@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23231" systemVersion="23G93" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
+    <entity name="CalendarDayEntity" representedClassName="CalendarDayEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="date" optional="YES" attributeType="String"/>
+        <relationship name="todos" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="TodoEntity" inverseName="dateRelation" inverseEntity="TodoEntity"/>
+    </entity>
+    <entity name="TodoEntity" representedClassName="TodoEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="text" optional="YES" attributeType="String"/>
+        <relationship name="dateRelation" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CalendarDayEntity" inverseName="todos" inverseEntity="CalendarDayEntity"/>
+    </entity>
+</model>

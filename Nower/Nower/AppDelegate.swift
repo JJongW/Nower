@@ -30,7 +30,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let window = DraggableWindow(
             contentRect: windowFrame,
-            styleMask: [.borderless], // borderless 유지
+            styleMask: [.borderless, .titled], // borderless 유지
             backing: .buffered,
             defer: false
         )
@@ -40,16 +40,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.level = .normal
         window.collectionBehavior = [.canJoinAllSpaces, .stationary]
         window.ignoresMouseEvents = false // 마우스 이벤트 활성화
-        
-        window.contentView = NSHostingView(rootView: ContentView( currentColor: settingsManager.backgroundColor).environmentObject(settingsManager))
+        window.makeKeyAndOrderFront(nil)
+
+        window.contentView = NSHostingView(rootView: ContentView().environmentObject(settingsManager))
 
         self.window = window
         self.window?.makeKeyAndOrderFront(nil)
     }
-    
+
     @objc func updateContentView() {
         DispatchQueue.main.async { [self] in
-            self.window?.contentView = NSHostingView(rootView: ContentView( currentColor: settingsManager.backgroundColor).environmentObject(self.settingsManager))
+            self.window?.contentView = NSHostingView(rootView: ContentView().environmentObject(self.settingsManager))
         }
     }
     

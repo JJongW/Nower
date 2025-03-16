@@ -6,122 +6,154 @@
 //
 
 import SwiftUI
+import Foundation
 
 struct ContentView: View {
-    @State private var currentDate = Date()
-    let calendar = Calendar.current
-    
-    @StateObject var settingsManager = SettingsManager()
-    @State var currentColor: Color
+    let days: [String] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+    @StateObject private var viewModel = CalendarViewModel()
+    @State private var newTodoText: String = ""
+    @State private var selectedDate: String? = nil
+    @State private var isPopupVisible: Bool = false
 
     var body: some View {
-        VStack {
-            HStack {
-                Button(action: { changeMonth(by: -1) }) {
-                    Image(systemName: "chevron.left")
-                        .font(.title)
-                        .padding()
+        ZStack {
+            // Dismiss popup on background tap
+            AppColors.background
+                .edgesIgnoringSafeArea(.all)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    isPopupVisible = false
                 }
 
-                Text(getMonthYearString(from: currentDate))
-                    .font(.title)
-                    .bold()
+            VStack(spacing: 0) {
+                VStack {
+                    // Header
+                    HStack {
+                        Button(action: { viewModel.changeMonth(by: -1) }) {
+                            AppIcons.leftArrow
+                                .foregroundColor(AppColors.textColor1)
+                        }
+                        .buttonStyle(.borderless)
+
+                        Text(getMonthYear(from: viewModel.currentMonth))
+                            .font(.title).bold()
+                            .foregroundColor(AppColors.textColor1)
+
+                        Button(action: { viewModel.changeMonth(by: 1) }) {
+                            AppIcons.rightArrow
+                                .foregroundColor(AppColors.textColor1)
+                        }
+                        .buttonStyle(.borderless)
+
+                        Spacer()
+
+                        Button(action: { isPopupVisible = true }) {
+                            Text("Add Event")
+                                .foregroundColor(.white)
+                                .padding()
+                                .background(AppColors.buttonColor)
+                                .cornerRadius(8)
+                        }
+                        .buttonStyle(.borderless)
+                    }
                     .padding()
-
-                Button(action: { changeMonth(by: 1) }) {
-                    Image(systemName: "chevron.right")
-                        .font(.title)
-                        .padding()
                 }
-            }
-            
-            VStack {
-                WeekdayHeaderView()
-                CalendarGridView(date: Date())
-            }
-            .padding()
-        }
-        .background(settingsManager.backgroundColor.opacity(settingsManager.opacity))
-        .onReceive(settingsManager.$backgroundColor) { newColor in
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        currentColor = newColor // ✅ 기존 색상 유지
+                .frame(maxWidth: .infinity)
+
+                // Weekday Headers
+                HStack {
+                    ForEach(days, id: \..self) { day in
+                        Text(day)
+                            .foregroundColor(AppColors.textColor1)
+                            .font(.caption)
+                            .frame(maxWidth: .infinity)
                     }
                 }
-                .onReceive(settingsManager.$opacity) { newOpacity in
-                    print("Opacity changed to \(newOpacity)")
+                .padding(.bottom, 5)
+
+                // Calendar Grid
+                CalendarGridView()
+                    .environmentObject(viewModel)
+            }
+            .frame(width: 1024, height: 720)
+
+            // Popup for adding events
+            if isPopupVisible {
+                VStack(spacing: 20) {
+                    Text("Add New Event")
+                        .font(.headline)
+                        .foregroundColor(AppColors.textColor1)
+
+                    DatePicker("Select Date", selection: Binding(
+                        get: {
+                            selectedDate.flatMap { getDate(from: $0) } ?? Date()
+                        },
+                        set: { newValue in
+                            selectedDate = getString(from: newValue)
+                        }
+                    ), displayedComponents: .date)
+                    .datePickerStyle(GraphicalDatePickerStyle())
+                    .frame(maxWidth: 300)
+
+                    TextField("Enter event", text: $newTodoText)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding()
+
+                    HStack {
+                        Button("Cancel") {
+                            isPopupVisible = false
+                        }
+                        .foregroundColor(.red)
+
+                        Button("Save") {
+                            if let date = selectedDate, !newTodoText.isEmpty {
+                                viewModel.addTodo(for: date, todo: newTodoText)
+                                newTodoText = ""
+                                isPopupVisible = false
+
+                                DispatchQueue.main.async {
+                                    viewModel.loadTodos()
+                                }
+                            }
+                        }
+                        .foregroundColor(.blue)
+                    }
                 }
-        .animation(.easeInOut(duration: 0.2), value: settingsManager.backgroundColor)
-        .animation(.easeInOut(duration: 0.2), value: settingsManager.opacity)
+                .padding()
+                .background(AppColors.popupBackground)
+                .cornerRadius(12)
+                .frame(maxWidth: 400)
+            }
+        }
     }
 
-    func getMonthYearString(from date: Date) -> String {
+    func getMonthYear(from date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "YYYY년 MM월"
+        formatter.dateFormat = "MMM yyyy"
         return formatter.string(from: date)
     }
-    
-    // 월 변경 함수
-    func changeMonth(by value: Int) {
-        if let newDate = calendar.date(byAdding: .month, value: value, to: currentDate) {
-            currentDate = newDate
-        }
+
+    func getToday() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d"
+        return formatter.string(from: Date())
+    }
+
+    func getDate(from dateString: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.date(from: dateString)
+    }
+
+    func getString(from date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
     }
 }
 
-
-// 요일 헤더 뷰
-struct WeekdayHeaderView: View {
-    let weekdays = ["일", "월", "화", "수", "목", "금", "토"]
-
-    var body: some View {
-        HStack {
-            ForEach(weekdays, id: \.self) { day in
-                Text(day)
-                    .frame(maxWidth: .infinity)
-                    .bold()
-                    .foregroundColor(day == "일" ? .red : (day == "토" ? .blue : .black)) // 일요일은 빨강, 토요일은 파랑
-            }
-        }
-        .padding(.bottom, 5)
-    }
-}
-
-// 달력 날짜 UI
-struct CalendarGridView: View {
-    let date: Date
-    let calendar = Calendar.current
-
-    var body: some View {
-        let days = getDaysInMonth(for: date)
-        let firstWeekday = getFirstWeekday(for: date)
-
-        LazyVGrid(columns: Array(repeating: GridItem(), count: 7), spacing: 10) {
-            // 첫 주의 빈 칸 추가
-            ForEach(0..<firstWeekday, id: \.self) { _ in
-                Text("")
-                    .frame(width: 40, height: 40)
-            }
-
-            // 날짜 추가
-            ForEach(days, id: \.self) { day in
-                Text("\(day)")
-                    .frame(width: 40, height: 40)
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(8)
-            }
-        }
-    }
-
-    // 현재 월의 날짜 배열 반환
-    func getDaysInMonth(for date: Date) -> [Int] {
-        let range = calendar.range(of: .day, in: .month, for: date)!
-        return Array(range)
-    }
-
-    // 현재 월이 시작하는 요일 계산 (일요일 = 0, 월요일 = 1 ...)
-    func getFirstWeekday(for date: Date) -> Int {
-        let components = calendar.dateComponents([.year, .month], from: date)
-        let firstDayOfMonth = calendar.date(from: components)!
-        return calendar.component(.weekday, from: firstDayOfMonth) - 1
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
     }
 }
