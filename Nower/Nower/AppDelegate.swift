@@ -4,7 +4,6 @@
 //
 //  Created by 신종원 on 3/3/25.
 //
-
 import Cocoa
 import SwiftUI
 import ServiceManagement
@@ -16,49 +15,59 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let appBundleID = "pr.jongwon.Nower"
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        setupWindow()
+        setupMainWindow()
         setupStatusBar()
         enableAutoLaunch()
-        
+
         NotificationCenter.default.addObserver(self, selector: #selector(updateContentView), name: .init("SettingsChanged"), object: nil)
     }
 
-    func setupWindow() {
+    func setupMainWindow() {
         let screenSize = NSScreen.main?.frame ?? NSRect(x: 0, y: 0, width: 1920, height: 1080)
-        let savedPosition = loadWindowPosition() ?? NSPoint(x: (screenSize.width - 400) / 2, y: (screenSize.height - 300) / 2)
-        let windowFrame = NSRect(origin: savedPosition, size: CGSize(width: 400, height: 300))
+        let savedPosition = loadWindowPosition() ?? NSPoint(x: (screenSize.width - 1024) / 2,
+                                                            y: (screenSize.height - 720) / 2)
+        let windowFrame = NSRect(origin: savedPosition, size: CGSize(width: 1024, height: 720))
 
         let window = DraggableWindow(
             contentRect: windowFrame,
-            styleMask: [.borderless, .titled], // borderless 유지
+            styleMask: [.titled, .closable, .resizable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
 
-        window.isOpaque = false
-        window.backgroundColor = NSColor.clear
+        window.title = "Nower"
+        window.isOpaque = true
+        window.hasShadow = true
+        window.backgroundColor = NSColor.windowBackgroundColor
         window.level = .normal
-        window.collectionBehavior = [.canJoinAllSpaces, .stationary]
-        window.ignoresMouseEvents = false // 마우스 이벤트 활성화
-        window.makeKeyAndOrderFront(nil)
+        window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
+        window.ignoresMouseEvents = false
 
-        window.contentView = NSHostingView(rootView: ContentView().environmentObject(settingsManager))
+        let contentView = ContentView().environmentObject(settingsManager)
+        window.contentView = NSHostingView(rootView: contentView)
+
+        // ✅ 창 띄우기
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
 
         self.window = window
-        self.window?.makeKeyAndOrderFront(nil)
     }
 
     @objc func updateContentView() {
-        DispatchQueue.main.async { [self] in
-            self.window?.contentView = NSHostingView(rootView: ContentView().environmentObject(self.settingsManager))
+        guard let window = window else { return }
+        DispatchQueue.main.async {
+            window.contentView = NSHostingView(
+                rootView: ContentView()
+                    .environmentObject(self.settingsManager)
+            )
         }
     }
-    
+
     func applicationWillTerminate(_ notification: Notification) {
         saveWindowPosition()
     }
 
-    // ✅ 마지막 위치 저장
     private func saveWindowPosition() {
         guard let window = window else { return }
         let position = window.frame.origin
@@ -66,15 +75,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         UserDefaults.standard.set(position.y, forKey: "windowPositionY")
     }
 
-    // ✅ 마지막 위치 복원
     private func loadWindowPosition() -> NSPoint? {
         let x = UserDefaults.standard.double(forKey: "windowPositionX")
         let y = UserDefaults.standard.double(forKey: "windowPositionY")
-
         if x == 0 && y == 0 { return nil }
         return NSPoint(x: x, y: y)
     }
-        
+
     func setupStatusBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
 
@@ -84,18 +91,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "설정", action: #selector(openSettings), keyEquivalent: ""))
-        menu.addItem(NSMenuItem.separator())
+        menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "자동 실행 활성화", action: #selector(enableAutoLaunch), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "자동 실행 비활성화", action: #selector(disableAutoLaunch), keyEquivalent: ""))
-        menu.addItem(NSMenuItem.separator())
+        menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "종료", action: #selector(quitApp), keyEquivalent: "q"))
 
         statusItem?.menu = menu
     }
 
     @objc func openSettings() {
-        let settingsView = SettingsView()
-            .environmentObject(SettingsManager())
+        let settingsView = SettingsView().environmentObject(settingsManager)
 
         let settingsWindow = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 300, height: 200),
@@ -115,12 +121,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApplication.shared.terminate(nil)
     }
 
-    // Mac 부팅 시 자동 실행 활성화
     @objc func enableAutoLaunch() {
         SMLoginItemSetEnabled(appBundleID as CFString, true)
     }
 
-    // 자동 실행 비활성화
     @objc func disableAutoLaunch() {
         SMLoginItemSetEnabled(appBundleID as CFString, false)
     }

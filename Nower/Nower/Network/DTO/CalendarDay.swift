@@ -16,4 +16,7 @@ struct CalendarDay: Identifiable {
 struct TodoItem: Identifiable, Hashable {
     let id = UUID()
     let text: String
+    let isRepeating: Bool
+    let date: String
+    let colorName: String
 }

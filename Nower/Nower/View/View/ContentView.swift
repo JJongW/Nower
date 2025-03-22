@@ -13,6 +13,7 @@ struct ContentView: View {
     @StateObject private var viewModel = CalendarViewModel()
     @State private var newTodoText: String = ""
     @State private var selectedDate: String? = nil
+    @State private var selectedColor: String = ""
     @State private var isPopupVisible: Bool = false
 
     var body: some View {
@@ -26,18 +27,18 @@ struct ContentView: View {
                 }
 
             VStack(spacing: 0) {
+                // Top Headers (Month change, Add Event)
                 VStack {
-                    // Header
                     HStack {
+                        Text(getMonthYear(from: viewModel.currentMonth))
+                            .font(.title).bold()
+                            .foregroundColor(AppColors.textColor1)
+
                         Button(action: { viewModel.changeMonth(by: -1) }) {
                             AppIcons.leftArrow
                                 .foregroundColor(AppColors.textColor1)
                         }
                         .buttonStyle(.borderless)
-
-                        Text(getMonthYear(from: viewModel.currentMonth))
-                            .font(.title).bold()
-                            .foregroundColor(AppColors.textColor1)
 
                         Button(action: { viewModel.changeMonth(by: 1) }) {
                             AppIcons.rightArrow
@@ -57,8 +58,15 @@ struct ContentView: View {
                         .buttonStyle(.borderless)
                     }
                     .padding()
+
+                    Text("이번 달은 이렇게 지내보는 거 어떤가요?")
+                        .foregroundColor(AppColors.textColor1)
+                        .font(.subheadline)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(EdgeInsets(top: 8, leading: 20, bottom: 32, trailing: 20))
                 }
                 .frame(maxWidth: .infinity)
+                .frame(alignment: .leading)
 
                 // Weekday Headers
                 HStack {
@@ -69,74 +77,28 @@ struct ContentView: View {
                             .frame(maxWidth: .infinity)
                     }
                 }
-                .padding(.bottom, 5)
+                .padding(.top, 8)
+                .padding(.bottom, 8)
 
                 // Calendar Grid
                 CalendarGridView()
                     .environmentObject(viewModel)
             }
             .frame(width: 1024, height: 720)
+            .padding(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
 
             // Popup for adding events
             if isPopupVisible {
-                VStack(spacing: 20) {
-                    Text("Add New Event")
-                        .font(.headline)
-                        .foregroundColor(AppColors.textColor1)
-
-                    DatePicker("Select Date", selection: Binding(
-                        get: {
-                            selectedDate.flatMap { getDate(from: $0) } ?? Date()
-                        },
-                        set: { newValue in
-                            selectedDate = getString(from: newValue)
-                        }
-                    ), displayedComponents: .date)
-                    .datePickerStyle(GraphicalDatePickerStyle())
-                    .frame(maxWidth: 300)
-
-                    TextField("Enter event", text: $newTodoText)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .padding()
-
-                    HStack {
-                        Button("Cancel") {
-                            isPopupVisible = false
-                        }
-                        .foregroundColor(.red)
-
-                        Button("Save") {
-                            if let date = selectedDate, !newTodoText.isEmpty {
-                                viewModel.addTodo(for: date, todo: newTodoText)
-                                newTodoText = ""
-                                isPopupVisible = false
-
-                                DispatchQueue.main.async {
-                                    viewModel.loadTodos()
-                                }
-                            }
-                        }
-                        .foregroundColor(.blue)
-                    }
-                }
-                .padding()
-                .background(AppColors.popupBackground)
-                .cornerRadius(12)
-                .frame(maxWidth: 400)
+                AddEventView(selectedColor: $selectedColor, isPopupVisible: $isPopupVisible)
+                    .environmentObject(viewModel)
             }
         }
     }
 
     func getMonthYear(from date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMM yyyy"
+        formatter.dateFormat = "MMM` yyyy"
         return formatter.string(from: date)
-    }
-
-    func getToday() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "d"
-        return formatter.string(from: Date())
     }
 
     func getDate(from dateString: String) -> Date? {
