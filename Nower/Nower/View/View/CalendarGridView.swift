@@ -14,8 +14,11 @@ struct CalendarGridView: View {
     let maxTodosToShow = 3
     @State private var selectedDate: String? = nil
     @State private var selectedTodo: TodoItem? = nil
-    @State private var isShowingAlert: Bool = false
+    @State private var isShowingEditPopup = false
     @State private var showDeleteOptions = false
+
+    @Binding var toastMessage: String
+    @Binding var showToast: Bool
 
     func getToday() -> String {
         let formatter = DateFormatter()
@@ -33,35 +36,16 @@ struct CalendarGridView: View {
             .padding()
         }
         .frame(maxHeight: .infinity)
-        .alert(isPresented: $isShowingAlert) {
-            if let todo = selectedTodo, let date = selectedDate {
-                return Alert(
-                    title: Text("삭제하시겠습니까?"),
-                    primaryButton: .destructive(Text("삭제")) {
-                        viewModel.deleteTodo(for: date, todo: todo)
-                    },
-                    secondaryButton: .cancel(Text("취소"))
-                )
-            } else {
-                return Alert(title: Text("오류"), message: Text("선택된 일정이 없습니다."), dismissButton: .default(Text("확인")))
-            }
+        .sheet(isPresented: $isShowingEditPopup) {
+            EditTodoSheetWrapper(
+                selectedTodo: selectedTodo,
+                selectedDate: selectedDate,
+                isPresented: $isShowingEditPopup,
+                showToast: $showToast,
+                toastMessage: $toastMessage
+            )
+            .environmentObject(viewModel)
         }
-        .confirmationDialog("반복 일정을 삭제할까요?", isPresented: $showDeleteOptions, titleVisibility: .visible) {
-            Button("이 일정만 삭제", role: .destructive) {
-                if let todo = selectedTodo, let date = selectedDate {
-                    viewModel.deleteTodo(for: date, todo: todo)
-                }
-            }
-
-            Button("반복 일정 모두 삭제", role: .destructive) {
-                if let todo = selectedTodo, let date = selectedDate {
-                    viewModel.deleteRepeatingTodos(startingFrom: date, text: todo.text)
-                }
-            }
-
-            Button("취소", role: .cancel) {}
-        }
-
     }
 
     @ViewBuilder
@@ -129,16 +113,13 @@ struct CalendarGridView: View {
             .onTapGesture {
                 selectedTodo = todo
                 selectedDate = date
-
-                // ⚠️ 하나만 true 되도록
-                if todo.isRepeating {
-                    showDeleteOptions = true
-                    isShowingAlert = false
-                } else {
-                    showDeleteOptions = false
-                    isShowingAlert = true
+            }
+            .onChange(of: selectedDate) { _ in
+                if selectedTodo != nil && selectedDate != nil {
+                    isShowingEditPopup = true
                 }
             }
+
             .onDrag {
                 selectedDate = date
                 print("✅ Drag started for \(todo.text) from \(date)")
@@ -156,6 +137,7 @@ struct CalendarGridView: View {
                     DispatchQueue.main.async {
                         print("📌 Moving Todo: \(droppedTodo) from \(sourceDate) to \(targetDate)")
                         viewModel.moveTodo(from: sourceDate, to: targetDate, todoText: droppedTodo)
+                        show(message: "⏱️ 일정이 이동되었습니다.")
                     }
                 } else {
                     print("❌ Failed to retrieve droppedTodo or sourceDate is nil")
@@ -164,5 +146,36 @@ struct CalendarGridView: View {
             return true
         }
         return false
+    }
+
+    func show(message: String) {
+        toastMessage = message
+        withAnimation {
+            showToast = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation {
+                showToast = false
+            }
+        }
+    }
+}
+
+struct EditTodoSheetWrapper: View {
+    let selectedTodo: TodoItem?
+    let selectedDate: String?
+    @Binding var isPresented: Bool
+    @Binding var showToast: Bool
+    @Binding var toastMessage: String
+
+    @EnvironmentObject var viewModel: CalendarViewModel
+
+    var body: some View {
+        if let todo = selectedTodo, let date = selectedDate {
+            EditTodoPopupView(todo: todo, date: date, isPresented: $isPresented, showToast: $showToast, toastMessage: $toastMessage)
+                .environmentObject(viewModel)
+        } else {
+            EmptyView()
+        }
     }
 }

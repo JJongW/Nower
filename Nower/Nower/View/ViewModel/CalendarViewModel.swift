@@ -225,10 +225,10 @@ class CalendarViewModel: ObservableObject {
             let oldResults = try context.fetch(oldRequest)
             let newResults = try context.fetch(newRequest)
                 if let todoToMove = oldResults.first {
+                    let originalColor = todoToMove.colorName
                     context.delete(todoToMove)
-                    try context.save() // ✅ 삭제를 즉시 저장
+                    try context.save()
 
-                    // ✅ 새 날짜에 추가
                     let newDay = newResults.first ?? {
                         let newEntity = CalendarDayEntity(context: context)
                         newEntity.date = newDate
@@ -238,8 +238,10 @@ class CalendarViewModel: ObservableObject {
                     let newTodo = TodoEntity(context: context)
                     newTodo.text = todoText
                     newTodo.dateRelation = newDay
+                    newTodo.colorName = originalColor
+                    newTodo.isRepeating = todoToMove.isRepeating
 
-                    try context.save() // ✅ 새로운 데이터도 즉시 저장
+                    try context.save()
 
                     DispatchQueue.main.async {
                         self.loadTodos()
