@@ -25,12 +25,46 @@ class EventManager {
     }
 
     func addTodo(_ todo: TodoItem) {
-        todos.append(todo)
+        loadTodos() // 최신 iCloud 데이터 불러오기
+
+        // iCloud 서버에 있는 기존 데이터 읽기
+        let serverData = store.data(forKey: key)
+        var serverTodos: [TodoItem] = []
+        if let data = serverData, let decoded = try? JSONDecoder().decode([TodoItem].self, from: data) {
+            serverTodos = decoded
+        }
+
+        // 서버에 있던 데이터 + 현재 추가하려는 Todo 병합
+        var mergedTodos = serverTodos
+        mergedTodos.append(todo)
+
+        // 중복 제거 (id 기준)
+        let uniqueTodos = Array(Set(mergedTodos))
+
+        todos = uniqueTodos
         saveTodos()
     }
 
     func deleteTodo(_ todo: TodoItem) {
-        todos.removeAll { $0.id == todo.id }
+        loadTodos()
+
+        // 서버에 있는 기존 데이터 읽기
+        var serverTodos: [TodoItem] = []
+        if let data = store.data(forKey: key),
+           let decoded = try? JSONDecoder().decode([TodoItem].self, from: data) {
+            serverTodos = decoded
+        }
+
+        // 서버 데이터와 현재 데이터 병합
+        var mergedTodos = serverTodos + todos
+
+        // 삭제할 TodoItem 제외
+        mergedTodos.removeAll { $0.id == todo.id }
+
+        // 중복 제거
+        let uniqueTodos = Array(Set(mergedTodos))
+
+        todos = uniqueTodos
         saveTodos()
     }
 
@@ -45,16 +79,19 @@ class EventManager {
         if let encoded = try? JSONEncoder().encode(todos) {
             store.set(encoded, forKey: key)
             store.synchronize()
+            print("✅ iCloud에 넣은 데이터: \(todos)")
         }
     }
 
     private func loadTodos() {
         guard let data = store.data(forKey: key),
-              let decoded = try? JSONDecoder().decode([TodoItem].self, from: data) else {
-            todos = []
-            return
-        }
-        todos = decoded
+                let decoded = try? JSONDecoder().decode([TodoItem].self, from: data) else {
+              todos = []
+              print("❌ iCloud에서 불러온 데이터 없음")
+              return
+          }
+          todos = decoded
+          print("✅ iCloud에서 불러온 데이터: \(todos)")
     }
 
     @objc private func icloudDidUpdate(notification: Notification) {

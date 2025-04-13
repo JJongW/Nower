@@ -25,4 +25,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
         return true
     }
+
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        // ✅ 앱이 활성화될 때 무조건 iCloud 수동 동기화
+        NSUbiquitousKeyValueStore.default.synchronize()
+        print("✅ iCloud 수동 동기화 시도")
+    }
 }
