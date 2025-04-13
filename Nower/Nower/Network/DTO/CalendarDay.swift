@@ -13,8 +13,8 @@ struct CalendarDay: Identifiable {
     var todos: [TodoItem]
 }
 
-struct TodoItem: Identifiable, Hashable {
-    let id = UUID()
+struct TodoItem: Identifiable, Hashable, Codable {
+    var id = UUID()
     let text: String
     let isRepeating: Bool
     let date: String

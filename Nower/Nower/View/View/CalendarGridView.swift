@@ -9,7 +9,7 @@ import Foundation
 import SwiftUI
 
 struct CalendarGridView: View {
-    @EnvironmentObject var viewModel: CalendarViewModel // ✅ 전역 모델 사용
+    @EnvironmentObject var viewModel: CalendarViewModel
 
     let maxTodosToShow = 3
     @State private var selectedDate: String? = nil
@@ -119,7 +119,6 @@ struct CalendarGridView: View {
                     isShowingEditPopup = true
                 }
             }
-
             .onDrag {
                 selectedDate = date
                 print("✅ Drag started for \(todo.text) from \(date)")

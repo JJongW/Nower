@@ -58,7 +58,7 @@ struct EditTodoPopupView: View {
 
             HStack(spacing: 20) {
                 Button(action: {
-                    viewModel.deleteTodo(for: date, todo: originalTodo)
+                    viewModel.deleteTodo(todo: originalTodo)
                     toastMessage = "🗑 일정이 삭제되었습니다."
                     showToast = true
                     isPresented = false
@@ -73,7 +73,7 @@ struct EditTodoPopupView: View {
 
                 if originalTodo.isRepeating {
                     Button(action: {
-                        viewModel.deleteRepeatingTodos(startingFrom: date, text: originalTodo.text)
+                        viewModel.deleteTodo(todo: originalTodo)
                         toastMessage = "🗑 반복 일정이 삭제되었습니다."
                         showToast = true
                         isPresented = false
