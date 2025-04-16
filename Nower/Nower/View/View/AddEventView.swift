@@ -23,17 +23,22 @@ struct AddEventView: View {
     var body: some View {
         VStack {
             VStack(alignment: .center, spacing: 20) {
-                TextField("할 일을 입력하세요", text: $eventText)
+                TextField("", text: $eventText)
+                    .placeholder(when: eventText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
+                           Text("할 일을 입력하세요")
+                               .foregroundColor(.gray)
+                               .font(.system(size: 16, weight: .medium))
+                               .padding(.leading, 8)
+                       }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 8)
                     .background(AppColors.popupBackground)
                     .cornerRadius(12)
                     .shadow(radius: 2)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(AppColors.textWhite)
+                    .foregroundColor(ThemeManager.isDarkMode ? .white : .white)
                     .textFieldStyle(.plain)
 
-                // 색상 선택
                 HStack {
                     ForEach(colorOptions, id: \.self) { color in
                         Button(action: {
@@ -50,7 +55,6 @@ struct AddEventView: View {
                     }
                 }
 
-                // 일정 유형 선택
                 HStack {
                     ForEach(EventType.allCases, id: \.self) { type in
                         Button(action: {
@@ -68,7 +72,6 @@ struct AddEventView: View {
                     }
                 }
 
-                // 선택 유형에 따라 다른 입력
                 if viewModel.selectedEventType == .normal {
                     VStack(alignment: .leading) {
                         Text("날짜 선택")
@@ -89,15 +92,17 @@ struct AddEventView: View {
 
                         DatePicker("시작 날짜", selection: $startDate, displayedComponents: .date)
                             .datePickerStyle(CompactDatePickerStyle())
+                            .foregroundColor(.gray)
 
                         DatePicker("종료 날짜", selection: $endDate, displayedComponents: .date)
                             .datePickerStyle(CompactDatePickerStyle())
+                            .foregroundColor(.gray)
                     }
                     .accentColor(AppColors.textHighlighted)
                 }
 
                 if viewModel.selectedEventType == .repeatable {
-                    VStack(alignment: .leading) {
+                    VStack(alignment: .center) {
                         Text("반복 시작 날짜")
                             .font(.subheadline)
                             .foregroundColor(.gray)
@@ -105,13 +110,23 @@ struct AddEventView: View {
                             .datePickerStyle(GraphicalDatePickerStyle())
                             .accentColor(AppColors.primaryPink)
 
-                        Picker("반복 설정", selection: $repeatOption) {
+                        HStack(spacing: 8) {
                             ForEach(RepeatOption.allCases, id: \.self) { option in
-                                Text(option.rawValue).tag(option)
+                                Button(action: {
+                                    repeatOption = option
+                                }) {
+                                    Text(option.rawValue)
+                                        .font(.system(size: 14))
+                                        .foregroundColor(repeatOption == option ? .black : .white)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(repeatOption == option ? Color.white : Color.gray.opacity(0.5))
+                                        .cornerRadius(8)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
-                        .pickerStyle(SegmentedPickerStyle())
-                        .padding()
+
                     }
                 }
 
