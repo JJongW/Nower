@@ -51,9 +51,8 @@ class CalendarViewController: UIViewController {
         let weekday = calendar.component(.weekday, from: firstDayOfMonth)
         let numberOfDays = calendar.range(of: .day, in: .month, for: currentDate)?.count ?? 30
 
-        // 앞에 빈 칸 채우기
         for _ in 1..<weekday {
-            days.append("") // 빈 셀
+            days.append("")
         }
 
         // 날짜 채우기
@@ -113,35 +112,41 @@ extension CalendarViewController: UICollectionViewDataSource {
 
         guard let selectedDate = Calendar.current.date(from: dateComponents) else { return }
 
-        let newEventVC = NewEventViewController()
-        newEventVC.selectedDate = selectedDate
-        newEventVC.onSave = { [weak self] newTodo in
-            guard let self = self else { return }
+        let hasTodos = !EventManager.shared.todos(on: selectedDate).isEmpty
 
-            // 저장하는 로직
-            EventManager.shared.addTodo(newTodo)
-
-            // 달력 새로고침
-            self.calendarView.collectionView.reloadData()
+        if hasTodos {
+            let vc = EventListViewController()
+            vc.selectedDate = selectedDate
+            present(vc, animated: true)
+        } else {
+            let addVC = NewEventViewController()
+            addVC.selectedDate = selectedDate
+            addVC.onSave = { todo in
+                EventManager.shared.addTodo(todo)
+                collectionView.reloadData()
+            }
+            if let sheet = addVC.sheetPresentationController {
+                sheet.detents = [.medium()]
+                sheet.prefersGrabberVisible = true
+            }
+            addVC.modalPresentationStyle = .pageSheet
+            present(addVC, animated: true)
         }
-
-        present(newEventVC, animated: true)
     }
 
 
     func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
 
-        // 선이 이미 있는 경우 중복 추가 방지
         if cell.contentView.viewWithTag(999) == nil {
             let separator = UIView()
             separator.tag = 999
-            separator.backgroundColor = UIColor.lightGray.withAlphaComponent(0.3) // 연한 회색 선
+            separator.backgroundColor = UIColor.lightGray.withAlphaComponent(0.3)
             cell.contentView.addSubview(separator)
 
             separator.snp.makeConstraints { make in
                 make.leading.trailing.equalToSuperview()
                 make.bottom.equalToSuperview()
-                make.height.equalTo(0.5) // 얇은 0.5pt
+                make.height.equalTo(0.5)
             }
         }
     }

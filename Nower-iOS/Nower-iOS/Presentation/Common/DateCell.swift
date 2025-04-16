@@ -13,7 +13,7 @@ class DateCell: UICollectionViewCell {
 
     let dayLabel: UILabel = {
         let label = UILabel()
-        label.font = UIFont.systemFont(ofSize: 12) // ⬅️ 폰트 크기 줄임
+        label.font = UIFont.systemFont(ofSize: 12)
         label.textAlignment = .center
         return label
     }()
@@ -70,7 +70,7 @@ class DateCell: UICollectionViewCell {
 
         for todo in limitedEvents {
             let capsule = EventCapsuleView()
-            capsule.configure(title: todo.text, color: UIColor(AppColors.color(for: todo.colorName)))
+            capsule.configure(title: todo.text, color: AppColors.color(for: todo.colorName))
             eventStackView.addArrangedSubview(capsule)
 
             capsule.snp.makeConstraints {
@@ -88,7 +88,7 @@ class DateCell: UICollectionViewCell {
 
         backgroundHighlightView.backgroundColor = .clear
         backgroundHighlightView.layer.borderWidth = 0
-        dayLabel.textColor = .label
+        dayLabel.textColor = AppColors.textPrimary
 
         if isToday {
             dayLabel.textColor = .systemBlue

@@ -14,6 +14,7 @@ class CalendarView: UIView {
         label.font = UIFont.systemFont(ofSize: 24, weight: .bold)
         label.text = "2025.4"
         label.textAlignment = .center
+        label.textColor = AppColors.textPrimary
         return label
     }()
     let previousButton = UIButton(type: .system)

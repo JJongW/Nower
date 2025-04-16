@@ -9,7 +9,13 @@ import SnapKit
 
 class EventPopupViewController: UIViewController {
 
-    private let dateLabel = UILabel()
+    private let dateLabel: UILabel = {
+        let label = UILabel()
+        label.font = UIFont.boldSystemFont(ofSize: 20)
+        label.textAlignment = .center
+        return label
+    }()
+
     private let tableView = UITableView()
     private var todos: [TodoItem]
     private let selectedDate: Date
@@ -33,9 +39,6 @@ class EventPopupViewController: UIViewController {
 
     private func setupUI() {
         view.backgroundColor = .white
-
-        dateLabel.font = UIFont.boldSystemFont(ofSize: 20)
-        dateLabel.textAlignment = .center
 
         view.addSubview(dateLabel)
         dateLabel.snp.makeConstraints {

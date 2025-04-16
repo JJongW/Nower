@@ -25,7 +25,7 @@ class EventCell: UITableViewCell {
 
     private func setupUI() {
         titleLabel.font = UIFont.systemFont(ofSize: 16)
-        titleLabel.textColor = .label
+        titleLabel.textColor = AppColors.textPrimary
 
         contentView.addSubview(titleLabel)
         titleLabel.snp.makeConstraints { make in

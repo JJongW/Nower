@@ -9,83 +9,80 @@ import SnapKit
 
 class NewEventViewController: UIViewController {
 
+    private let contentView = NewEventView()
     var selectedDate: Date!
+    var existingTodo: TodoItem?
+
     var onSave: ((TodoItem) -> Void)?
+    var onDelete: ((TodoItem) -> Void)?
 
-    private let textField = UITextField()
     private var selectedColorName: String = "skyblue"
-
-    private let colors: [String] = ["skyblue", "peach", "lavender", "mintgreen", "coralred"]
-    private let colorStackView = UIStackView()
+    override func loadView() {
+        self.view = contentView
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .white
 
-        view.addSubview(textField)
-        textField.placeholder = "일정을 입력하세요"
-        textField.borderStyle = .roundedRect
-        textField.snp.makeConstraints {
-            $0.top.equalTo(view.safeAreaLayoutGuide).offset(20)
-            $0.leading.trailing.equalToSuperview().inset(20)
+        if let todo = existingTodo {
+            contentView.eventTextField.text = todo.text
+            selectedColorName = todo.colorName
+            contentView.deleteButton.isHidden = false
+            contentView.saveButton.setTitle("저장", for: .normal)
         }
 
-        view.addSubview(colorStackView)
-        colorStackView.axis = .horizontal
-        colorStackView.spacing = 8
-        colorStackView.distribution = .fillEqually
-        colorStackView.snp.makeConstraints {
-            $0.top.equalTo(textField.snp.bottom).offset(20)
-            $0.leading.trailing.equalToSuperview().inset(20)
-            $0.height.equalTo(44)
-        }
-
-        colors.forEach { colorName in
-            let button = UIButton()
-            button.backgroundColor = UIColor(AppColors.color(for: colorName))
-            button.layer.cornerRadius = 8
-            button.layer.borderColor = UIColor.lightGray.cgColor
-            button.layer.borderWidth = 1
-            button.tag = colors.firstIndex(of: colorName) ?? 0
-            button.addTarget(self, action: #selector(colorButtonTapped(_:)), for: .touchUpInside)
-            colorStackView.addArrangedSubview(button)
-        }
-
-        let saveButton = UIButton(type: .system)
-        saveButton.setTitle("추가", for: .normal)
-        saveButton.addTarget(self, action: #selector(didTapSave), for: .touchUpInside)
-        view.addSubview(saveButton)
-        saveButton.snp.makeConstraints {
-            $0.top.equalTo(colorStackView.snp.bottom).offset(30)
-            $0.centerX.equalToSuperview()
-        }
+        bindActions()
+        highlightSelectedColor()
     }
+    private func bindActions() {
+        contentView.saveButton.addTarget(self, action: #selector(didTapSave), for: .touchUpInside)
+        contentView.deleteButton.addTarget(self, action: #selector(didTapDelete), for: .touchUpInside)
 
-    @objc private func colorButtonTapped(_ sender: UIButton) {
-        selectedColorName = colors[sender.tag]
-        colorStackView.arrangedSubviews.forEach { view in
-            if let button = view as? UIButton {
-                button.layer.borderColor = UIColor.lightGray.cgColor
-            }
+        contentView.colorButtons.forEach { button in
+            button.addTarget(self, action: #selector(colorSelected(_:)), for: .touchUpInside)
         }
-        sender.layer.borderColor = UIColor.black.cgColor
     }
 
     @objc private func didTapSave() {
-        guard let text = textField.text, !text.isEmpty else { return }
+        guard let text = contentView.eventTextField.text, !text.isEmpty else { return }
 
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         let dateString = formatter.string(from: selectedDate)
 
-        let newTodo = TodoItem(
+        let todo = TodoItem(
+            id: existingTodo?.id ?? UUID(),
             text: text,
             isRepeating: false,
             date: dateString,
             colorName: selectedColorName
         )
 
-        onSave?(newTodo)
+        onSave?(todo)
+        NotificationCenter.default.post(name: .init("TodosUpdated"), object: nil)
         dismiss(animated: true)
+    }
+
+    @objc private func didTapDelete() {
+        guard let todo = existingTodo else { return }
+        onDelete?(todo)
+        NotificationCenter.default.post(name: .init("TodosUpdated"), object: nil)
+        dismiss(animated: true)
+    }
+
+    @objc private func colorSelected(_ sender: UIButton) {
+        let index = sender.tag
+        selectedColorName = contentView.colors[index]
+
+        contentView.colorButtons.forEach {
+            $0.layer.borderColor = UIColor.lightGray.cgColor
+        }
+        sender.layer.borderColor = UIColor.black.cgColor
+    }
+
+    private func highlightSelectedColor() {
+        guard let index = contentView.colors.firstIndex(of: selectedColorName) else { return }
+        let button = contentView.colorButtons[index]
+        button.layer.borderColor = UIColor.black.cgColor
     }
 }

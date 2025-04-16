@@ -4,36 +4,56 @@
 //
 //  Created by 신종원 on 4/11/25.
 //
-
 import UIKit
-import Foundation
-import SwiftUICore
 
-struct AppColors {
-    static let background = Color(hex: "#FFFFFF")
-    static let textColor1 = Color(hex: "#101010")
-    static let textWhite = Color(hex: "#FFFFFF")
-    static let textHighlighted = Color(hex: "#FF7E62")
-    static let todoBackground = Color.gray.opacity(0.2)
-    static let popupBackground = Color(hex: "#101010")
+enum AppColors {
 
-    static let todayHighlight = Color.gray
+    /// 기본 텍스트
+    static let textPrimary = UIColor(hex: "#101010")
 
-    static let buttonColor = Color(hex: "#101010")
-    static let primaryPink = Color(hex: "#C95A71")
-    static let lightPink = Color(hex: "#FFD3DD")
+    /// 배경 색상
+    static var background: UIColor {
+        return UIColor { trait in
+            trait.userInterfaceStyle == .dark ? UIColor(hex: "#1C1C1E") : .white
+        }
+    }
 
-    static let black = Color(hex: "#1c1c1c")
+    /// 팝업 배경
+    static var popupBackground: UIColor {
+        return UIColor { trait in
+            trait.userInterfaceStyle == .dark ? UIColor(hex: "#2C2C2E") : UIColor(hex: "#101010")
+        }
+    }
 
+    /// 강조 색
+    static var textHighlighted: UIColor {
+        return UIColor(hex: "#FF7E62") // 고정
+    }
 
-    // 달력 선택 컬러
-    static let skyblue = Color(hex: "#A0D2EB")
-    static let peach = Color(hex: "#FFD6A5")
-    static let lavender = Color(hex: "#CABBE9")
-    static let mintgreen = Color(hex: "#B5EAD7")
-    static let coralred = Color(hex: "#FF968A")
+    /// 버튼 색상
+    static var buttonColor: UIColor {
+        return UIColor { trait in
+            trait.userInterfaceStyle == .dark ? UIColor(hex: "#EEEEEE") : UIColor(hex: "#101010")
+        }
+    }
 
-    static func color(for name: String) -> Color {
+    /// 캡슐 뷰 배경
+    static var todoBackground: UIColor {
+        return UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor.gray.withAlphaComponent(0.3)
+                : UIColor.gray.withAlphaComponent(0.2)
+        }
+    }
+
+    // 캘린더 테마 색 (고정)
+    static let skyblue = UIColor(hex: "#A0D2EB")
+    static let peach = UIColor(hex: "#FFD6A5")
+    static let lavender = UIColor(hex: "#CABBE9")
+    static let mintgreen = UIColor(hex: "#B5EAD7")
+    static let coralred = UIColor(hex: "#FF968A")
+
+    static func color(for name: String) -> UIColor {
         switch name {
         case "skyblue": return skyblue
         case "peach": return peach
@@ -45,15 +65,18 @@ struct AppColors {
     }
 }
 
-extension Color {
-    init(hex: String) {
-        let scanner = Scanner(string: hex)
-        _ = scanner.scanString("#")
+extension UIColor {
+    convenience init(hex: String) {
+        var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+        hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
+
         var rgb: UInt64 = 0
-        scanner.scanHexInt64(&rgb)
-        let r = Double((rgb >> 16) & 0xFF) / 255.0
-        let g = Double((rgb >> 8) & 0xFF) / 255.0
-        let b = Double(rgb & 0xFF) / 255.0
-        self.init(red: r, green: g, blue: b)
+        Scanner(string: hexSanitized).scanHexInt64(&rgb)
+
+        let r = CGFloat((rgb & 0xFF0000) >> 16) / 255
+        let g = CGFloat((rgb & 0x00FF00) >> 8) / 255
+        let b = CGFloat(rgb & 0x0000FF) / 255
+
+        self.init(red: r, green: g, blue: b, alpha: 1)
     }
 }
