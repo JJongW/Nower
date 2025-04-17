@@ -10,25 +10,20 @@ import UIKit
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
-    var window: UIWindow?
-
-    func application(
-        _ application: UIApplication,
-        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
-    ) -> Bool {
-
-        window = UIWindow(frame: UIScreen.main.bounds)
-        let VC = CalendarViewController()
-        let navVC = UINavigationController(rootViewController: VC)
-        window?.rootViewController = navVC
-        window?.makeKeyAndVisible()
-
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // 초기 설정 또는 iCloud 동기화 트리거
+        NSUbiquitousKeyValueStore.default.synchronize()
         return true
     }
 
-    func applicationDidBecomeActive(_ application: UIApplication) {
-        // ✅ 앱이 활성화될 때 무조건 iCloud 수동 동기화
-        NSUbiquitousKeyValueStore.default.synchronize()
-        print("✅ iCloud 수동 동기화 시도")
+    // MARK: UISceneSession Lifecycle
+    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession,
+                     options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+    }
+
+    func application(_ application: UIApplication, didDiscardSceneSessions sceneSessions: Set<UISceneSession>) {
+        // 해당 세션이 필요 없을 때 호출됨
     }
 }

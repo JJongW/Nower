@@ -23,6 +23,18 @@ class CalendarViewController: UIViewController {
         super.viewDidLoad()
         setupCollectionView()
         generateCalendar()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(icloudDidUpdate),
+            name: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+            object: NSUbiquitousKeyValueStore.default
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(forceSync),
+            name: UIApplication.didBecomeActiveNotification,
+            object: nil
+        )
         NotificationCenter.default.addObserver(self, selector: #selector(todosUpdated), name: .init("TodosUpdated"), object: nil)
 
         calendarView.previousButton.addTarget(self, action: #selector(didTapPreviousMonth), for: .touchUpInside)
@@ -38,6 +50,19 @@ class CalendarViewController: UIViewController {
     private func setupCollectionView() {
         calendarView.collectionView.dataSource = self
         calendarView.collectionView.delegate = self
+    }
+
+    @objc private func icloudDidUpdate(notification: Notification) {
+        print("📥 iCloud 변경 감지됨 - 일정 새로고침")
+        EventManager.shared.loadTodos()
+        DispatchQueue.main.async {
+            self.calendarView.collectionView.reloadData()
+        }
+    }
+
+    @objc private func forceSync() {
+        NSUbiquitousKeyValueStore.default.synchronize()
+        print("🔄 수동 iCloud 동기화 요청됨")
     }
 
     // MARK: - 달력 생성
@@ -91,8 +116,11 @@ class CalendarViewController: UIViewController {
         isNextMonth = true
         generateCalendar()
     }
+
     @objc private func todosUpdated() {
-        calendarView.collectionView.reloadData()
+        DispatchQueue.main.async {
+            self.calendarView.collectionView.reloadData()
+        }
     }
 }
 
@@ -143,10 +171,10 @@ extension CalendarViewController: UICollectionViewDataSource {
             separator.backgroundColor = UIColor.lightGray.withAlphaComponent(0.3)
             cell.contentView.addSubview(separator)
 
-            separator.snp.makeConstraints { make in
-                make.leading.trailing.equalToSuperview()
-                make.bottom.equalToSuperview()
-                make.height.equalTo(0.5)
+            separator.snp.makeConstraints {
+                $0.leading.trailing.equalToSuperview()
+                $0.bottom.equalToSuperview()
+                $0.height.equalTo(0.5)
             }
         }
     }

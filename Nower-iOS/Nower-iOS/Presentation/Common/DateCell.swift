@@ -27,6 +27,14 @@ class DateCell: UICollectionViewCell {
     }()
     private let backgroundHighlightView = UIView()
 
+    private let moreLabel: UILabel = {
+        let label = UILabel()
+        label.text = ""
+        label.font = UIFont.systemFont(ofSize: 10)
+        label.textColor = .lightGray
+        return label
+    }()
+
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupUI()
@@ -62,47 +70,47 @@ class DateCell: UICollectionViewCell {
     }
 
     func configure(day: Int, todos: [TodoItem], isToday: Bool, isSelected: Bool) {
-        dayLabel.text = "\(day)"
-        eventStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        DispatchQueue.main.async {
+            self.dayLabel.text = "\(day)"
+            self.eventStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
 
-        let maxVisibleEvents = 4
-        let limitedEvents = todos.prefix(maxVisibleEvents)
+            let maxVisibleEvents = 4
+            let limitedEvents = todos.prefix(maxVisibleEvents)
 
-        for todo in limitedEvents {
-            let capsule = EventCapsuleView()
-            capsule.configure(title: todo.text, color: AppColors.color(for: todo.colorName))
-            eventStackView.addArrangedSubview(capsule)
+            for todo in limitedEvents {
+                let capsule = EventCapsuleView()
+                capsule.configure(title: todo.text, color: AppColors.color(for: todo.colorName))
+                self.eventStackView.addArrangedSubview(capsule)
 
-            capsule.snp.makeConstraints {
-                $0.leading.trailing.equalToSuperview().inset(2)
+                capsule.snp.makeConstraints {
+                    $0.leading.trailing.equalToSuperview().inset(2)
+                }
             }
-        }
 
-        if todos.count > maxVisibleEvents {
-            let moreLabel = UILabel()
-            moreLabel.text = "+\(todos.count - maxVisibleEvents)개"
-            moreLabel.font = UIFont.systemFont(ofSize: 10)
-            moreLabel.textColor = .lightGray
-            eventStackView.addArrangedSubview(moreLabel)
-        }
+            if todos.count > maxVisibleEvents {
+                self.moreLabel.text = "+\(todos.count - maxVisibleEvents)개"
+                self.eventStackView.addArrangedSubview(self.moreLabel)
+            }
 
-        backgroundHighlightView.backgroundColor = .clear
-        backgroundHighlightView.layer.borderWidth = 0
-        dayLabel.textColor = AppColors.textPrimary
+            self.dayLabel.textColor = AppColors.textPrimary
 
-        if isToday {
-            dayLabel.textColor = .systemBlue
-        }
+            if isToday {
+                self.dayLabel.textColor = .systemBlue
+            }
 
-        if isSelected {
-            backgroundHighlightView.backgroundColor = UIColor.systemGray4.withAlphaComponent(0.5)
+            if isSelected {
+                self.backgroundHighlightView.backgroundColor = UIColor.systemGray4.withAlphaComponent(0.5)
+            } else {
+                self.backgroundHighlightView.backgroundColor = .clear
+            }
         }
     }
 
     func configureEmpty() {
-        dayLabel.text = ""
-        backgroundHighlightView.backgroundColor = .clear
-        backgroundHighlightView.layer.borderWidth = 0
-        eventStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        DispatchQueue.main.async {
+            self.dayLabel.text = ""
+            self.eventStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+            self.backgroundHighlightView.backgroundColor = .clear
+        }
     }
 }
