@@ -83,7 +83,7 @@ class EventManager {
         }
     }
 
-    private func loadTodos() {
+    func loadTodos() {
         guard let data = store.data(forKey: key),
                 let decoded = try? JSONDecoder().decode([TodoItem].self, from: data) else {
               todos = []
