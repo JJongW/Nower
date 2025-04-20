@@ -17,6 +17,7 @@ class NewEventViewController: UIViewController {
     var onDelete: ((TodoItem) -> Void)?
 
     private var selectedColorName: String = "skyblue"
+
     override func loadView() {
         self.view = contentView
     }
@@ -46,9 +47,7 @@ class NewEventViewController: UIViewController {
     @objc private func didTapSave() {
         guard let text = contentView.eventTextField.text, !text.isEmpty else { return }
 
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        let dateString = formatter.string(from: selectedDate)
+        let dateString = selectedDate.formatted("yyyy-MM-dd")
 
         let todo = TodoItem(
             id: existingTodo?.id ?? UUID(),

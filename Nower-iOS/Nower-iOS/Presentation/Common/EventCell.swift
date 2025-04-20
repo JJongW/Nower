@@ -28,8 +28,8 @@ class EventCell: UITableViewCell {
         titleLabel.textColor = AppColors.textPrimary
 
         contentView.addSubview(titleLabel)
-        titleLabel.snp.makeConstraints { make in
-            make.edges.equalToSuperview().inset(16)
+        titleLabel.snp.makeConstraints {
+            $0.edges.equalToSuperview().inset(16)
         }
     }
 

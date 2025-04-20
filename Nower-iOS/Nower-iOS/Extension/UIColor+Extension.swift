@@ -51,7 +51,7 @@ enum AppColors {
     static let skyblue = UIColor(hex: "#A0D2EB")
     static let peach = UIColor(hex: "#FFD6A5")
     static let lavender = UIColor(hex: "#CABBE9")
-    static let mintgreen = UIColor(hex: "#B5EAD7")
+    static let mintgreen = UIColor(hex: "#7ECCB0")
     static let coralred = UIColor(hex: "#FF968A")
 
     static func color(for name: String) -> UIColor {

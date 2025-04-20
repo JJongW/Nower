@@ -23,6 +23,7 @@ class CalendarViewController: UIViewController {
         super.viewDidLoad()
         setupCollectionView()
         generateCalendar()
+
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(icloudDidUpdate),
