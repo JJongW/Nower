@@ -18,6 +18,7 @@ struct AppColors {
     static let popupBackground = Color(hex: "#101010")
 
     static let todayHighlight = Color.gray
+    static let holidayHighlight = Color(hex: "#F0224C")
 
     static let buttonColor = Color(hex: "#101010")
     static let primaryPink = Color(hex: "#C95A71")
@@ -30,7 +31,7 @@ struct AppColors {
     static let skyblue = Color(hex: "#A0D2EB")
     static let peach = Color(hex: "#FFD6A5")
     static let lavender = Color(hex: "#CABBE9")
-    static let mintgreen = Color(hex: "#B5EAD7")
+    static let mintgreen = Color(hex: "#7ECCB0")
     static let coralred = Color(hex: "#FF968A")
 
     static func color(for name: String) -> Color {
