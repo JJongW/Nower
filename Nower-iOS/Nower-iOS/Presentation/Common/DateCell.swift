@@ -95,7 +95,7 @@ class DateCell: UICollectionViewCell {
             self.dayLabel.textColor = AppColors.textPrimary
 
             if isToday {
-                self.dayLabel.textColor = .systemBlue
+                self.dayLabel.textColor = AppColors.textHighlighted
             }
 
             if isSelected {

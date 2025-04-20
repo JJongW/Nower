@@ -10,6 +10,7 @@ enum AppColors {
 
     /// 기본 텍스트
     static let textPrimary = UIColor(hex: "#101010")
+    static let textMain = UIColor(hex: "#FFFFFF")
 
     /// 배경 색상
     static var background: UIColor {
@@ -21,13 +22,13 @@ enum AppColors {
     /// 팝업 배경
     static var popupBackground: UIColor {
         return UIColor { trait in
-            trait.userInterfaceStyle == .dark ? UIColor(hex: "#2C2C2E") : UIColor(hex: "#101010")
+            trait.userInterfaceStyle == .dark ? UIColor(hex: "#2C2C2E") : UIColor(hex: "#FEFEFE")
         }
     }
 
     /// 강조 색
     static var textHighlighted: UIColor {
-        return UIColor(hex: "#FF7E62") // 고정
+        return UIColor(hex: "#FF7E62")
     }
 
     /// 버튼 색상
@@ -50,7 +51,7 @@ enum AppColors {
     static let skyblue = UIColor(hex: "#A0D2EB")
     static let peach = UIColor(hex: "#FFD6A5")
     static let lavender = UIColor(hex: "#CABBE9")
-    static let mintgreen = UIColor(hex: "#B5EAD7")
+    static let mintgreen = UIColor(hex: "#7ECCB0")
     static let coralred = UIColor(hex: "#FF968A")
 
     static func color(for name: String) -> UIColor {

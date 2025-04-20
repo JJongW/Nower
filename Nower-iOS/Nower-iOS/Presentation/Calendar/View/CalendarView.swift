@@ -17,8 +17,34 @@ class CalendarView: UIView {
         label.textColor = AppColors.textPrimary
         return label
     }()
-    let previousButton = UIButton(type: .system)
-    let nextButton = UIButton(type: .system)
+
+    let previousButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("<", for: .normal)
+        button.titleLabel?.font = UIFont.systemFont(ofSize: 20, weight: .bold)
+        button.tintColor = AppColors.textHighlighted
+        return button
+    }()
+
+    let nextButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle(">", for: .normal)
+        button.titleLabel?.font = UIFont.systemFont(ofSize: 20, weight: .bold)
+        button.tintColor = AppColors.textHighlighted
+        return button
+    }()
+
+    private let weekdayStackView: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .horizontal
+        stack.distribution = .fillEqually
+        stack.alignment = .center
+        stack.spacing = 0
+        return stack
+    }()
+
+    let weekdays = ["S", "M", "T", "W", "T", "F", "S"]
+
     let collectionView: UICollectionView
 
     override init(frame: CGRect) {
@@ -39,18 +65,26 @@ class CalendarView: UIView {
     private func setupUI() {
         backgroundColor = .white
 
-        previousButton.setTitle("<", for: .normal)
-        nextButton.setTitle(">", for: .normal)
-
         addSubview(previousButton)
         addSubview(monthLabel)
         addSubview(nextButton)
+        addSubview(weekdayStackView)
         addSubview(collectionView)
+
+        for day in weekdays {
+            let label = UILabel()
+            label.text = day
+            label.textAlignment = .center
+            label.font = UIFont.systemFont(ofSize: 14, weight: .medium)
+            label.textColor = AppColors.textPrimary
+            weekdayStackView.addArrangedSubview(label)
+        }
 
         monthLabel.snp.makeConstraints {
             $0.top.equalTo(safeAreaLayoutGuide).offset(16)
             $0.centerX.equalToSuperview()
         }
+
         previousButton.snp.makeConstraints {
             $0.top.equalTo(safeAreaLayoutGuide).offset(16)
             $0.leading.equalToSuperview().offset(16)
@@ -63,9 +97,17 @@ class CalendarView: UIView {
             $0.width.height.equalTo(32)
         }
 
+        weekdayStackView.snp.makeConstraints {
+            $0.top.equalTo(monthLabel.snp.bottom).offset(32)
+            $0.leading.trailing.equalToSuperview().inset(8)
+            $0.height.equalTo(20)
+        }
+
         collectionView.snp.makeConstraints {
-            $0.top.equalTo(monthLabel.snp.bottom).offset(36)
-            $0.leading.trailing.bottom.equalToSuperview()
+            $0.top.equalTo(weekdayStackView.snp.bottom).offset(36)
+            $0.leading.equalToSuperview().offset(4)
+            $0.trailing.equalToSuperview().offset(-4)
+            $0.bottom.equalToSuperview()
         }
 
         collectionView.backgroundColor = .white

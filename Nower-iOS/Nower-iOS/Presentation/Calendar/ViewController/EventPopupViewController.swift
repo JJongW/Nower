@@ -39,6 +39,8 @@ class EventPopupViewController: UIViewController {
 
     private func setupUI() {
         view.backgroundColor = .white
+        tableView.dataSource = self
+        tableView.delegate = self
 
         view.addSubview(dateLabel)
         dateLabel.snp.makeConstraints {
@@ -52,8 +54,6 @@ class EventPopupViewController: UIViewController {
             $0.leading.trailing.bottom.equalToSuperview()
         }
 
-        tableView.dataSource = self
-        tableView.delegate = self
         tableView.register(EventCell.self, forCellReuseIdentifier: EventCell.identifier)
     }
 }

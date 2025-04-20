@@ -10,7 +10,15 @@ import SnapKit
 
 class EventCapsuleView: UIView {
 
-    private let titleLabel = UILabel()
+    private let titleLabel: UILabel = {
+        let label = UILabel()
+        label.font = UIFont.systemFont(ofSize: 10)
+        label.textColor = AppColors.textMain
+        label.textAlignment = .center
+        label.numberOfLines = 1
+        label.lineBreakMode = .byTruncatingTail
+        return label
+    }()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -22,15 +30,10 @@ class EventCapsuleView: UIView {
     }
 
     private func setupUI() {
-        layer.cornerRadius = 6
-
-        titleLabel.font = UIFont.systemFont(ofSize: 10)
-        titleLabel.textColor = .white
-        titleLabel.textAlignment = .center
-        titleLabel.numberOfLines = 1
-        titleLabel.lineBreakMode = .byTruncatingTail
+        self.layer.cornerRadius = 6
 
         addSubview(titleLabel)
+
         titleLabel.snp.makeConstraints {
             $0.edges.equalToSuperview().inset(4)
         }
