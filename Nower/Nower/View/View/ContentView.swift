@@ -9,7 +9,7 @@ import SwiftUI
 import Foundation
 
 struct ContentView: View {
-    let days: [String] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+    let days: [String] = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
 
     @StateObject private var viewModel = CalendarViewModel()
     @State private var newTodoText: String = ""
@@ -87,7 +87,7 @@ struct ContentView: View {
                 HStack {
                     ForEach(days, id: \..self) { day in
                         Text(day)
-                            .foregroundColor(AppColors.textColor1)
+                            .foregroundColor(day == "SUN" ? AppColors.holidayHighlight : AppColors.textColor1)
                             .font(.caption)
                             .frame(maxWidth: .infinity)
                     }
