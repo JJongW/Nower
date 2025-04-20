@@ -12,6 +12,15 @@ final class EventListViewController: UIViewController {
     var selectedDate: Date!
     private var todos: [TodoItem] = []
 
+    private let eventDateLabel: UILabel = {
+        let label = UILabel()
+        label.text = "25.04.16"
+        label.font = .systemFont(ofSize: 24, weight: .bold)
+        label.textColor = AppColors.textPrimary
+        label.numberOfLines = 1
+        return label
+    }()
+
     private let eventTableView: UITableView = {
         let tableView = UITableView()
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
@@ -19,6 +28,7 @@ final class EventListViewController: UIViewController {
         tableView.backgroundColor = UIColor(hex: "#FFFFFF")
         return tableView
     }()
+
     private let addButton: UIButton = {
         let button = UIButton()
         button.setTitle("＋", for: .normal)
@@ -39,9 +49,18 @@ final class EventListViewController: UIViewController {
         view.backgroundColor = UIColor(hex: "#FFFFFF")
         eventTableView.dataSource = self
         eventTableView.delegate = self
+        eventTableView.register(EventTableViewCell.self, forCellReuseIdentifier: "EventCell")
+
+        view.addSubview(eventDateLabel)
+        eventDateLabel.snp.makeConstraints {
+            $0.top.equalToSuperview().offset(32)
+            $0.leading.equalToSuperview().offset(20)
+        }
+
         view.addSubview(eventTableView)
         eventTableView.snp.makeConstraints {
-            $0.edges.equalToSuperview()
+            $0.top.equalTo(eventDateLabel.snp.bottom).offset(12)
+            $0.leading.trailing.bottom.equalToSuperview()
         }
 
         view.addSubview(addButton)
@@ -55,6 +74,7 @@ final class EventListViewController: UIViewController {
 
     private func loadTodos() {
         todos = EventManager.shared.todos(on: selectedDate)
+        eventDateLabel.text = selectedDate.formatted("yy.MM.dd")
         eventTableView.reloadData()
     }
 
@@ -76,53 +96,17 @@ final class EventListViewController: UIViewController {
 }
 
 extension EventListViewController: UITableViewDataSource, UITableViewDelegate {
+
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return todos.count
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
-        let todo = todos[indexPath.row]
-
-        let containerView = UIView()
-        containerView.backgroundColor = AppColors.color(for: todo.colorName)
-        containerView.layer.cornerRadius = 12
-
-        let titleLabel = UILabel()
-        titleLabel.text = todo.text
-        titleLabel.font = .systemFont(ofSize: 16, weight: .semibold)
-        titleLabel.textColor = .white
-        titleLabel.numberOfLines = 0
-
-        let subtitleLabel = UILabel()
-        subtitleLabel.text = "일상"
-        subtitleLabel.font = .systemFont(ofSize: 12)
-        subtitleLabel.textColor = .white
-
-        containerView.addSubview(titleLabel)
-        containerView.addSubview(subtitleLabel)
-
-        titleLabel.snp.makeConstraints {
-            $0.top.equalToSuperview().offset(10)
-            $0.leading.trailing.equalToSuperview().inset(12)
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: "EventCell", for: indexPath) as? EventTableViewCell else {
+            return UITableViewCell()
         }
-
-        subtitleLabel.snp.makeConstraints {
-            $0.top.equalTo(titleLabel.snp.bottom).offset(4)
-            $0.leading.trailing.equalToSuperview().inset(12)
-            $0.bottom.equalToSuperview().inset(10)
-        }
-
-        for subview in cell.contentView.subviews { subview.removeFromSuperview() }
-        cell.contentView.addSubview(containerView)
-        containerView.snp.makeConstraints {
-            $0.top.bottom.equalToSuperview().inset(6)
-            $0.leading.trailing.equalToSuperview().inset(20)
-        }
-
-        cell.backgroundColor = UIColor(hex: "#FFFFFF")
+        cell.configure(with: todos[indexPath.row])
         cell.selectionStyle = .none
-
         return cell
     }
 

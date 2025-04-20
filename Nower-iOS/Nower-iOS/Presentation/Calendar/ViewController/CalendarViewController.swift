@@ -92,7 +92,7 @@ class CalendarViewController: UIViewController {
     // MARK: - 월 표시
     private func updateMonthLabel() {
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy년 M월"
+        formatter.dateFormat = "yy MMM d"
         calendarView.monthLabel.text = formatter.string(from: currentDate)
     }
 
