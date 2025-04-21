@@ -25,6 +25,8 @@ class CalendarViewController: UIViewController {
         generateCalendar()
         setupSwipeGesture()
 
+        CalendarDataManager.shared.preloadAdjacentMonths(baseDate: currentDate)
+
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(icloudDidUpdate),
@@ -88,6 +90,24 @@ class CalendarViewController: UIViewController {
         print("🔄 수동 iCloud 동기화 요청됨")
     }
 
+    func preloadAdjacentMonths(baseDate: Date) {
+        let calendar = Calendar.current
+        let current = baseDate
+        let prev = calendar.date(byAdding: .month, value: -1, to: current)!
+        let next = calendar.date(byAdding: .month, value: 1, to: current)!
+
+        for date in [prev, current, next] {
+            let comps = calendar.dateComponents([.year, .month], from: date)
+            CalendarDataManager.shared.fetchHolidays(for: comps.year!, month: comps.month!) {
+                DispatchQueue.main.async {
+                    print("📆 미리 달력 새로고침")
+                    self.calendarView.collectionView.reloadData()
+                }
+            }
+        }
+    }
+
+
     // MARK: - 달력 생성
     private func generateCalendar() {
         days = []
@@ -103,19 +123,24 @@ class CalendarViewController: UIViewController {
             days.append("")
         }
 
-        // 날짜 채우기
         for day in 1...numberOfDays {
             days.append("\(day)")
         }
 
         updateMonthLabel()
         calendarView.collectionView.reloadData()
+
+        CalendarDataManager.shared.fetchHolidays(for: components.year ?? 2025, month: components.month ?? 1) {
+            DispatchQueue.main.async {
+                self.calendarView.collectionView.reloadData()
+            }
+        }
     }
 
     // MARK: - 월 표시
     private func updateMonthLabel() {
         let formatter = DateFormatter()
-        formatter.dateFormat = "yy MMM d"
+        formatter.dateFormat = "yy MMM"
         calendarView.monthLabel.text = formatter.string(from: currentDate)
     }
 
@@ -226,9 +251,9 @@ extension CalendarViewController: UICollectionViewDataSource {
             let calendar = Calendar.current
             let today = Date()
             let isToday = calendar.isDate(today, inSameDayAs: date)
+            let dayString = date.formatted("yyyy-MM-dd")
             let isSelected = indexPath == selectedIndexPath
-
-            cell.configure(day: day, todos: todos, isToday: isToday, isSelected: isSelected)
+            cell.configure(day: day, todos: todos, isToday: isToday, isSelected: isSelected, dateString: dayString)
         } else {
             cell.configureEmpty()
         }

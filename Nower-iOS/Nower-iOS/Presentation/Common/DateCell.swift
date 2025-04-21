@@ -27,6 +27,15 @@ class DateCell: UICollectionViewCell {
     }()
     private let backgroundHighlightView = UIView()
 
+    private let holidayLabel: UILabel = {
+        let label = UILabel()
+        label.textColor = AppColors.coralred
+        label.font = UIFont.systemFont(ofSize: 10)
+        label.textAlignment = .center
+        label.numberOfLines = 1
+        return label
+    }()
+
     private let moreLabel: UILabel = {
         let label = UILabel()
         label.text = ""
@@ -54,12 +63,18 @@ class DateCell: UICollectionViewCell {
         }
 
         backgroundHighlightView.addSubview(dayLabel)
+        backgroundHighlightView.addSubview(holidayLabel)
         backgroundHighlightView.addSubview(eventStackView)
 
         dayLabel.snp.makeConstraints {
             $0.top.equalToSuperview().offset(2)
             $0.height.equalTo(12)
             $0.centerX.equalToSuperview()
+        }
+
+        holidayLabel.snp.makeConstraints {
+            $0.top.equalTo(dayLabel.snp.bottom).offset(2)
+            $0.leading.trailing.equalToSuperview()
         }
 
         eventStackView.snp.makeConstraints {
@@ -69,7 +84,7 @@ class DateCell: UICollectionViewCell {
         }
     }
 
-    func configure(day: Int, todos: [TodoItem], isToday: Bool, isSelected: Bool) {
+    func configure(day: Int, todos: [TodoItem], isToday: Bool, isSelected: Bool, dateString: String) {
         DispatchQueue.main.async {
             self.dayLabel.text = "\(day)"
             self.eventStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
@@ -92,10 +107,15 @@ class DateCell: UICollectionViewCell {
                 self.eventStackView.addArrangedSubview(self.moreLabel)
             }
 
-            self.dayLabel.textColor = AppColors.textPrimary
-
-            if isToday {
+            if let name = CalendarDataManager.shared.holidayName(for: dateString) {
+                self.holidayLabel.text = name
+                self.dayLabel.textColor = AppColors.coralred
+            } else if isToday {
+                self.holidayLabel.text = ""
                 self.dayLabel.textColor = AppColors.textHighlighted
+            } else {
+                self.holidayLabel.text = ""
+                self.dayLabel.textColor = AppColors.textPrimary
             }
 
             if isSelected {
@@ -109,6 +129,7 @@ class DateCell: UICollectionViewCell {
     func configureEmpty() {
         DispatchQueue.main.async {
             self.dayLabel.text = ""
+            self.holidayLabel.text = ""
             self.eventStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
             self.backgroundHighlightView.backgroundColor = .clear
         }

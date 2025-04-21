@@ -12,7 +12,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // 초기 설정 또는 iCloud 동기화 트리거
         NSUbiquitousKeyValueStore.default.synchronize()
         return true
     }
@@ -24,6 +23,5 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func application(_ application: UIApplication, didDiscardSceneSessions sceneSessions: Set<UISceneSession>) {
-        // 해당 세션이 필요 없을 때 호출됨
     }
 }
