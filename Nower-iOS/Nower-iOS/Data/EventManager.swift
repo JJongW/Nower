@@ -25,20 +25,17 @@ class EventManager {
     }
 
     func addTodo(_ todo: TodoItem) {
-        loadTodos() // 최신 iCloud 데이터 불러오기
+        loadTodos()
 
-        // iCloud 서버에 있는 기존 데이터 읽기
         let serverData = store.data(forKey: key)
         var serverTodos: [TodoItem] = []
         if let data = serverData, let decoded = try? JSONDecoder().decode([TodoItem].self, from: data) {
             serverTodos = decoded
         }
 
-        // 서버에 있던 데이터 + 현재 추가하려는 Todo 병합
         var mergedTodos = serverTodos
         mergedTodos.append(todo)
 
-        // 중복 제거 (id 기준)
         let uniqueTodos = Array(Set(mergedTodos))
 
         todos = uniqueTodos
@@ -48,20 +45,16 @@ class EventManager {
     func deleteTodo(_ todo: TodoItem) {
         loadTodos()
 
-        // 서버에 있는 기존 데이터 읽기
         var serverTodos: [TodoItem] = []
         if let data = store.data(forKey: key),
            let decoded = try? JSONDecoder().decode([TodoItem].self, from: data) {
             serverTodos = decoded
         }
 
-        // 서버 데이터와 현재 데이터 병합
         var mergedTodos = serverTodos + todos
 
-        // 삭제할 TodoItem 제외
         mergedTodos.removeAll { $0.id == todo.id }
 
-        // 중복 제거
         let uniqueTodos = Array(Set(mergedTodos))
 
         todos = uniqueTodos
