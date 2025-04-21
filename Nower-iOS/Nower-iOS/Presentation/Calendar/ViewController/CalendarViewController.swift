@@ -23,6 +23,7 @@ class CalendarViewController: UIViewController {
         super.viewDidLoad()
         setupCollectionView()
         generateCalendar()
+        setupSwipeGesture()
 
         NotificationCenter.default.addObserver(
             self,
@@ -51,6 +52,27 @@ class CalendarViewController: UIViewController {
     private func setupCollectionView() {
         calendarView.collectionView.dataSource = self
         calendarView.collectionView.delegate = self
+    }
+
+    private func setupSwipeGesture() {
+        let swipeLeft = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipe(_:)))
+        swipeLeft.direction = .left
+        calendarView.collectionView.addGestureRecognizer(swipeLeft)
+
+        let swipeRight = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipe(_:)))
+        swipeRight.direction = .right
+        calendarView.collectionView.addGestureRecognizer(swipeRight)
+    }
+
+    @objc private func handleSwipe(_ gesture: UISwipeGestureRecognizer) {
+        switch gesture.direction {
+        case .left:
+            didTapNextMonth()
+        case .right:
+            didTapPreviousMonth()
+        default:
+            break
+        }
     }
 
     @objc private func icloudDidUpdate(notification: Notification) {
@@ -98,17 +120,13 @@ class CalendarViewController: UIViewController {
     }
 
     // MARK: - 월 이동
-    @objc private func moveMonth(by value: Int) {
-        guard let newDate = Calendar.current.date(byAdding: .month, value: value, to: currentDate) else { return }
-        currentDate = newDate
-        generateCalendar()
-    }
 
     @objc private func didTapPreviousMonth() {
         guard let newDate = Calendar.current.date(byAdding: .month, value: -1, to: currentDate) else { return }
         currentDate = newDate
         isNextMonth = false
         generateCalendar()
+        animateCalendarTransition(direction: .transitionFlipFromLeft)
     }
 
     @objc private func didTapNextMonth() {
@@ -116,6 +134,19 @@ class CalendarViewController: UIViewController {
         currentDate = newDate
         isNextMonth = true
         generateCalendar()
+        animateCalendarTransition(direction: .transitionFlipFromLeft)
+    }
+
+    private func animateCalendarTransition(direction: UIView.AnimationOptions) {
+        generateCalendar()
+
+        UIView.transition(with: calendarView.collectionView,
+                          duration: 0.3,
+                          options: [direction, .transitionCrossDissolve],
+                          animations: {
+                              self.calendarView.collectionView.reloadData()
+                          },
+                          completion: nil)
     }
 
     @objc private func todosUpdated() {
