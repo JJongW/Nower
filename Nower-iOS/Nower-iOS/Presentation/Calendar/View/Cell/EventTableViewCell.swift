@@ -38,6 +38,7 @@ class EventTableViewCell: UITableViewCell {
     }
 
     private func setupUI() {
+        backgroundColor = AppColors.background
         contentView.addSubview(containerView)
         containerView.addSubview(eventTitleLabel)
         containerView.addSubview(eventSubtitleLabel)

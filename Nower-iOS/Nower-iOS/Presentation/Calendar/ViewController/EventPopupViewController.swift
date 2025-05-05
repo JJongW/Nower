@@ -7,67 +7,57 @@
 import UIKit
 import SnapKit
 
-class EventPopupViewController: UIViewController {
+final class EventPopupViewController: UIViewController {
 
-    private let dateLabel: UILabel = {
-        let label = UILabel()
-        label.font = UIFont.boldSystemFont(ofSize: 20)
-        label.textAlignment = .center
-        return label
-    }()
+    var selectedDate: Date!
+    var onSave: ((TodoItem) -> Void)?
 
-    private let tableView = UITableView()
-    private var todos: [TodoItem]
-    private let selectedDate: Date
+    private let popupView = NewEventView()
+    private let viewModel: CalendarViewModel
 
-    init(dateText: String, date: Date, todos: [TodoItem]) {
-        self.selectedDate = date
-        self.todos = todos
+    init(viewModel: CalendarViewModel) {
+        self.viewModel = viewModel
         super.init(nibName: nil, bundle: nil)
-        dateLabel.text = dateText
-        modalPresentationStyle = .pageSheet
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
+    override func loadView() {
+        self.view = popupView
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupUI()
+
+        popupView.dateLabel.text = selectedDate.formatted("yy.MM.dd")
+
+        popupView.saveButton.addTarget(self, action: #selector(saveTapped), for: .touchUpInside)
+        popupView.cancelButton.addTarget(self, action: #selector(cancelTapped), for: .touchUpInside)
+
+        popupView.colorOptions.forEach { button in
+            button.addTarget(self, action: #selector(colorSelected(_:)), for: .touchUpInside)
+        }
     }
 
-    private func setupUI() {
-        view.backgroundColor = .white
-        tableView.dataSource = self
-        tableView.delegate = self
+    @objc private func saveTapped() {
+        guard let text = popupView.textField.text, !text.isEmpty else { return }
+        let colorName = popupView.selectedColorName
 
-        view.addSubview(dateLabel)
-        dateLabel.snp.makeConstraints {
-            $0.top.equalTo(view.safeAreaLayoutGuide).offset(16)
-            $0.centerX.equalToSuperview()
-        }
+        viewModel.todoText = text
+        viewModel.selectedColorName = colorName
+        viewModel.selectedDate = selectedDate
+        viewModel.addTodo()
 
-        view.addSubview(tableView)
-        tableView.snp.makeConstraints {
-            $0.top.equalTo(dateLabel.snp.bottom).offset(16)
-            $0.leading.trailing.bottom.equalToSuperview()
-        }
-
-        tableView.register(EventCell.self, forCellReuseIdentifier: EventCell.identifier)
-    }
-}
-
-extension EventPopupViewController: UITableViewDataSource, UITableViewDelegate {
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return todos.count
+        dismiss(animated: true)
     }
 
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        guard let cell = tableView.dequeueReusableCell(withIdentifier: EventCell.identifier, for: indexPath) as? EventCell else {
-            return UITableViewCell()
-        }
-        cell.configure(title: todos[indexPath.row].text)
-        return cell
+    @objc private func cancelTapped() {
+        dismiss(animated: true)
+    }
+
+    @objc private func colorSelected(_ sender: UIButton) {
+        popupView.selectColor(sender)
     }
 }
