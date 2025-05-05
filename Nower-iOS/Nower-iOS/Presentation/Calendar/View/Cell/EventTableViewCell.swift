@@ -44,6 +44,7 @@ class EventTableViewCell: UITableViewCell {
         containerView.addSubview(eventSubtitleLabel)
 
         containerView.layer.cornerRadius = 12
+
         containerView.snp.makeConstraints {
             $0.top.bottom.equalToSuperview().inset(4)
             $0.leading.equalToSuperview().offset(20)

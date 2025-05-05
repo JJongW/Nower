@@ -8,8 +8,9 @@ import UIKit
 import SnapKit
 
 final class NewEventViewController: UIViewController {
+    var coordinator: AppCoordinator?
     var selectedDate: Date!
-    var viewModel: CalendarViewModel!  // ✅ 여기에 선언이 있어야 함
+    var viewModel: CalendarViewModel!
 
     private let popupView = NewEventView()
 
@@ -38,7 +39,12 @@ final class NewEventViewController: UIViewController {
         viewModel.selectedDate = selectedDate
         viewModel.addTodo()
 
-        dismiss(animated: true)
+        dismiss(animated: true) {
+            if let vc = self.coordinator?.navigationController.topViewController {
+                vc.showToast(message: "✅ 일정이 추가되었습니다")
+            }
+            self.coordinator?.returnToBack()
+        }
     }
 
     @objc private func cancelTapped() {

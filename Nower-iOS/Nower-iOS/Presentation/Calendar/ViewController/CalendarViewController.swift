@@ -7,6 +7,7 @@ import UIKit
 
 final class CalendarViewController: UIViewController {
 
+    var coordinator: AppCoordinator?
     private let calendarView = CalendarView()
     private var currentDate = Date()
     private var days: [String] = []
@@ -56,7 +57,7 @@ final class CalendarViewController: UIViewController {
             name: UIApplication.didBecomeActiveNotification,
             object: nil
         )
-        NotificationCenter.default.addObserver(self, selector: #selector(todosUpdated), name: .init("TodosUpdated"), object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(todosUpdated), name: .todosUpdated, object: nil)
 
         calendarView.previousButton.addTarget(self, action: #selector(didTapPreviousMonth), for: .touchUpInside)
         calendarView.nextButton.addTarget(self, action: #selector(didTapNextMonth), for: .touchUpInside)
@@ -179,6 +180,7 @@ final class CalendarViewController: UIViewController {
 
     @objc private func todosUpdated() {
         DispatchQueue.main.async {
+            self.viewModel.loadAllTodos()
             self.calendarView.collectionView.reloadData()
         }
     }
@@ -201,20 +203,9 @@ extension CalendarViewController: UICollectionViewDataSource {
         let hasTodos = !viewModel.todos(for: selectedDate).isEmpty
 
         if hasTodos {
-            let vc = EventListViewController()
-            vc.selectedDate = selectedDate
-            vc.viewModel = viewModel
-            present(vc, animated: true)
+            coordinator?.presentEventList(for: selectedDate, viewModel: viewModel)
         } else {
-            let addVC = NewEventViewController()
-            addVC.selectedDate = selectedDate
-            addVC.viewModel = viewModel
-            if let sheet = addVC.sheetPresentationController {
-                sheet.detents = [.medium()]
-                sheet.prefersGrabberVisible = true
-            }
-            addVC.modalPresentationStyle = .pageSheet
-            present(addVC, animated: true)
+            coordinator?.presentNewEvent(for: selectedDate, viewModel: viewModel)
         }
     }
 
@@ -251,7 +242,20 @@ extension CalendarViewController: UICollectionViewDataSource {
             let dayString = date.formatted("yyyy-MM-dd")
             let isSelected = indexPath == selectedIndexPath
             let holidayName = holidayUseCase.holidayName(for: date)
-            cell.configure(day: day, todos: todos, isToday: isToday, isSelected: isSelected, dateString: dayString, holidayName: holidayName)
+            let weekday = Calendar.current.component(.weekday, from: date)
+            let isSunday = weekday == 1
+            let isSaturday = weekday == 7
+
+            cell.configure(
+                day: day,
+                todos: todos,
+                isToday: isToday,
+                isSelected: isSelected,
+                dateString: dayString,
+                holidayName: holidayName,
+                isSunday: isSunday,
+                isSaturday: isSaturday
+            )
         } else {
             cell.configureEmpty()
         }
