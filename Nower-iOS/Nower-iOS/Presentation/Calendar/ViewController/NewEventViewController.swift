@@ -7,81 +7,45 @@
 import UIKit
 import SnapKit
 
-class NewEventViewController: UIViewController {
-
-    private let contentView = NewEventView()
+final class NewEventViewController: UIViewController {
     var selectedDate: Date!
-    var existingTodo: TodoItem?
+    var viewModel: CalendarViewModel!  // ✅ 여기에 선언이 있어야 함
 
-    var onSave: ((TodoItem) -> Void)?
-    var onDelete: ((TodoItem) -> Void)?
-
-    private var selectedColorName: String = "skyblue"
+    private let popupView = NewEventView()
 
     override func loadView() {
-        self.view = contentView
+        self.view = popupView
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        if let todo = existingTodo {
-            contentView.eventTextField.text = todo.text
-            selectedColorName = todo.colorName
-            contentView.deleteButton.isHidden = false
-            contentView.saveButton.setTitle("저장", for: .normal)
-        }
+        popupView.dateLabel.text = selectedDate.formatted("yy.MM.dd")
 
-        bindActions()
-        highlightSelectedColor()
-    }
-    private func bindActions() {
-        contentView.saveButton.addTarget(self, action: #selector(didTapSave), for: .touchUpInside)
-        contentView.deleteButton.addTarget(self, action: #selector(didTapDelete), for: .touchUpInside)
+        popupView.saveButton.addTarget(self, action: #selector(saveTapped), for: .touchUpInside)
+        popupView.cancelButton.addTarget(self, action: #selector(cancelTapped), for: .touchUpInside)
 
-        contentView.colorButtons.forEach { button in
+        popupView.colorOptions.forEach { button in
             button.addTarget(self, action: #selector(colorSelected(_:)), for: .touchUpInside)
         }
     }
 
-    @objc private func didTapSave() {
-        guard let text = contentView.eventTextField.text, !text.isEmpty else { return }
+    @objc private func saveTapped() {
+        guard let text = popupView.textField.text, !text.isEmpty else { return }
 
-        let dateString = selectedDate.formatted("yyyy-MM-dd")
+        viewModel.todoText = text
+        viewModel.selectedColorName = popupView.selectedColorName
+        viewModel.selectedDate = selectedDate
+        viewModel.addTodo()
 
-        let todo = TodoItem(
-            id: existingTodo?.id ?? UUID(),
-            text: text,
-            isRepeating: false,
-            date: dateString,
-            colorName: selectedColorName
-        )
-
-        onSave?(todo)
-        NotificationCenter.default.post(name: .init("TodosUpdated"), object: nil)
         dismiss(animated: true)
     }
 
-    @objc private func didTapDelete() {
-        guard let todo = existingTodo else { return }
-        onDelete?(todo)
-        NotificationCenter.default.post(name: .init("TodosUpdated"), object: nil)
+    @objc private func cancelTapped() {
         dismiss(animated: true)
     }
 
     @objc private func colorSelected(_ sender: UIButton) {
-        let index = sender.tag
-        selectedColorName = contentView.colors[index]
-
-        contentView.colorButtons.forEach {
-            $0.layer.borderColor = UIColor.lightGray.cgColor
-        }
-        sender.layer.borderColor = UIColor.black.cgColor
-    }
-
-    private func highlightSelectedColor() {
-        guard let index = contentView.colors.firstIndex(of: selectedColorName) else { return }
-        let button = contentView.colorButtons[index]
-        button.layer.borderColor = UIColor.black.cgColor
+        popupView.selectColor(sender)
     }
 }

@@ -17,6 +17,9 @@ class EventCapsuleView: UIView {
         label.textAlignment = .center
         label.numberOfLines = 1
         label.lineBreakMode = .byTruncatingTail
+        label.adjustsFontSizeToFitWidth = false
+        label.minimumScaleFactor = 1.0
+        label.setContentHuggingPriority(.defaultLow, for: .horizontal)
         return label
     }()
 

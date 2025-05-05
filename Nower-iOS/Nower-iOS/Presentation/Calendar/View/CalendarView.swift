@@ -7,13 +7,21 @@
 import UIKit
 import SnapKit
 
-class CalendarView: UIView {
+final class CalendarView: UIView {
 
     let monthLabel: UILabel = {
         let label = UILabel()
-        label.font = UIFont.systemFont(ofSize: 24, weight: .bold)
-        label.text = "2025.4"
+        label.font = .systemFont(ofSize: 24, weight: .bold)
         label.textAlignment = .center
+        label.textColor = AppColors.textPrimary
+        return label
+    }()
+
+    let textLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 12, weight: .semibold)
+        label.textAlignment = .left
+        label.text = "열심히 테스트 중입니다!! 아직! v0.0.1"
         label.textColor = AppColors.textPrimary
         return label
     }()
@@ -21,7 +29,7 @@ class CalendarView: UIView {
     let previousButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("<", for: .normal)
-        button.titleLabel?.font = UIFont.systemFont(ofSize: 20, weight: .bold)
+        button.titleLabel?.font = .systemFont(ofSize: 20, weight: .medium)
         button.tintColor = AppColors.textHighlighted
         return button
     }()
@@ -29,7 +37,7 @@ class CalendarView: UIView {
     let nextButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle(">", for: .normal)
-        button.titleLabel?.font = UIFont.systemFont(ofSize: 20, weight: .bold)
+        button.titleLabel?.font = .systemFont(ofSize: 20, weight: .medium)
         button.tintColor = AppColors.textHighlighted
         return button
     }()
@@ -45,16 +53,19 @@ class CalendarView: UIView {
 
     let weekdays = ["S", "M", "T", "W", "T", "F", "S"]
 
-    let collectionView: UICollectionView
-
-    override init(frame: CGRect) {
+    let collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
-        layout.minimumInteritemSpacing = 0
+        layout.minimumInteritemSpacing = 8
         layout.minimumLineSpacing = 8
 
-        self.collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
-        super.init(frame: frame)
+        let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        collectionView.backgroundColor = .white
+        collectionView.register(DateCell.self, forCellWithReuseIdentifier: DateCell.identifier)
+        return collectionView
+    }()
 
+    override init(frame: CGRect) {
+        super.init(frame: frame)
         setupUI()
     }
 
@@ -65,9 +76,10 @@ class CalendarView: UIView {
     private func setupUI() {
         backgroundColor = .white
 
-        addSubview(previousButton)
         addSubview(monthLabel)
+        addSubview(previousButton)
         addSubview(nextButton)
+        addSubview(textLabel)
         addSubview(weekdayStackView)
         addSubview(collectionView)
 
@@ -81,36 +93,36 @@ class CalendarView: UIView {
         }
 
         monthLabel.snp.makeConstraints {
-            $0.top.equalTo(safeAreaLayoutGuide).offset(16)
+            $0.top.equalTo(safeAreaLayoutGuide.snp.top).offset(16)
             $0.centerX.equalToSuperview()
         }
 
         previousButton.snp.makeConstraints {
-            $0.top.equalTo(safeAreaLayoutGuide).offset(16)
-            $0.leading.equalToSuperview().offset(16)
-            $0.width.height.equalTo(32)
+            $0.centerY.equalTo(monthLabel)
+            $0.leading.equalToSuperview().offset(20)
         }
 
         nextButton.snp.makeConstraints {
-            $0.top.equalTo(safeAreaLayoutGuide).offset(16)
-            $0.trailing.equalToSuperview().offset(-16)
-            $0.width.height.equalTo(32)
+            $0.centerY.equalTo(monthLabel)
+            $0.trailing.equalToSuperview().inset(20)
+        }
+
+        textLabel.snp.makeConstraints {
+            $0.top.equalTo(monthLabel.snp.bottom).offset(48)
+            $0.leading.equalToSuperview().offset(20)
         }
 
         weekdayStackView.snp.makeConstraints {
-            $0.top.equalTo(monthLabel.snp.bottom).offset(32)
+            $0.top.equalTo(textLabel.snp.bottom).offset(36)
             $0.leading.trailing.equalToSuperview().inset(8)
             $0.height.equalTo(20)
         }
 
         collectionView.snp.makeConstraints {
             $0.top.equalTo(weekdayStackView.snp.bottom).offset(36)
-            $0.leading.equalToSuperview().offset(4)
-            $0.trailing.equalToSuperview().offset(-4)
+            $0.leading.equalToSuperview().offset(8)
+            $0.trailing.equalToSuperview().offset(-8)
             $0.bottom.equalToSuperview()
         }
-
-        collectionView.backgroundColor = .white
-        collectionView.register(DateCell.self, forCellWithReuseIdentifier: DateCell.identifier)
     }
 }
