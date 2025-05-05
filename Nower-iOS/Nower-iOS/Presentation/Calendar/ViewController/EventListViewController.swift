@@ -7,6 +7,8 @@
 import UIKit
 
 final class EventListViewController: UIViewController {
+
+    var coordinator: AppCoordinator?
     var selectedDate: Date!
     var viewModel: CalendarViewModel!
 
@@ -80,6 +82,7 @@ final class EventListViewController: UIViewController {
         let newVC = NewEventViewController()
         newVC.selectedDate = selectedDate
         newVC.viewModel = viewModel
+        newVC.coordinator = self.coordinator
 
         if let sheet = newVC.sheetPresentationController {
             sheet.detents = [.medium()]
@@ -110,6 +113,7 @@ extension EventListViewController: UITableViewDataSource, UITableViewDelegate {
         editVC.todo = todo
         editVC.viewModel = viewModel
         editVC.selectedDate = selectedDate
+        editVC.coordinator = self.coordinator
 
         if let sheet = editVC.sheetPresentationController {
             sheet.detents = [.medium()]

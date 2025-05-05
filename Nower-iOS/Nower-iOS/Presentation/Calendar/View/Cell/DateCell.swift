@@ -91,7 +91,7 @@ final class DateCell: UICollectionViewCell {
     }
 
     // MARK: - Configuration
-    func configure(day: Int, todos: [TodoItem], isToday: Bool, isSelected: Bool, dateString: String, holidayName: String?) {
+    func configure(day: Int, todos: [TodoItem], isToday: Bool, isSelected: Bool, dateString: String, holidayName: String?, isSunday: Bool, isSaturday: Bool) {
         dayLabel.text = "\(day)"
         dayLabel.textColor = AppColors.textPrimary
         eventStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
@@ -106,6 +106,12 @@ final class DateCell: UICollectionViewCell {
             dayLabel.textColor = AppColors.coralred
         } else {
             holidayLabel.text = ""
+            if isSunday {
+                dayLabel.textColor = AppColors.coralred
+            }
+            if isSaturday {
+                dayLabel.textColor = AppColors.skyblue
+            }
         }
 
         let maxVisibleEvents = 4

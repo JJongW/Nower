@@ -16,8 +16,6 @@ final class CalendarViewModel: ObservableObject {
     private let loadAllTodosUseCase: LoadAllTodosUseCase
     private let holidayUseCase: HolidayUseCase
 
-    private let store = NSUbiquitousKeyValueStore.default
-
     @Published var todosByDate: [String: [TodoItem]] = [:]
     @Published var selectedDate: Date?
     @Published var todoText: String = ""
@@ -44,8 +42,11 @@ final class CalendarViewModel: ObservableObject {
     }
 
     func loadAllTodos() {
+        NSUbiquitousKeyValueStore.default.synchronize()
+
         todosByDate = [:]
         let allTodos = loadAllTodosUseCase.execute()
+        print("📦 allTodos:", allTodos)
         for todo in allTodos {
             todosByDate[todo.date, default: []].append(todo)
         }
@@ -68,29 +69,32 @@ final class CalendarViewModel: ObservableObject {
         guard let date = selectedDate, !todoText.isEmpty else { return }
         let newTodo = TodoItem(text: todoText, isRepeating: isRepeating, date: date.toDateString(), colorName: selectedColorName)
         addTodoUseCase.execute(todo: newTodo)
-        store.synchronize()
+        NSUbiquitousKeyValueStore.default.synchronize()
         loadAllTodos()
+        NotificationCenter.default.post(name: .todosUpdated, object: nil)
     }
 
     func deleteTodo(_ todo: TodoItem) {
         deleteTodoUseCase.execute(todo: todo)
-        store.synchronize()
+        NSUbiquitousKeyValueStore.default.synchronize()
         loadAllTodos()
+        NotificationCenter.default.post(name: .todosUpdated, object: nil)
     }
 
     func updateTodo(original: TodoItem, updatedText: String, updatedColor: String) {
         let updatedTodo = TodoItem(text: updatedText, isRepeating: isRepeating, date: original.date, colorName: updatedColor)
         updateTodoUseCase.execute(original: original, updated: updatedTodo)
-        store.synchronize()
+        NSUbiquitousKeyValueStore.default.synchronize()
         loadAllTodos()
+        NotificationCenter.default.post(name: .todosUpdated, object: nil)
     }
 
     func debugPrintICloudTodos() {
-        store.synchronize()  // ✅ 동기화 먼저
+        NSUbiquitousKeyValueStore.default.synchronize()
 
         print("🔍 [iCloud] todos 확인 시작")
 
-        guard let saved = store.array(forKey: "SavedTodos") as? [Data] else {
+        guard let saved = NSUbiquitousKeyValueStore.default.array(forKey: "SavedTodos") as? [Data] else {
             print("⚠️ iCloud 저장소에서 'todos' 키에 해당하는 배열이 없음")
             return
         }

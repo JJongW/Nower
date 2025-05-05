@@ -83,12 +83,20 @@ final class CalendarView: UIView {
         addSubview(weekdayStackView)
         addSubview(collectionView)
 
-        for day in weekdays {
+        for (index, day) in weekdays.enumerated() {
             let label = UILabel()
             label.text = day
             label.textAlignment = .center
             label.font = UIFont.systemFont(ofSize: 14, weight: .medium)
-            label.textColor = AppColors.textPrimary
+
+            if index == 0 {
+                label.textColor = AppColors.coralred
+            } else if index == 6 {
+                label.textColor = AppColors.skyblue
+            } else {
+                label.textColor = AppColors.textPrimary
+            }
+
             weekdayStackView.addArrangedSubview(label)
         }
 

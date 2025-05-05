@@ -29,16 +29,19 @@ final class TodoRepositoryImpl: TodoRepository {
     }
 
     func addTodo(_ todo: TodoItem) {
+        loadFromiCloud()
         todoStorage.append(todo)
         saveToiCloud()
     }
 
     func deleteTodo(_ todo: TodoItem) {
+        loadFromiCloud()
         todoStorage.removeAll { $0.id == todo.id }
         saveToiCloud()
     }
 
     func updateTodo(_ original: TodoItem, with updated: TodoItem) {
+        loadFromiCloud()
         if let index = todoStorage.firstIndex(where: { $0.id == original.id }) {
             todoStorage[index] = updated
             saveToiCloud()
@@ -46,6 +49,7 @@ final class TodoRepositoryImpl: TodoRepository {
     }
 
     func allTodos() -> [TodoItem] {
+        print("🧾 현재 todoStorage 수:", todoStorage.count)
         return todoStorage
     }
 
@@ -54,23 +58,27 @@ final class TodoRepositoryImpl: TodoRepository {
     private let iCloudKey = "SavedTodos"
 
     private func saveToiCloud() {
-        let encoded = todoStorage.compactMap { try? JSONEncoder().encode($0) }
+        let encoded = todoStorage.compactMap { try? JSONEncoder().encode($0) } // ✅ 각각 인코딩
         store.set(encoded, forKey: iCloudKey)
         store.synchronize()
+        print("✅ iCloud에 [Data] 배열 저장 완료 (\(encoded.count)개)")
     }
 
     func loadFromiCloud() {
-        guard let data = store.data(forKey: iCloudKey),
-              let decoded = try? JSONDecoder().decode([TodoItem].self, from: data) else {
+        guard let array = store.array(forKey: iCloudKey) as? [Data] else {
+            print("⚠️ iCloud에서 불러올 [Data] 배열 없음")
             todoStorage = []
             return
         }
+
+        let decoded = array.compactMap { try? JSONDecoder().decode(TodoItem.self, from: $0) }
         todoStorage = decoded
-        print("iCloud에서 불러온 데이터")
+        print("✅ iCloud에서 불러온 todo: \(decoded.count)개")
     }
 
     @objc private func handleiCloudUpdate(_ notification: Notification) {
-        print("📥 iCloud 동기화 감지됨 - 일정 로드")
+        print("📥 iCloud 동기화 감지됨")
+        store.synchronize() // ✅ 수동 동기화
         loadFromiCloud()
         NotificationCenter.default.post(name: .init("TodosUpdated"), object: nil)
     }

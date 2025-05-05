@@ -7,9 +7,10 @@
 import UIKit
 
 final class EditEventBottomSheetViewController: UIViewController {
+    var coordinator: AppCoordinator?
     var todo: TodoItem!
     var selectedDate: Date!
-    var viewModel: CalendarViewModel!  // ✅ 이게 반드시 있어야 함
+    var viewModel: CalendarViewModel!
 
     private let popupView = NewEventView()
 
@@ -44,17 +45,31 @@ final class EditEventBottomSheetViewController: UIViewController {
 
         let updatedColor = popupView.selectedColorName
         viewModel.updateTodo(original: todo, updatedText: updatedText, updatedColor: updatedColor)
-
-        dismiss(animated: true)
+        dismiss(animated: true) {
+            if let vc = self.coordinator?.navigationController.topViewController {
+                vc.showToast(message: "🛠️ 일정이 수정되었습니다")
+            }
+            self.coordinator?.returnToBack()
+        }
     }
 
     @objc private func deleteTapped() {
         viewModel.deleteTodo(todo)
-        dismiss(animated: true)
+        dismiss(animated: true) {
+            DispatchQueue.main.async {
+                if let vc = self.coordinator?.navigationController.topViewController {
+                    print("일정 삭제됨.")
+                    vc.showToast(message: "❌ 일정이 삭제되었습니다")
+                }
+                self.coordinator?.returnToBack()
+            }
+        }
     }
 
     @objc private func cancelTapped() {
-        dismiss(animated: true)
+        dismiss(animated: true) {
+            self.coordinator?.returnToBack()
+        }
     }
 
     @objc private func colorSelected(_ sender: UIButton) {
