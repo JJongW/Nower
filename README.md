@@ -10,29 +10,33 @@
 
 <h2>📐 아키텍처 구조</h2>
 
-<pre>
-.
-├── Presentation
-│   ├── View
-│   ├── ViewController
-│   └── ViewModel
-├── Domain
-│   ├── Entity
-│   ├── Repository
-│   └── UseCase
-├── Data
-│   ├── RepositoryImpl
-│   └── API (Holiday, etc)
-├── Resource
-│   ├── Assets
-│   └── AppColors.swift
-├── Supporting
-│   ├── SceneDelegate.swift
-│   └── AppDelegate.swift
-└── Utils
-    ├── Extensions
-    └── Coordinator
-</pre>
+
+```mermaid
+graph TD
+    UI["🖼️ UI Layer<br/>(ViewController)"] --> VM["🧠 ViewModel"]
+    VM --> UC["🧩 UseCase"]
+    UC --> RP["📦 Repository<br/>(Protocol)"]
+    RP --> RPI["💽 RepositoryImpl"]
+    RPI --> iCloud["☁️ iCloud Store"]
+    RPI --> API["🌐 Moya API (공휴일)"]
+
+    subgraph Presentation Layer
+        UI
+        VM
+    end
+
+    subgraph Domain Layer
+        UC
+        RP
+    end
+
+    subgraph Data Layer
+        RPI
+        iCloud
+        API
+    end
+```
+
 
 <h2>🧠 Clean Architecture 흐름</h2>
 
