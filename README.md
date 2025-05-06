@@ -1,9 +1,9 @@
-<h1>📂 Nower iOS App (v0.0.1)</h1>
+<h1>📂 Nower iOS & macOS App (v0.0.1)</h1>
 
 <h2>📌 소개</h2>
 <p>
   <strong>Nower</strong>는 <code>iCloud</code> 기반의 Todo 및 캘린더 앱으로, 
-  <strong>Clean Architecture</strong>에 따라 Presentation, Domain, Data 레이어가 분리되어 유지보수성과 테스트가 용이하게 설계된 <code>iOS UIKit</code> 앱입니다.
+  <strong>Clean Architecture</strong>에 따라 Presentation, Domain, Data 레이어가 분리되어 유지보수성과 테스트가 용이하게 설계된 <code>macOS SwiftUI</code>, <code>iOS UIKit</code> 앱입니다.
 </p>
 
 <hr />
