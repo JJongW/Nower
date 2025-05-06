@@ -66,17 +66,17 @@ final class CalendarViewModel: ObservableObject {
     }
 
     func addTodo() {
-        loadAllTodos()
         guard let date = selectedDate, !todoText.isEmpty else { return }
         let newTodo = TodoItem(text: todoText, isRepeating: isRepeating, date: date.toDateString(), colorName: selectedColorName)
         addTodoUseCase.execute(todo: newTodo)
         NSUbiquitousKeyValueStore.default.synchronize()
-        loadAllTodos()
-        NotificationCenter.default.post(name: .todosUpdated, object: nil)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.loadAllTodos()
+            NotificationCenter.default.post(name: .todosUpdated, object: nil)
+        }
     }
 
     func deleteTodo(_ todo: TodoItem) {
-        loadAllTodos()
         deleteTodoUseCase.execute(todo: todo)
         NSUbiquitousKeyValueStore.default.synchronize()
         loadAllTodos()

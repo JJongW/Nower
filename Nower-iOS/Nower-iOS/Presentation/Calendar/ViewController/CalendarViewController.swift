@@ -98,7 +98,7 @@ final class CalendarViewController: UIViewController {
 
     @objc private func icloudDidUpdate(notification: Notification) {
         print("📥 iCloud 변경 감지됨 - 일정 새로고침")
-        viewModel.loadAllTodos()
+        //viewModel.loadAllTodos()
         DispatchQueue.main.async {
             self.calendarView.collectionView.reloadData()
         }
