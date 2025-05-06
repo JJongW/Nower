@@ -58,22 +58,31 @@ final class TodoRepositoryImpl: TodoRepository {
     private let iCloudKey = "SavedTodos"
 
     private func saveToiCloud() {
-        let encoded = todoStorage.compactMap { try? JSONEncoder().encode($0) } // ✅ 각각 인코딩
-        store.set(encoded, forKey: iCloudKey)
-        store.synchronize()
-        print("✅ iCloud에 [Data] 배열 저장 완료 (\(encoded.count)개)")
+        do {
+            let encoded = try JSONEncoder().encode(todoStorage)
+            store.set(encoded, forKey: iCloudKey)
+            store.synchronize()
+            print("✅ iCloud 저장 완료: \(todoStorage.count)개")
+        } catch {
+            print("❌ 저장 실패:", error)
+        }
     }
 
     func loadFromiCloud() {
-        guard let array = store.array(forKey: iCloudKey) as? [Data] else {
-            print("⚠️ iCloud에서 불러올 [Data] 배열 없음")
+        guard let data = store.data(forKey: iCloudKey) else {
+            print("⚠️ 저장된 데이터 없음")
             todoStorage = []
             return
         }
 
-        let decoded = array.compactMap { try? JSONDecoder().decode(TodoItem.self, from: $0) }
-        todoStorage = decoded
-        print("✅ iCloud에서 불러온 todo: \(decoded.count)개")
+        do {
+            let decoded = try JSONDecoder().decode([TodoItem].self, from: data)
+            todoStorage = decoded
+            print("✅ 불러오기 성공: \(decoded.count)개")
+        } catch {
+            print("❌ 디코딩 실패:", error)
+            todoStorage = []
+        }
     }
 
     @objc private func handleiCloudUpdate(_ notification: Notification) {

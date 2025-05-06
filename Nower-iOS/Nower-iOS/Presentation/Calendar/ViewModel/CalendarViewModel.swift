@@ -1,5 +1,5 @@
 //
-//  TodoViewModel.swift
+//  CalendarViewModel.swift
 //  Nower-iOS
 //
 //  Created by 신종원 on 5/3/25.
@@ -66,6 +66,7 @@ final class CalendarViewModel: ObservableObject {
     }
 
     func addTodo() {
+        loadAllTodos()
         guard let date = selectedDate, !todoText.isEmpty else { return }
         let newTodo = TodoItem(text: todoText, isRepeating: isRepeating, date: date.toDateString(), colorName: selectedColorName)
         addTodoUseCase.execute(todo: newTodo)
@@ -75,6 +76,7 @@ final class CalendarViewModel: ObservableObject {
     }
 
     func deleteTodo(_ todo: TodoItem) {
+        loadAllTodos()
         deleteTodoUseCase.execute(todo: todo)
         NSUbiquitousKeyValueStore.default.synchronize()
         loadAllTodos()
@@ -91,23 +93,21 @@ final class CalendarViewModel: ObservableObject {
 
     func debugPrintICloudTodos() {
         NSUbiquitousKeyValueStore.default.synchronize()
-
         print("🔍 [iCloud] todos 확인 시작")
 
-        guard let saved = NSUbiquitousKeyValueStore.default.array(forKey: "SavedTodos") as? [Data] else {
-            print("⚠️ iCloud 저장소에서 'todos' 키에 해당하는 배열이 없음")
+        guard let data = NSUbiquitousKeyValueStore.default.data(forKey: "SavedTodos") else {
+            print("⚠️ iCloud 저장소에 데이터 없음")
             return
         }
 
-        print("✅ iCloud에 저장된 TodoItem 총 \(saved.count)개")
-
-        for (index, data) in saved.enumerated() {
-            do {
-                let item = try JSONDecoder().decode(TodoItem.self, from: data)
-                print("🔸 [\(index)] \(item.text) | \(item.date) | \(item.colorName) | 반복: \(item.isRepeating)")
-            } catch {
-                print("❌ [\(index)] 디코딩 실패: \(error)")
+        do {
+            let items = try JSONDecoder().decode([TodoItem].self, from: data)
+            print("✅ \(items.count)개의 TodoItem 디코딩 완료:")
+            for (i, item) in items.enumerated() {
+                print("🔸 [\(i)] \(item.text) | \(item.date) | \(item.colorName) | 반복: \(item.isRepeating)")
             }
+        } catch {
+            print("❌ 디코딩 실패:", error)
         }
     }
 }

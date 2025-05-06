@@ -17,6 +17,8 @@ class EventManager {
 
     private init() {
         loadTodos()
+        print("🧾 iCloud 내용(macOS):", NSUbiquitousKeyValueStore.default.dictionaryRepresentation)
+
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(icloudDidUpdate),

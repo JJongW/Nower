@@ -3,6 +3,7 @@
 //  Nower-iOS
 //
 //  Created by 신종원 on 4/11/25.
+
 import UIKit
 
 final class CalendarViewController: UIViewController {
@@ -51,13 +52,19 @@ final class CalendarViewController: UIViewController {
             name: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
             object: NSUbiquitousKeyValueStore.default
         )
+
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(forceSync),
             name: UIApplication.didBecomeActiveNotification,
             object: nil
         )
-        NotificationCenter.default.addObserver(self, selector: #selector(todosUpdated), name: .todosUpdated, object: nil)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(todosUpdated),
+            name: .todosUpdated,
+            object: nil
+        )
 
         calendarView.previousButton.addTarget(self, action: #selector(didTapPreviousMonth), for: .touchUpInside)
         calendarView.nextButton.addTarget(self, action: #selector(didTapNextMonth), for: .touchUpInside)

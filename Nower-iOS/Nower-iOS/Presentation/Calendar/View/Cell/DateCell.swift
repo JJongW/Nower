@@ -93,23 +93,24 @@ final class DateCell: UICollectionViewCell {
     // MARK: - Configuration
     func configure(day: Int, todos: [TodoItem], isToday: Bool, isSelected: Bool, dateString: String, holidayName: String?, isSunday: Bool, isSaturday: Bool) {
         dayLabel.text = "\(day)"
-        dayLabel.textColor = AppColors.textPrimary
         eventStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         moreLabel.text = ""
 
-        if isToday {
-            dayLabel.textColor = AppColors.textHighlighted
-        }
+        // 기본 색상
+        dayLabel.textColor = AppColors.textPrimary
 
+        // 우선순위: 공휴일 > 오늘 > 일요일 > 토요일
         if let holiday = holidayName {
             holidayLabel.text = holiday
             dayLabel.textColor = AppColors.coralred
         } else {
             holidayLabel.text = ""
-            if isSunday {
+
+            if isToday {
+                dayLabel.textColor = AppColors.textHighlighted
+            } else if isSunday {
                 dayLabel.textColor = AppColors.coralred
-            }
-            if isSaturday {
+            } else if isSaturday {
                 dayLabel.textColor = AppColors.skyblue
             }
         }

@@ -27,7 +27,7 @@ final class NowerLoggerPlugin: PluginType {
         case .success(let response):
             print("✅ Response Status: \(response.statusCode)")
             if let json = try? JSONSerialization.jsonObject(with: response.data, options: .mutableContainers) {
-                print("🧪 Response JSON:\n\(json)")
+                //print("🧪 Response JSON:\n\(json)")
             } else {
                 print("🧪 Raw Data: \(String(data: response.data, encoding: .utf8) ?? "")")
             }
