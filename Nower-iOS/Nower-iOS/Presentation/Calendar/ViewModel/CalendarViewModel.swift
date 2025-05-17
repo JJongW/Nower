@@ -79,8 +79,10 @@ final class CalendarViewModel: ObservableObject {
     func deleteTodo(_ todo: TodoItem) {
         deleteTodoUseCase.execute(todo: todo)
         NSUbiquitousKeyValueStore.default.synchronize()
-        loadAllTodos()
-        NotificationCenter.default.post(name: .todosUpdated, object: nil)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.loadAllTodos()
+            NotificationCenter.default.post(name: .todosUpdated, object: nil)
+        }
     }
 
     func updateTodo(original: TodoItem, updatedText: String, updatedColor: String) {
