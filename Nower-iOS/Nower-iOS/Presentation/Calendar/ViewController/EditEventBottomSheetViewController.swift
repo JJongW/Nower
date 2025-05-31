@@ -22,7 +22,6 @@ final class EditEventBottomSheetViewController: UIViewController {
         super.viewDidLoad()
 
         popupView.textField.text = todo.text
-        popupView.dateLabel.text = selectedDate.formatted("yy.MM.dd")
         popupView.deleteButton.isHidden = false
 
         if let index = popupView.colorOptions.firstIndex(where: {
@@ -33,8 +32,6 @@ final class EditEventBottomSheetViewController: UIViewController {
 
         popupView.saveButton.addTarget(self, action: #selector(saveTapped), for: .touchUpInside)
         popupView.deleteButton.addTarget(self, action: #selector(deleteTapped), for: .touchUpInside)
-        popupView.cancelButton.addTarget(self, action: #selector(cancelTapped), for: .touchUpInside)
-
         popupView.colorOptions.forEach {
             $0.addTarget(self, action: #selector(colorSelected(_:)), for: .touchUpInside)
         }

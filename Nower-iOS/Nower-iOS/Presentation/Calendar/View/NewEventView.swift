@@ -11,36 +11,27 @@ final class NewEventView: UIView {
 
     // MARK: - Components
 
-    let dateLabel: UILabel = {
-        let label = UILabel()
-        label.font = UIFont.systemFont(ofSize: 14, weight: .medium)
-        label.textColor = AppColors.textPrimary
-        label.textAlignment = .center
-        return label
-    }()
-
-    let cancelButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setTitle("취소", for: .normal)
-        button.setTitleColor(.systemGray, for: .normal)
-        return button
+    let textFieldBackgroundView: UIView = {
+        let view = UIView()
+        view.backgroundColor = AppColors.textFieldBackground
+        view.layer.cornerRadius = 10
+        view.layer.masksToBounds = true
+        return view
     }()
 
     let textField: UITextField = {
         let textField = UITextField()
         textField.placeholder = "일정을 입력하세요"
-        textField.setPlaceholder(color: AppColors.textPrimary)
-        textField.borderStyle = .roundedRect
-        textField.backgroundColor = .white
-        textField.textColor = AppColors.textPrimary
-        textField.tintColor = AppColors.textPrimary
+        textField.setPlaceholder(color: AppColors.textFieldPlacehorder)
+        textField.borderStyle = .none
+        textField.backgroundColor = .clear
         return textField
     }()
 
     let colorStackView: UIStackView = {
         var stackView = UIStackView()
         stackView.axis = .horizontal
-        stackView.spacing = 8
+        stackView.spacing = 30
         stackView.distribution = .fillEqually
         return stackView
     }()
@@ -68,36 +59,32 @@ final class NewEventView: UIView {
     private func setupUI() {
         backgroundColor = .white
 
-        addSubview(dateLabel)
-        dateLabel.snp.makeConstraints {
-            $0.top.equalTo(safeAreaLayoutGuide).offset(12)
-            $0.centerX.equalToSuperview()
-        }
-
-        addSubview(cancelButton)
-        cancelButton.snp.makeConstraints {
-            $0.centerY.equalTo(dateLabel)
-            $0.trailing.equalToSuperview().inset(20)
-        }
-
+        addSubview(textFieldBackgroundView)
         addSubview(textField)
-        textField.snp.makeConstraints {
-            $0.top.equalTo(dateLabel.snp.bottom).offset(16)
+
+        textFieldBackgroundView.snp.makeConstraints {
+            $0.top.equalToSuperview().offset(36)
+            $0.height.equalTo(60)
             $0.leading.trailing.equalToSuperview().inset(20)
+        }
+
+        textField.snp.makeConstraints {
+            $0.center.equalTo(textFieldBackgroundView)
+            $0.leading.trailing.equalToSuperview().inset(32)
         }
 
         addSubview(colorStackView)
         colorStackView.snp.makeConstraints {
-            $0.top.equalTo(textField.snp.bottom).offset(20)
-            $0.leading.trailing.equalToSuperview().inset(20)
-            $0.height.equalTo(44)
+            $0.top.equalTo(textFieldBackgroundView.snp.bottom).offset(32)
+            $0.leading.trailing.equalToSuperview().inset(32)
+            $0.height.equalTo(40)
         }
 
         for color in colorNames {
             let button = UIButton()
             button.backgroundColor = AppColors.color(for: color)
-            button.layer.cornerRadius = 8
-            button.layer.borderColor = UIColor.lightGray.cgColor
+            button.layer.cornerRadius = 20
+            button.layer.borderColor = AppColors.textHighlighted.cgColor
             button.layer.borderWidth = 1
             button.tag = colorOptions.count
             colorOptions.append(button)
@@ -123,7 +110,7 @@ final class NewEventView: UIView {
 
     func selectColor(_ sender: UIButton) {
         for (index, button) in colorOptions.enumerated() {
-            button.layer.borderWidth = (button == sender) ? 3 : 1
+            button.layer.borderWidth = (button == sender) ? 3 : 0
             if button == sender {
                 selectedColorName = colorNames[index]
             }

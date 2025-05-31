@@ -21,11 +21,7 @@ final class NewEventViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        popupView.dateLabel.text = selectedDate.formatted("yy.MM.dd")
-
         popupView.saveButton.addTarget(self, action: #selector(saveTapped), for: .touchUpInside)
-        popupView.cancelButton.addTarget(self, action: #selector(cancelTapped), for: .touchUpInside)
-
         popupView.colorOptions.forEach { button in
             button.addTarget(self, action: #selector(colorSelected(_:)), for: .touchUpInside)
         }

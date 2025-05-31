@@ -11,10 +11,17 @@ enum AppColors {
     /// 기본 텍스트
     static let textPrimary: UIColor = #colorLiteral(red: 0.06274509804, green: 0.06274509804, blue: 0.06274509804, alpha: 1)
     static let textMain: UIColor = #colorLiteral(red: 1, green: 1, blue: 1, alpha: 1)
+    static let textFieldPlacehorder: UIColor = #colorLiteral(red: 0.831372549, green: 0.8235294118, blue: 0.8235294118, alpha: 1)
 
     /// 배경 색상
     static var background: UIColor {
         let background: UIColor = #colorLiteral(red: 1, green: 1, blue: 1, alpha: 1)
+        return UIColor { trait in
+            trait.userInterfaceStyle == .dark ? background : background
+        }
+    }
+    static var textFieldBackground: UIColor {
+        let background: UIColor = #colorLiteral(red: 0.968627451, green: 0.968627451, blue: 0.968627451, alpha: 1)
         return UIColor { trait in
             trait.userInterfaceStyle == .dark ? background : background
         }
