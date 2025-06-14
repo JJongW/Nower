@@ -22,6 +22,7 @@ final class NewEventView: UIView {
     let textField: UITextField = {
         let textField = UITextField()
         textField.placeholder = "일정을 입력하세요"
+        textField.textColor = AppColors.textPrimary
         textField.setPlaceholder(color: AppColors.textFieldPlacehorder)
         textField.borderStyle = .none
         textField.backgroundColor = .clear
