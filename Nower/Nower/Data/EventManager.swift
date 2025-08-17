@@ -3,10 +3,14 @@
 //  Nower
 //
 //  Created by 신종원 on 4/12/25.
+//  DEPRECATED: Use CloudSyncManager instead
 //
 
 import Foundation
 
+/// ⚠️ DEPRECATED: EventManager는 더 이상 사용하지 않습니다.
+/// CloudSyncManager와 Clean Architecture 패턴을 사용해주세요.
+@available(*, deprecated, message: "Use CloudSyncManager and Clean Architecture instead")
 class EventManager {
     static let shared = EventManager()
 

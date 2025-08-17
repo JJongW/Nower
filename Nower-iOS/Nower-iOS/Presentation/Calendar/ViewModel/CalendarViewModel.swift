@@ -39,6 +39,7 @@ final class CalendarViewModel: ObservableObject {
         self.holidayUseCase = holidayUseCase
 
         loadAllTodos()
+        setupNotificationObserver()
     }
 
     func loadAllTodos() {
@@ -69,28 +70,18 @@ final class CalendarViewModel: ObservableObject {
         guard let date = selectedDate, !todoText.isEmpty else { return }
         let newTodo = TodoItem(text: todoText, isRepeating: isRepeating, date: date.toDateString(), colorName: selectedColorName)
         addTodoUseCase.execute(todo: newTodo)
-        NSUbiquitousKeyValueStore.default.synchronize()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            self.loadAllTodos()
-            NotificationCenter.default.post(name: .todosUpdated, object: nil)
-        }
+        // CloudSyncManager가 자동으로 알림을 발송하므로 별도 처리 불필요
     }
 
     func deleteTodo(_ todo: TodoItem) {
         deleteTodoUseCase.execute(todo: todo)
-        NSUbiquitousKeyValueStore.default.synchronize()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            self.loadAllTodos()
-            NotificationCenter.default.post(name: .todosUpdated, object: nil)
-        }
+        // CloudSyncManager가 자동으로 알림을 발송하므로 별도 처리 불필요
     }
 
     func updateTodo(original: TodoItem, updatedText: String, updatedColor: String) {
         let updatedTodo = TodoItem(text: updatedText, isRepeating: isRepeating, date: original.date, colorName: updatedColor)
         updateTodoUseCase.execute(original: original, updated: updatedTodo)
-        NSUbiquitousKeyValueStore.default.synchronize()
-        loadAllTodos()
-        NotificationCenter.default.post(name: .todosUpdated, object: nil)
+        // CloudSyncManager가 자동으로 알림을 발송하므로 별도 처리 불필요
     }
 
     func debugPrintICloudTodos() {
@@ -110,6 +101,25 @@ final class CalendarViewModel: ObservableObject {
             }
         } catch {
             print("❌ 디코딩 실패:", error)
+        }
+    }
+    
+    // MARK: - Private Methods
+    
+    /// CloudSyncManager 알림 옵저버를 설정합니다.
+    private func setupNotificationObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(todosDidUpdate),
+            name: CloudSyncManager.todosDidUpdateNotification,
+            object: nil
+        )
+    }
+    
+    /// Todo 업데이트 알림을 처리합니다.
+    @objc private func todosDidUpdate() {
+        DispatchQueue.main.async {
+            self.loadAllTodos()
         }
     }
 }

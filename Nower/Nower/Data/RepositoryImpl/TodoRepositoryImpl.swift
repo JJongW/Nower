@@ -1,13 +1,17 @@
 //
 //  TodoRepositoryImpl.swift
-//  Nower-iOS
+//  Nower (macOS)
 //
-//  Created by 신종원 on 5/3/25.
+//  Created by AI Assistant on 5/12/25.
+//  Copyright © 2025 Nower. All rights reserved.
 //
 
 import Foundation
 
+/// TodoRepository의 구현체
+/// CloudSyncManager를 통해 실제 데이터 관리를 수행합니다.
 final class TodoRepositoryImpl: TodoRepository {
+    
     // MARK: - Properties
     private let cloudSyncManager: CloudSyncManager
     
@@ -15,28 +19,30 @@ final class TodoRepositoryImpl: TodoRepository {
     init(cloudSyncManager: CloudSyncManager = CloudSyncManager.shared) {
         self.cloudSyncManager = cloudSyncManager
     }
-
+    
     // MARK: - TodoRepository Implementation
     
-    func fetchTodos(on date: Date) -> [TodoItem] {
+    func getAllTodos() -> [TodoItem] {
+        return cloudSyncManager.getAllTodos()
+    }
+    
+    func getTodos(for date: Date) -> [TodoItem] {
         return cloudSyncManager.getTodos(for: date)
     }
-
+    
     func addTodo(_ todo: TodoItem) {
         cloudSyncManager.addTodo(todo)
     }
-
+    
     func deleteTodo(_ todo: TodoItem) {
         cloudSyncManager.deleteTodo(todo)
     }
-
-    func updateTodo(_ original: TodoItem, with updated: TodoItem) {
+    
+    func updateTodo(original: TodoItem, with updated: TodoItem) {
         cloudSyncManager.updateTodo(original: original, with: updated)
     }
-
-    func allTodos() -> [TodoItem] {
-        return cloudSyncManager.getAllTodos()
+    
+    func forceSynchronize() {
+        cloudSyncManager.forceSynchronize()
     }
-
-
 }
