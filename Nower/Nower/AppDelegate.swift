@@ -20,6 +20,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         enableAutoLaunch()
 
         NotificationCenter.default.addObserver(self, selector: #selector(updateContentView), name: .init("SettingsChanged"), object: nil)
+        
+        // 윈도우 설정 관련 알림 설정
+        NotificationCenter.default.addObserver(self, selector: #selector(pinToTopLeftChanged), name: .init("PinToTopLeftChanged"), object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(alwaysOnTopChanged), name: .init("AlwaysOnTopChanged"), object: nil)
     }
 
     func setupMainWindow() {
@@ -44,7 +48,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.ignoresMouseEvents = false
 
         let contentView = ContentView().environmentObject(settingsManager)
-        window.contentView = NSHostingView(rootView: contentView)
+        let hostingView = SafeHostingView(rootView: contentView)
+        window.contentView = hostingView
 
         // ✅ 창 띄우기
         window.center()
@@ -52,15 +57,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
 
         self.window = window
+        
+        // 저장된 설정 적용
+        DispatchQueue.main.async {
+            self.applyInitialSettings()
+        }
     }
 
     @objc func updateContentView() {
         guard let window = window else { return }
         DispatchQueue.main.async {
-            window.contentView = NSHostingView(
-                rootView: ContentView()
-                    .environmentObject(self.settingsManager)
-            )
+            let contentView = ContentView().environmentObject(self.settingsManager)
+            let hostingView = SafeHostingView(rootView: contentView)
+            window.contentView = hostingView
         }
     }
 
@@ -90,6 +99,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let menu = NSMenu()
+        
+        // 빠른 설정 메뉴
+        let quickSettingsItem = NSMenuItem(title: "빠른 설정", action: nil, keyEquivalent: "")
+        let quickSettingsMenu = NSMenu()
+        
+        let pinTopLeftItem = NSMenuItem(title: "좌측 상단 고정", action: #selector(togglePinToTopLeft), keyEquivalent: "")
+        pinTopLeftItem.state = settingsManager.isPinToTopLeft ? .on : .off
+        
+        let alwaysOnTopItem = NSMenuItem(title: "항상 위에 표시", action: #selector(toggleAlwaysOnTop), keyEquivalent: "")
+        alwaysOnTopItem.state = settingsManager.isAlwaysOnTop ? .on : .off
+        
+        quickSettingsMenu.addItem(pinTopLeftItem)
+        quickSettingsMenu.addItem(alwaysOnTopItem)
+        quickSettingsItem.submenu = quickSettingsMenu
+        
+        menu.addItem(quickSettingsItem)
+        menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "설정", action: #selector(openSettings), keyEquivalent: ""))
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "자동 실행 활성화", action: #selector(enableAutoLaunch), keyEquivalent: ""))
@@ -113,7 +139,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         settingsWindow.title = "설정"
         settingsWindow.center()
         settingsWindow.isReleasedWhenClosed = false
-        settingsWindow.contentView = NSHostingView(rootView: settingsView)
+        settingsWindow.contentView = SafeHostingView(rootView: settingsView)
         settingsWindow.makeKeyAndOrderFront(nil)
     }
 
@@ -127,5 +153,73 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func disableAutoLaunch() {
         SMLoginItemSetEnabled(appBundleID as CFString, false)
+    }
+    
+    // MARK: - Window Settings Handlers
+    
+    /// 좌측 상단 고정 기능 변경 처리
+    @objc func pinToTopLeftChanged() {
+        guard let window = window else { return }
+        
+        DispatchQueue.main.async {
+            let isPinned = self.settingsManager.isPinToTopLeft
+            window.setPinToTopLeft(isPinned)
+            
+            print("📍 [AppDelegate] 좌측 상단 고정: \(isPinned ? "활성화" : "비활성화")")
+        }
+    }
+    
+    /// 항상 위에 표시 기능 변경 처리
+    @objc func alwaysOnTopChanged() {
+        guard let window = window else { return }
+        
+        DispatchQueue.main.async {
+            let alwaysOnTop = self.settingsManager.isAlwaysOnTop
+            window.setAlwaysOnTop(alwaysOnTop)
+            
+            print("⬆️ [AppDelegate] 항상 위에 표시: \(alwaysOnTop ? "활성화" : "비활성화")")
+        }
+    }
+    
+    // MARK: - Quick Settings Toggle Methods
+    
+    /// 좌측 상단 고정 토글
+    @objc func togglePinToTopLeft() {
+        settingsManager.isPinToTopLeft.toggle()
+        updateStatusBarMenu()
+    }
+    
+    /// 항상 위에 표시 토글
+    @objc func toggleAlwaysOnTop() {
+        settingsManager.isAlwaysOnTop.toggle()
+        updateStatusBarMenu()
+    }
+    
+    /// 상태바 메뉴 업데이트 (토글 상태 반영)
+    private func updateStatusBarMenu() {
+        setupStatusBar() // 간단하게 메뉴를 다시 생성
+    }
+    
+    /// 앱 시작 시 저장된 설정들을 적용
+    private func applyInitialSettings() {
+        guard let window = window else { return }
+        
+        // 좌측 상단 고정 적용
+        if settingsManager.isPinToTopLeft {
+            window.setPinToTopLeft(true)
+        }
+        
+        // 항상 위에 표시 적용
+        if settingsManager.isAlwaysOnTop {
+            window.setAlwaysOnTop(true)
+        }
+        
+        // 투명도 적용
+        window.setWindowOpacity(settingsManager.opacity)
+        
+        print("🚀 [AppDelegate] 초기 설정 적용 완료")
+        print("   - 좌측 상단 고정: \(settingsManager.isPinToTopLeft)")
+        print("   - 항상 위에 표시: \(settingsManager.isAlwaysOnTop)")
+        print("   - 투명도: \(Int(settingsManager.opacity * 100))%")
     }
 }
