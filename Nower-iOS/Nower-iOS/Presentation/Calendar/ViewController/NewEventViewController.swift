@@ -36,6 +36,11 @@ final class NewEventViewController: UIViewController {
         viewModel.addTodo()
 
         dismiss(animated: true) {
+            // 일정 추가 후 즉시 UI 새로고침을 위한 수동 알림 발송
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: CloudSyncManager.todosDidUpdateNotification, object: nil)
+            }
+            
             if let vc = self.coordinator?.navigationController.topViewController {
                 vc.showToast(message: "✅ 일정이 추가되었습니다")
             }

@@ -59,10 +59,11 @@ final class CalendarViewController: UIViewController {
             name: UIApplication.didBecomeActiveNotification,
             object: nil
         )
+        // CloudSyncManager의 알림을 수신하도록 변경
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(todosUpdated),
-            name: .todosUpdated,
+            name: CloudSyncManager.todosDidUpdateNotification,
             object: nil
         )
 
@@ -185,10 +186,16 @@ final class CalendarViewController: UIViewController {
                           completion: nil)
     }
 
+    /// Todo 데이터가 업데이트되었을 때 UI를 새로고침합니다.
+    /// CloudSyncManager에서 발송하는 알림을 수신하여 처리합니다.
     @objc private func todosUpdated() {
+        print("📱 [CalendarViewController] Todo 업데이트 알림 수신됨 - UI 새로고침 시작")
         DispatchQueue.main.async {
+            // ViewModel의 데이터를 새로 로드
             self.viewModel.loadAllTodos()
+            // CollectionView 전체를 새로고침하여 변경사항 반영
             self.calendarView.collectionView.reloadData()
+            print("✅ [CalendarViewController] UI 새로고침 완료")
         }
     }
 }

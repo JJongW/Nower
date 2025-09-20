@@ -43,6 +43,11 @@ final class EditEventBottomSheetViewController: UIViewController {
         let updatedColor = popupView.selectedColorName
         viewModel.updateTodo(original: todo, updatedText: updatedText, updatedColor: updatedColor)
         dismiss(animated: true) {
+            // 일정 수정 후 즉시 UI 새로고침을 위한 수동 알림 발송
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: CloudSyncManager.todosDidUpdateNotification, object: nil)
+            }
+            
             if let vc = self.coordinator?.navigationController.topViewController {
                 vc.showToast(message: "🛠️ 일정이 수정되었습니다")
             }
@@ -53,7 +58,10 @@ final class EditEventBottomSheetViewController: UIViewController {
     @objc private func deleteTapped() {
         viewModel.deleteTodo(todo)
         dismiss(animated: true) {
+            // 일정 삭제 후 즉시 UI 새로고침을 위한 수동 알림 발송
             DispatchQueue.main.async {
+                NotificationCenter.default.post(name: CloudSyncManager.todosDidUpdateNotification, object: nil)
+                
                 if let vc = self.coordinator?.navigationController.topViewController {
                     print("일정 삭제됨.")
                     vc.showToast(message: "❌ 일정이 삭제되었습니다")
