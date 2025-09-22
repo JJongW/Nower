@@ -63,6 +63,14 @@ final class CalendarView: UIView {
         collectionView.register(DateCell.self, forCellWithReuseIdentifier: DateCell.identifier)
         return collectionView
     }()
+    
+    // MARK: - 기간별 일정 오버레이를 위한 컨테이너
+    let periodEventOverlayContainer: UIView = {
+        let view = UIView()
+        view.backgroundColor = .clear
+        view.isUserInteractionEnabled = false // 터치 이벤트는 하위 collectionView로 전달
+        return view
+    }()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -82,6 +90,7 @@ final class CalendarView: UIView {
         addSubview(textLabel)
         addSubview(weekdayStackView)
         addSubview(collectionView)
+        addSubview(periodEventOverlayContainer) // 오버레이를 가장 위에 추가
 
         for (index, day) in weekdays.enumerated() {
             let label = UILabel()
@@ -131,6 +140,51 @@ final class CalendarView: UIView {
             $0.leading.equalToSuperview().offset(8)
             $0.trailing.equalToSuperview().offset(-8)
             $0.bottom.equalToSuperview()
+        }
+        
+        // 오버레이 컨테이너는 collectionView와 동일한 영역을 차지
+        periodEventOverlayContainer.snp.makeConstraints {
+            $0.edges.equalTo(collectionView)
+        }
+    }
+    
+    // MARK: - 기간별 일정 오버레이 관리
+    
+    /// 기간별 일정 오버레이를 모두 제거합니다.
+    func clearPeriodEventOverlays() {
+        periodEventOverlayContainer.subviews.forEach { $0.removeFromSuperview() }
+    }
+    
+    /// 기간별 일정 오버레이를 추가합니다.
+    /// - Parameters:
+    ///   - todo: 기간별 일정 아이템
+    ///   - segments: 기간별 일정의 각 세그먼트 정보
+    ///   - row: 해당 일정이 표시될 행 (0부터 시작)
+    func addPeriodEventOverlay(todo: TodoItem, segments: [PeriodEventSegment], row: Int) {
+        let overlayView = PeriodEventOverlayView()
+        
+        // 오버레이 뷰의 전체 프레임을 모든 세그먼트를 포함하도록 설정
+        if !segments.isEmpty {
+            let minX = segments.map { $0.frame.minX }.min() ?? 0
+            let minY = segments.map { $0.frame.minY }.min() ?? 0
+            let maxX = segments.map { $0.frame.maxX }.max() ?? 0
+            let maxY = segments.map { $0.frame.maxY }.max() ?? 0
+            
+            let overlayFrame = CGRect(
+                x: minX,
+                y: minY,
+                width: maxX - minX,
+                height: maxY - minY
+            )
+            
+            overlayView.frame = overlayFrame
+            print("🖼️ [CalendarView] 오버레이 프레임: \(overlayFrame)")
+            
+            // 프레임 설정 후 configure 호출
+            overlayView.configure(todo: todo, segments: segments, row: row)
+            
+            periodEventOverlayContainer.addSubview(overlayView)
+            print("✅ [CalendarView] 오버레이 추가됨: \(todo.text)")
         }
     }
 }

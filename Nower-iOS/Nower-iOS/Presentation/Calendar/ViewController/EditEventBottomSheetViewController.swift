@@ -45,7 +45,7 @@ final class EditEventBottomSheetViewController: UIViewController {
         dismiss(animated: true) {
             // 일정 수정 후 즉시 UI 새로고침을 위한 수동 알림 발송
             DispatchQueue.main.async {
-                NotificationCenter.default.post(name: CloudSyncManager.todosDidUpdateNotification, object: nil)
+                NotificationCenter.default.post(name: Notification.Name("CloudSyncManager.todosDidUpdate"), object: nil)
             }
             
             if let vc = self.coordinator?.navigationController.topViewController {
@@ -60,7 +60,7 @@ final class EditEventBottomSheetViewController: UIViewController {
         dismiss(animated: true) {
             // 일정 삭제 후 즉시 UI 새로고침을 위한 수동 알림 발송
             DispatchQueue.main.async {
-                NotificationCenter.default.post(name: CloudSyncManager.todosDidUpdateNotification, object: nil)
+                NotificationCenter.default.post(name: Notification.Name("CloudSyncManager.todosDidUpdate"), object: nil)
                 
                 if let vc = self.coordinator?.navigationController.topViewController {
                     print("일정 삭제됨.")

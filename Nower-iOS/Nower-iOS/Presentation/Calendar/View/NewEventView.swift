@@ -40,9 +40,92 @@ final class NewEventView: UIView {
     let saveButton = UIButton(type: .system)
     let deleteButton = UIButton(type: .system)
 
+    // MARK: - 기간 선택 관련 컴포넌트
+    
+    let periodModeContainer: UIView = {
+        let view = UIView()
+        view.backgroundColor = AppColors.textFieldBackground
+        view.layer.cornerRadius = 10
+        view.layer.masksToBounds = true
+        return view
+    }()
+    
+    let periodModeLabel: UILabel = {
+        let label = UILabel()
+        label.text = "기간별 일정"
+        label.textColor = AppColors.textPrimary
+        label.font = UIFont.systemFont(ofSize: 16, weight: .medium)
+        return label
+    }()
+    
+    let periodModeSwitch: UISwitch = {
+        let switchControl = UISwitch()
+        switchControl.isOn = false
+        switchControl.onTintColor = AppColors.color(for: "skyblue")
+        return switchControl
+    }()
+    
+    let dateSelectionContainer: UIView = {
+        let view = UIView()
+        view.backgroundColor = AppColors.textFieldBackground
+        view.layer.cornerRadius = 10
+        view.layer.masksToBounds = true
+        view.isHidden = true // 기본적으로 숨김
+        return view
+    }()
+    
+    let startDateLabel: UILabel = {
+        let label = UILabel()
+        label.text = "시작일"
+        label.textColor = AppColors.textPrimary
+        label.font = UIFont.systemFont(ofSize: 14, weight: .medium)
+        return label
+    }()
+    
+    let startDateButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("날짜 선택", for: .normal)
+        button.setTitleColor(AppColors.textPrimary, for: .normal)
+        button.backgroundColor = UIColor.systemGray6
+        button.layer.cornerRadius = 8
+        button.titleLabel?.font = UIFont.systemFont(ofSize: 14)
+        return button
+    }()
+    
+    let endDateLabel: UILabel = {
+        let label = UILabel()
+        label.text = "종료일"
+        label.textColor = AppColors.textPrimary
+        label.font = UIFont.systemFont(ofSize: 14, weight: .medium)
+        return label
+    }()
+    
+    let endDateButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("날짜 선택", for: .normal)
+        button.setTitleColor(AppColors.textPrimary, for: .normal)
+        button.backgroundColor = UIColor.systemGray6
+        button.layer.cornerRadius = 8
+        button.titleLabel?.font = UIFont.systemFont(ofSize: 14)
+        return button
+    }()
+    
+    // MARK: - 기존 컴포넌트들
+    
     private(set) var colorOptions: [UIButton] = []
     private(set) var selectedColorName: String = "skyblue"
     let colorNames: [String] = ["skyblue", "peach", "lavender", "mintgreen", "coralred"]
+    
+    // MARK: - 기간 선택 관련 프로퍼티
+    
+    var isPeriodMode: Bool = false {
+        didSet {
+            updateDateSelectionVisibility()
+        }
+    }
+    
+    var selectedStartDate: Date?
+    var selectedEndDate: Date?
 
     // MARK: - Init
 
@@ -60,6 +143,7 @@ final class NewEventView: UIView {
     private func setupUI() {
         backgroundColor = .white
 
+        // 텍스트 필드
         addSubview(textFieldBackgroundView)
         addSubview(textField)
 
@@ -74,9 +158,41 @@ final class NewEventView: UIView {
             $0.leading.trailing.equalToSuperview().inset(32)
         }
 
+        // 기간 모드 스위치
+        addSubview(periodModeContainer)
+        periodModeContainer.addSubview(periodModeLabel)
+        periodModeContainer.addSubview(periodModeSwitch)
+
+        periodModeContainer.snp.makeConstraints {
+            $0.top.equalTo(textFieldBackgroundView.snp.bottom).offset(20)
+            $0.leading.trailing.equalToSuperview().inset(20)
+            $0.height.equalTo(50)
+        }
+
+        periodModeLabel.snp.makeConstraints {
+            $0.leading.equalToSuperview().offset(16)
+            $0.centerY.equalToSuperview()
+        }
+
+        periodModeSwitch.snp.makeConstraints {
+            $0.trailing.equalToSuperview().offset(-16)
+            $0.centerY.equalToSuperview()
+        }
+
+        // 날짜 선택 컨테이너
+        addSubview(dateSelectionContainer)
+        setupDateSelectionContainer()
+
+        dateSelectionContainer.snp.makeConstraints {
+            $0.top.equalTo(periodModeContainer.snp.bottom).offset(12)
+            $0.leading.trailing.equalToSuperview().inset(20)
+            $0.height.equalTo(100)
+        }
+
+        // 색상 선택
         addSubview(colorStackView)
         colorStackView.snp.makeConstraints {
-            $0.top.equalTo(textFieldBackgroundView.snp.bottom).offset(32)
+            $0.top.equalTo(dateSelectionContainer.snp.bottom).offset(20)
             $0.leading.trailing.equalToSuperview().inset(32)
             $0.height.equalTo(40)
         }
@@ -107,14 +223,178 @@ final class NewEventView: UIView {
             $0.centerX.equalToSuperview()
         }
         deleteButton.isHidden = true
+        
+        // 스위치 액션 설정
+        periodModeSwitch.addTarget(self, action: #selector(periodModeSwitchChanged(_:)), for: .valueChanged)
+        startDateButton.addTarget(self, action: #selector(startDateButtonTapped), for: .touchUpInside)
+        endDateButton.addTarget(self, action: #selector(endDateButtonTapped), for: .touchUpInside)
+    }
+    
+    private func setupDateSelectionContainer() {
+        dateSelectionContainer.addSubview(startDateLabel)
+        dateSelectionContainer.addSubview(startDateButton)
+        dateSelectionContainer.addSubview(endDateLabel)
+        dateSelectionContainer.addSubview(endDateButton)
+        
+        startDateLabel.snp.makeConstraints {
+            $0.top.equalToSuperview().offset(12)
+            $0.leading.equalToSuperview().offset(16)
+        }
+        
+        startDateButton.snp.makeConstraints {
+            $0.top.equalTo(startDateLabel.snp.bottom).offset(8)
+            $0.leading.equalToSuperview().offset(16)
+            $0.width.equalTo(120)
+            $0.height.equalTo(32)
+        }
+        
+        endDateLabel.snp.makeConstraints {
+            $0.top.equalToSuperview().offset(12)
+            $0.trailing.equalToSuperview().offset(-16)
+        }
+        
+        endDateButton.snp.makeConstraints {
+            $0.top.equalTo(endDateLabel.snp.bottom).offset(8)
+            $0.trailing.equalToSuperview().offset(-16)
+            $0.width.equalTo(120)
+            $0.height.equalTo(32)
+        }
     }
 
+    // MARK: - Actions
+    
+    @objc private func periodModeSwitchChanged(_ sender: UISwitch) {
+        isPeriodMode = sender.isOn
+    }
+    
+    @objc private func startDateButtonTapped() {
+        showDatePicker(for: .start)
+    }
+    
+    @objc private func endDateButtonTapped() {
+        showDatePicker(for: .end)
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func updateDateSelectionVisibility() {
+        UIView.animate(withDuration: 0.3) {
+            self.dateSelectionContainer.isHidden = !self.isPeriodMode
+        }
+    }
+    
+    private enum DatePickerType {
+        case start, end
+    }
+    
+    private func showDatePicker(for type: DatePickerType) {
+        guard let parentViewController = findViewController() else { return }
+        
+        // 커스텀 DatePicker 뷰컨트롤러 생성
+        let datePickerVC = UIViewController()
+        datePickerVC.preferredContentSize = CGSize(width: 320, height: 300)
+        
+        let datePicker = UIDatePicker()
+        datePicker.datePickerMode = .date
+        datePicker.preferredDatePickerStyle = .wheels
+        datePicker.locale = Locale(identifier: "ko_KR")
+        
+        // 최소/최대 날짜 설정
+        if type == .end, let startDate = selectedStartDate {
+            datePicker.minimumDate = startDate
+        }
+        if type == .start, let endDate = selectedEndDate {
+            datePicker.maximumDate = endDate
+        }
+        
+        datePickerVC.view.addSubview(datePicker)
+        datePicker.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            datePicker.centerXAnchor.constraint(equalTo: datePickerVC.view.centerXAnchor),
+            datePicker.centerYAnchor.constraint(equalTo: datePickerVC.view.centerYAnchor)
+        ])
+        
+        let alert = UIAlertController(title: type == .start ? "시작일 선택" : "종료일 선택", 
+                                    message: nil, 
+                                    preferredStyle: .actionSheet)
+        
+        alert.setValue(datePickerVC, forKey: "contentViewController")
+        
+        alert.addAction(UIAlertAction(title: "확인", style: .default) { _ in
+            let selectedDate = datePicker.date
+            self.updateSelectedDate(selectedDate, for: type)
+        })
+        
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+        
+        // iPad에서 actionSheet를 위한 설정
+        if let popover = alert.popoverPresentationController {
+            if type == .start {
+                popover.sourceView = self.startDateButton
+                popover.sourceRect = self.startDateButton.bounds
+            } else {
+                popover.sourceView = self.endDateButton
+                popover.sourceRect = self.endDateButton.bounds
+            }
+        }
+        
+        parentViewController.present(alert, animated: true)
+    }
+    
+    private func updateSelectedDate(_ date: Date, for type: DatePickerType) {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM/dd"
+        formatter.locale = Locale(identifier: "ko_KR")
+        
+        switch type {
+        case .start:
+            selectedStartDate = date
+            startDateButton.setTitle(formatter.string(from: date), for: .normal)
+        case .end:
+            selectedEndDate = date
+            endDateButton.setTitle(formatter.string(from: date), for: .normal)
+        }
+    }
+    
     func selectColor(_ sender: UIButton) {
         for (index, button) in colorOptions.enumerated() {
             button.layer.borderWidth = (button == sender) ? 3 : 0
             if button == sender {
                 selectedColorName = colorNames[index]
             }
+        }
+    }
+    
+    /// 기간 모드 설정 (외부에서 호출)
+    func setPeriodMode(_ enabled: Bool, startDate: Date? = nil, endDate: Date? = nil) {
+        isPeriodMode = enabled
+        periodModeSwitch.isOn = enabled
+        
+        if let startDate = startDate {
+            selectedStartDate = startDate
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MM/dd"
+            startDateButton.setTitle(formatter.string(from: startDate), for: .normal)
+        }
+        
+        if let endDate = endDate {
+            selectedEndDate = endDate
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MM/dd"
+            endDateButton.setTitle(formatter.string(from: endDate), for: .normal)
+        }
+    }
+}
+
+// MARK: - UIView Extension
+extension UIView {
+    func findViewController() -> UIViewController? {
+        if let nextResponder = self.next as? UIViewController {
+            return nextResponder
+        } else if let nextResponder = self.next as? UIView {
+            return nextResponder.findViewController()
+        } else {
+            return nil
         }
     }
 }
