@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>com.apple.developer.icloud-container-identifiers</key>
+	<array/>
+	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
+	<!-- 메인 앱과 동일한 키를 사용하기 위해 메인 앱의 Bundle Identifier를 명시적으로 지정 -->
+	<string>$(TeamIdentifierPrefix)pr.jongwon.Nower</string>
+</dict>
+</plist>
