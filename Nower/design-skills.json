@@ -1,0 +1,173 @@
+{
+  "designSystem": {
+    "name": "Nower macOS Design System",
+    "version": "1.0.0",
+    "baseDesignGuidelines": [
+      "Apple Human Interface Guidelines - macOS",
+      "Toss Design System Principles",
+      "WCAG 2.1 AA Accessibility Standards"
+    ]
+  },
+  "colorSystem": {
+    "darkMode": {
+      "enabled": true,
+      "mandatory": true,
+      "standard": "Apple HIG Dark Mode",
+      "detection": "ThemeManager.isDarkMode"
+    },
+    "contrast": {
+      "minimumRatio": 4.5,
+      "largeTextRatio": 3.0,
+      "standard": "WCAG AA"
+    },
+    "semanticColors": {
+      "background": {
+        "light": "#FFFFFF",
+        "dark": "#000000",
+        "description": "Primary background color"
+      },
+      "textPrimary": {
+        "light": "#0F0F0F",
+        "dark": "#F5F5F7",
+        "contrast": {
+          "light": 15.8,
+          "dark": 16.1
+        },
+        "description": "Primary text color with WCAG 4.5:1+ contrast"
+      },
+      "textMain": {
+        "light": "#FFFFFF",
+        "dark": "#FFFFFF",
+        "description": "Default text color for colored event capsules. Automatically adjusts based on background color to meet WCAG 4.5:1 contrast ratio."
+      },
+      "textHighlighted": {
+        "light": "#FF7E62",
+        "dark": "#FF9A85",
+        "description": "Accent color for today's date and primary actions"
+      },
+      "buttonBackground": {
+        "value": "#007AFF",
+        "description": "System blue for primary buttons (HIG compliant)"
+      },
+      "buttonTextColor": {
+        "value": "#FFFFFF",
+        "description": "White text for buttons with colored backgrounds"
+      },
+      "buttonSecondaryBackground": {
+        "light": "#E0E0E0",
+        "dark": "#3A3A3C",
+        "description": "Secondary button background color"
+      }
+    },
+    "themeColors": {
+      "skyblue": {
+        "light": "#A0D2EB",
+        "dark": "#73ADD9",
+        "description": "Calendar event theme color"
+      },
+      "peach": {
+        "light": "#FFD6A5",
+        "dark": "#FFBF8C",
+        "description": "Calendar event theme color"
+      },
+      "lavender": {
+        "light": "#CABBE9",
+        "dark": "#BFADE0",
+        "description": "Calendar event theme color"
+      },
+      "mintgreen": {
+        "light": "#7ECCB0",
+        "dark": "#66BFA6",
+        "description": "Calendar event theme color"
+      },
+      "coralred": {
+        "light": "#FF968A",
+        "dark": "#FFA699",
+        "description": "Calendar event theme color"
+      }
+    }
+  },
+  "spacing": {
+    "baseUnitPt": 8,
+    "allowedMultiples": [4, 8],
+    "minimumVerticalPaddingPt": 8,
+    "enforceVisualRhythm": true,
+    "cellSpacing": 0,
+    "description": "WeekView uses spacing: 0 to ensure period events connect seamlessly"
+  },
+  "layout": {
+    "avoidAbsolutePositioning": true,
+    "preferAdaptiveStacks": true,
+    "minimumClickTarget": 44,
+    "calendarLayout": {
+      "type": "week-based",
+      "cellSpacing": 0,
+      "fixedCellHeights": true,
+      "description": "All cells in a week have the same height to prevent period events from breaking"
+    },
+    "windowManagement": {
+      "draggableWindow": true,
+      "positionMemory": true,
+      "backgroundDragDisabled": true,
+      "description": "Window can only be moved by title bar or designated areas"
+    }
+  },
+  "accessibility": {
+    "colorContrast": {
+      "enforced": true,
+      "minimumRatio": 4.5,
+      "largeTextRatio": 3.0
+    },
+    "dynamicType": {
+      "supported": true,
+      "required": false
+    },
+    "voiceOver": {
+      "tested": true,
+      "required": true
+    }
+  },
+  "dragAndDrop": {
+    "enabled": true,
+    "singleDayEventsOnly": true,
+    "periodEventsDisabled": true,
+    "idBasedMovement": true,
+    "description": "Single-day events can be dragged to different dates. Period events cannot be moved."
+  },
+  "periodEvents": {
+    "seamlessConnection": true,
+    "fixedCellHeights": true,
+    "positionStyles": ["start", "middle", "end", "single"],
+    "description": "Period events span across multiple days seamlessly with distinct styling for each position"
+  },
+  "implementation": {
+    "framework": "SwiftUI",
+    "colorDefinition": {
+      "method": "AppColors struct with ThemeManager",
+      "example": "AppColors.textPrimary",
+      "darkModeDetection": "ThemeManager.isDarkMode"
+    },
+    "textColorForBackground": {
+      "method": "Automatic based on background color",
+      "description": "Text color automatically adjusts based on background color to ensure WCAG 4.5:1 contrast ratio",
+      "example": "Text(\"Event\").foregroundColor(Color.white).background(AppColors.color(for: \"skyblue\"))"
+    },
+    "testing": {
+      "darkMode": "required",
+      "contrast": "automated",
+      "accessibility": "VoiceOver + automated tools"
+    }
+  },
+  "macOSSpecific": {
+    "windowBehavior": {
+      "draggableByBackground": false,
+      "titleBarOnly": true,
+      "positionMemory": true
+    },
+    "components": {
+      "preferSwiftUI": true,
+      "useSystemComponents": true,
+      "customWindowClass": "DraggableWindow"
+    }
+  }
+}

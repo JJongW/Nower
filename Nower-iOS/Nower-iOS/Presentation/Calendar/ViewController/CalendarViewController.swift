@@ -11,7 +11,7 @@ final class CalendarViewController: UIViewController {
     var coordinator: AppCoordinator?
     private let calendarView = CalendarView()
     private var currentDate = Date()
-    private var days: [String] = []
+    private var weeks: [[WeekDayInfo]] = [] // 주 단위로 그룹화된 날짜들
 
     private var selectedIndexPath: IndexPath?
     private var isNextMonth = false
@@ -32,6 +32,8 @@ final class CalendarViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         viewModel.debugPrintICloudTodos()
+        // 날짜가 바뀌었을 수 있으므로 일일 명언 갱신
+        calendarView.textLabel.text = DailyQuoteManager.getTodayQuote()
     }
 
     override func loadView() {
@@ -59,10 +61,11 @@ final class CalendarViewController: UIViewController {
             name: UIApplication.didBecomeActiveNotification,
             object: nil
         )
+        // CloudSyncManager의 알림을 수신하도록 변경
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(todosUpdated),
-            name: .todosUpdated,
+            name: Notification.Name("CloudSyncManager.todosDidUpdate"),
             object: nil
         )
 
@@ -118,7 +121,7 @@ final class CalendarViewController: UIViewController {
     }
 
     private func generateCalendar() {
-        days = []
+        weeks = []
 
         var calendar = Calendar.current
         calendar.firstWeekday = 1
@@ -131,12 +134,40 @@ final class CalendarViewController: UIViewController {
 
         let numberOfDays = calendar.range(of: .day, in: .month, for: currentDate)?.count ?? 30
 
+        // 첫 주 생성 (빈 날짜 + 실제 날짜)
+        var currentWeek: [WeekDayInfo] = []
+        
+        // 빈 날짜들 추가
         for _ in 0..<firstWeekdayIndex {
-            days.append("")
+            currentWeek.append(createEmptyDayInfo())
         }
 
-        for day in 1...numberOfDays {
-            days.append("\(day)")
+        // 첫 주의 실제 날짜들 추가
+        let daysInFirstWeek = 7 - firstWeekdayIndex
+        for day in 1...daysInFirstWeek {
+            let dayInfo = createDayInfo(day: day, components: components, calendar: calendar)
+            currentWeek.append(dayInfo)
+        }
+        weeks.append(currentWeek)
+
+        // 나머지 주들 생성
+        var currentDay = daysInFirstWeek + 1
+        while currentDay <= numberOfDays {
+            currentWeek = []
+            let daysInThisWeek = min(7, numberOfDays - currentDay + 1)
+            
+            for day in currentDay..<(currentDay + daysInThisWeek) {
+                let dayInfo = createDayInfo(day: day, components: components, calendar: calendar)
+                currentWeek.append(dayInfo)
+            }
+            
+            // 주가 7일이 안 되면 빈 날짜로 채움
+            while currentWeek.count < 7 {
+                currentWeek.append(createEmptyDayInfo())
+            }
+            
+            weeks.append(currentWeek)
+            currentDay += daysInThisWeek
         }
 
         updateMonthLabel()
@@ -149,6 +180,50 @@ final class CalendarViewController: UIViewController {
                 }
             }
         }
+    }
+    
+    private func createDayInfo(day: Int, components: DateComponents, calendar: Calendar) -> WeekDayInfo {
+        var dayComponents = components
+        dayComponents.day = day
+        guard let date = calendar.date(from: dayComponents) else {
+            return createEmptyDayInfo()
+        }
+        
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let dateString = formatter.string(from: date)
+        
+        let todos = viewModel.todos(for: date)
+        let today = Date()
+        let isToday = calendar.isDate(today, inSameDayAs: date)
+        let holidayName = holidayUseCase.holidayName(for: date)
+        let weekday = calendar.component(.weekday, from: date)
+        let isSunday = weekday == 1
+        let isSaturday = weekday == 7
+        
+        return WeekDayInfo(
+            day: day,
+            dateString: dateString,
+            todos: todos,
+            isToday: isToday,
+            isSelected: false, // TODO: 선택 상태 관리 필요시 수정
+            holidayName: holidayName,
+            isSunday: isSunday,
+            isSaturday: isSaturday
+        )
+    }
+    
+    private func createEmptyDayInfo() -> WeekDayInfo {
+        return WeekDayInfo(
+            day: nil,
+            dateString: "",
+            todos: [],
+            isToday: false,
+            isSelected: false,
+            holidayName: nil,
+            isSunday: false,
+            isSaturday: false
+        )
     }
 
     private func updateMonthLabel() {
@@ -185,27 +260,64 @@ final class CalendarViewController: UIViewController {
                           completion: nil)
     }
 
+    /// Todo 데이터가 업데이트되었을 때 UI를 새로고침합니다.
+    /// CloudSyncManager에서 발송하는 알림을 수신하여 처리합니다.
     @objc private func todosUpdated() {
+        print("📱 [CalendarViewController] Todo 업데이트 알림 수신됨 - UI 새로고침 시작")
         DispatchQueue.main.async {
+            // ViewModel의 데이터를 새로 로드
             self.viewModel.loadAllTodos()
-            self.calendarView.collectionView.reloadData()
+            // 달력 데이터 재생성 (주 단위로 그룹화)
+            self.generateCalendar()
+            print("✅ [CalendarViewController] UI 새로고침 완료")
         }
     }
 }
 
 extension CalendarViewController: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return days.count
+        return weeks.count
     }
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        guard days[indexPath.item] != "" else { return }
+        // 주 단위 셀 선택은 WeekView의 touchesEnded에서 처리됨
+        // 이 메서드는 빈 구현으로 두거나, 필요시 추가 처리 가능
+    }
 
-        let day = Int(days[indexPath.item]) ?? 1
-        var dateComponents = Calendar.current.dateComponents([.year, .month], from: currentDate)
-        dateComponents.day = day
+    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        // Separator 제거 - 셀 간격 없이 연결된 느낌을 위해
+        if let separator = cell.contentView.viewWithTag(999) {
+            separator.removeFromSuperview()
+        }
+    }
 
-        guard let selectedDate = Calendar.current.date(from: dateComponents) else { return }
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: WeekCell.identifier, for: indexPath) as? WeekCell else {
+            return UICollectionViewCell()
+        }
+
+        guard indexPath.item < weeks.count else { return cell }
+        
+        let week = weeks[indexPath.item]
+        
+        // 선택 상태 업데이트 (필요시)
+        var updatedWeek = week
+        // TODO: 선택된 날짜에 따라 isSelected 업데이트
+        
+        cell.configure(weekDays: updatedWeek)
+        
+        // 날짜 선택 콜백 설정
+        cell.onDaySelected = { [weak self] dateString in
+            self?.handleDaySelection(dateString: dateString)
+        }
+
+        return cell
+    }
+    
+    private func handleDaySelection(dateString: String) {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        guard let selectedDate = formatter.date(from: dateString) else { return }
 
         let hasTodos = !viewModel.todos(for: selectedDate).isEmpty
 
@@ -215,68 +327,14 @@ extension CalendarViewController: UICollectionViewDataSource {
             coordinator?.presentNewEvent(for: selectedDate, viewModel: viewModel)
         }
     }
-
-    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
-        if cell.contentView.viewWithTag(999) == nil {
-            let separator = UIView()
-            separator.tag = 999
-            separator.backgroundColor = UIColor.lightGray.withAlphaComponent(0.3)
-            cell.contentView.addSubview(separator)
-
-            separator.snp.makeConstraints {
-                $0.leading.trailing.equalToSuperview()
-                $0.bottom.equalToSuperview()
-                $0.height.equalTo(0.5)
-            }
-        }
-    }
-
-    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: DateCell.identifier, for: indexPath) as? DateCell else {
-            return UICollectionViewCell()
-        }
-
-        let dayText = days[indexPath.item]
-        if let day = Int(dayText) {
-            var dateComponents = Calendar.current.dateComponents([.year, .month], from: currentDate)
-            dateComponents.day = day
-            guard let date = Calendar.current.date(from: dateComponents) else { return cell }
-
-            let todos = viewModel.todos(for: date)
-            let calendar = Calendar.current
-            let today = Date()
-            let isToday = calendar.isDate(today, inSameDayAs: date)
-            let dayString = date.formatted("yyyy-MM-dd")
-            let isSelected = indexPath == selectedIndexPath
-            let holidayName = holidayUseCase.holidayName(for: date)
-            let weekday = Calendar.current.component(.weekday, from: date)
-            let isSunday = weekday == 1
-            let isSaturday = weekday == 7
-
-            cell.configure(
-                day: day,
-                todos: todos,
-                isToday: isToday,
-                isSelected: isSelected,
-                dateString: dayString,
-                holidayName: holidayName,
-                isSunday: isSunday,
-                isSaturday: isSaturday
-            )
-        } else {
-            cell.configureEmpty()
-        }
-
-        return cell
-    }
 }
 
 extension CalendarViewController: UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        let totalSpacing: CGFloat = 8 * 6
-        let availableWidth = collectionView.bounds.width - totalSpacing
-        let cellWidth = floor(availableWidth / 7)
-        let cellHeight = cellWidth * 2.1
+        // 주 단위 셀: 전체 너비를 사용, 높이는 동적 계산
+        let availableWidth = collectionView.bounds.width
+        let cellWidth = availableWidth
+        let cellHeight: CGFloat = 120 // 주 단위 셀 높이 (조정 가능)
         return CGSize(width: cellWidth, height: cellHeight)
     }
 }

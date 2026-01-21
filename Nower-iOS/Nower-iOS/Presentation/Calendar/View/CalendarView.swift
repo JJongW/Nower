@@ -21,8 +21,10 @@ final class CalendarView: UIView {
         let label = UILabel()
         label.font = .systemFont(ofSize: 12, weight: .semibold)
         label.textAlignment = .left
-        label.text = "열심히 테스트 중입니다!! 아직! v0.0.1"
+        // 일일 명언으로 자동
+        label.text = DailyQuoteManager.getTodayQuote()
         label.textColor = AppColors.textPrimary
+        label.numberOfLines = 0 // 여러 줄 표시 지원
         return label
     }()
 
@@ -55,12 +57,13 @@ final class CalendarView: UIView {
 
     let collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
-        layout.minimumInteritemSpacing = 8
-        layout.minimumLineSpacing = 8
+        layout.minimumInteritemSpacing = 0 // 셀 간격 제거
+        layout.minimumLineSpacing = 0 // 행 간격 제거
+        layout.scrollDirection = .vertical
 
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
-        collectionView.backgroundColor = .white
-        collectionView.register(DateCell.self, forCellWithReuseIdentifier: DateCell.identifier)
+        collectionView.backgroundColor = AppColors.background
+        collectionView.register(WeekCell.self, forCellWithReuseIdentifier: WeekCell.identifier)
         return collectionView
     }()
 
@@ -74,7 +77,7 @@ final class CalendarView: UIView {
     }
 
     private func setupUI() {
-        backgroundColor = .white
+        backgroundColor = AppColors.background
 
         addSubview(monthLabel)
         addSubview(previousButton)
@@ -118,6 +121,7 @@ final class CalendarView: UIView {
         textLabel.snp.makeConstraints {
             $0.top.equalTo(monthLabel.snp.bottom).offset(48)
             $0.leading.equalToSuperview().offset(20)
+            $0.trailing.equalToSuperview().inset(20) // 명언이 길 경우를 대비한 제약
         }
 
         weekdayStackView.snp.makeConstraints {
@@ -128,8 +132,7 @@ final class CalendarView: UIView {
 
         collectionView.snp.makeConstraints {
             $0.top.equalTo(weekdayStackView.snp.bottom).offset(36)
-            $0.leading.equalToSuperview().offset(8)
-            $0.trailing.equalToSuperview().offset(-8)
+            $0.leading.trailing.equalToSuperview().inset(8) // 요일 헤더와 동일한 위치로 정렬
             $0.bottom.equalToSuperview()
         }
     }

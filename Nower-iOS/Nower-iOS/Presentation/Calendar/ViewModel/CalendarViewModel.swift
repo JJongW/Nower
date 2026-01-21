@@ -22,6 +22,10 @@ final class CalendarViewModel: ObservableObject {
     @Published var isRepeating: Bool = false
     @Published var selectedColorName: String = "default"
     @Published var selectedColor: String = "skyblue"
+    
+    // 기간별 일정을 위한 새로운 프로퍼티
+    @Published var selectedStartDate: Date?
+    @Published var selectedEndDate: Date?
 
     init(
         addTodoUseCase: AddTodoUseCase,
@@ -39,6 +43,7 @@ final class CalendarViewModel: ObservableObject {
         self.holidayUseCase = holidayUseCase
 
         loadAllTodos()
+        setupNotificationObserver()
     }
 
     func loadAllTodos() {
@@ -54,7 +59,28 @@ final class CalendarViewModel: ObservableObject {
 
     func todos(for date: Date) -> [TodoItem] {
         let key = date.toDateString()
-        return todosByDate[key] ?? []
+        let todosForDate = todosByDate[key] ?? []
+        
+        // 해당 날짜의 단일 날짜 일정들만 필터링 (기간별 일정 제외)
+        let singleDayTodos = todosForDate.filter { !$0.isPeriodEvent }
+        
+        // 모든 일정에서 기간별 일정을 찾되 중복 제거
+        let allTodos = todosByDate.values.flatMap { $0 }
+        let uniquePeriodTodos = Array(Set(allTodos.filter { todo in
+            todo.isPeriodEvent && todo.includesDate(date)
+        }))
+        
+        // 기간별 일정을 시작일 순으로 정렬
+        let sortedPeriodTodos = uniquePeriodTodos.sorted { first, second in
+            guard let firstStart = first.startDateObject,
+                  let secondStart = second.startDateObject else { return false }
+            return firstStart < secondStart
+        }
+        
+        print("📅 [CalendarViewModel] \(key) - 기간별: \(sortedPeriodTodos.count), 단일: \(singleDayTodos.count)")
+        
+        // 기간별 일정을 우선으로 반환
+        return sortedPeriodTodos + singleDayTodos
     }
 
     func holidayName(for date: Date) -> String? {
@@ -69,28 +95,46 @@ final class CalendarViewModel: ObservableObject {
         guard let date = selectedDate, !todoText.isEmpty else { return }
         let newTodo = TodoItem(text: todoText, isRepeating: isRepeating, date: date.toDateString(), colorName: selectedColorName)
         addTodoUseCase.execute(todo: newTodo)
-        NSUbiquitousKeyValueStore.default.synchronize()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            self.loadAllTodos()
-            NotificationCenter.default.post(name: .todosUpdated, object: nil)
-        }
+        // CloudSyncManager가 자동으로 알림을 발송하므로 별도 처리 불필요
+    }
+    
+    /// 기간별 일정을 추가합니다.
+    func addPeriodTodo() {
+        guard let startDate = selectedStartDate,
+              let endDate = selectedEndDate,
+              !todoText.isEmpty else { return }
+        
+        let newTodo = TodoItem(text: todoText, 
+                              isRepeating: isRepeating, 
+                              startDate: startDate, 
+                              endDate: endDate, 
+                              colorName: selectedColorName)
+        addTodoUseCase.execute(todo: newTodo)
+        // CloudSyncManager가 자동으로 알림을 발송하므로 별도 처리 불필요
     }
 
     func deleteTodo(_ todo: TodoItem) {
         deleteTodoUseCase.execute(todo: todo)
-        NSUbiquitousKeyValueStore.default.synchronize()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            self.loadAllTodos()
-            NotificationCenter.default.post(name: .todosUpdated, object: nil)
-        }
+        // CloudSyncManager가 자동으로 알림을 발송하므로 별도 처리 불필요
     }
 
-    func updateTodo(original: TodoItem, updatedText: String, updatedColor: String) {
-        let updatedTodo = TodoItem(text: updatedText, isRepeating: isRepeating, date: original.date, colorName: updatedColor)
+    func updateTodo(original: TodoItem, updatedText: String, updatedColor: String, date: Date? = nil) {
+        let targetDate = date ?? original.dateObject ?? Date()
+        let dateString = targetDate.toDateString()
+        let updatedTodo = TodoItem(text: updatedText, isRepeating: isRepeating, date: dateString, colorName: updatedColor)
         updateTodoUseCase.execute(original: original, updated: updatedTodo)
-        NSUbiquitousKeyValueStore.default.synchronize()
-        loadAllTodos()
-        NotificationCenter.default.post(name: .todosUpdated, object: nil)
+        // CloudSyncManager가 자동으로 알림을 발송하므로 별도 처리 불필요
+    }
+    
+    /// 기간별 일정을 수정합니다.
+    func updatePeriodTodo(original: TodoItem, updatedText: String, updatedColor: String, startDate: Date, endDate: Date) {
+        let updatedTodo = TodoItem(text: updatedText, 
+                                  isRepeating: isRepeating, 
+                                  startDate: startDate, 
+                                  endDate: endDate, 
+                                  colorName: updatedColor)
+        updateTodoUseCase.execute(original: original, updated: updatedTodo)
+        // CloudSyncManager가 자동으로 알림을 발송하므로 별도 처리 불필요
     }
 
     func debugPrintICloudTodos() {
@@ -110,6 +154,25 @@ final class CalendarViewModel: ObservableObject {
             }
         } catch {
             print("❌ 디코딩 실패:", error)
+        }
+    }
+    
+    // MARK: - Private Methods
+    
+    /// CloudSyncManager 알림 옵저버를 설정합니다.
+    private func setupNotificationObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(todosDidUpdate),
+            name: Notification.Name("CloudSyncManager.todosDidUpdate"),
+            object: nil
+        )
+    }
+    
+    /// Todo 업데이트 알림을 처리합니다.
+    @objc private func todosDidUpdate() {
+        DispatchQueue.main.async {
+            self.loadAllTodos()
         }
     }
 }

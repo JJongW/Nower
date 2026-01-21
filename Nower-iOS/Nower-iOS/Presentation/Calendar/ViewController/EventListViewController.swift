@@ -8,82 +8,38 @@ import UIKit
 
 final class EventListViewController: UIViewController {
 
+    private let eventListView = EventListView()
     var coordinator: AppCoordinator?
     var selectedDate: Date!
     var viewModel: CalendarViewModel!
 
-    private let eventDateLabel: UILabel = {
-        let label = UILabel()
-        label.font = .systemFont(ofSize: 24, weight: .bold)
-        label.textColor = AppColors.textPrimary
-        return label
-    }()
-
-    private let eventTableView: UITableView = {
-        let tableView = UITableView()
-        tableView.separatorStyle = .none
-        tableView.backgroundColor = AppColors.background
-        tableView.register(EventTableViewCell.self, forCellReuseIdentifier: "EventCell")
-        return tableView
-    }()
-
-    private let addButton: UIButton = {
-        let button = UIButton()
-        button.setTitle("＋", for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 28, weight: .bold)
-        button.backgroundColor = AppColors.textPrimary
-        button.tintColor = .white
-        button.layer.cornerRadius = 25
-        return button
-    }()
+    override func loadView() {
+        self.view = eventListView
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupUI()
+
+        eventListView.eventTableView.dataSource = self
+        eventListView.eventTableView.delegate = self
+        eventListView.addButton.addTarget(self, action: #selector(didTapAdd), for: .touchUpInside)
+
         reload()
-    }
-
-    private func setupUI() {
-        view.backgroundColor = .white
-        eventTableView.dataSource = self
-        eventTableView.delegate = self
-
-        view.addSubview(eventDateLabel)
-        view.addSubview(eventTableView)
-        view.addSubview(addButton)
-
-        eventDateLabel.snp.makeConstraints {
-            $0.top.equalToSuperview().offset(32)
-            $0.leading.equalToSuperview().offset(20)
-        }
-
-        eventTableView.snp.makeConstraints {
-            $0.top.equalTo(eventDateLabel.snp.bottom).offset(12)
-            $0.leading.trailing.bottom.equalToSuperview()
-        }
-
-        addButton.snp.makeConstraints {
-            $0.trailing.equalToSuperview().inset(20)
-            $0.bottom.equalTo(view.safeAreaLayoutGuide).inset(20)
-            $0.width.height.equalTo(50)
-        }
-
-        addButton.addTarget(self, action: #selector(didTapAdd), for: .touchUpInside)
     }
 
     private func reload() {
         viewModel.selectedDate = selectedDate
         viewModel.loadAllTodos()
-        eventTableView.reloadData()
-        eventDateLabel.text = selectedDate.formatted("yy.MM.dd")
+        eventListView.eventTableView.reloadData()
+        eventListView.eventDateLabel.text = selectedDate.formatted("dd")
+        eventListView.eventWeekLabel.text = selectedDate.formattedUS("EEE.").uppercased()
     }
 
     @objc private func didTapAdd() {
         let newVC = NewEventViewController()
         newVC.selectedDate = selectedDate
         newVC.viewModel = viewModel
-        newVC.coordinator = self.coordinator
-
+        newVC.coordinator = coordinator
         if let sheet = newVC.sheetPresentationController {
             sheet.detents = [.medium()]
             sheet.prefersGrabberVisible = true
