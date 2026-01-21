@@ -23,7 +23,7 @@ final class NewEventView: UIView {
         let textField = UITextField()
         textField.placeholder = "일정을 입력하세요"
         textField.textColor = AppColors.textPrimary
-        textField.setPlaceholder(color: AppColors.textFieldPlacehorder)
+        textField.setPlaceholder(color: AppColors.textFieldPlaceholder)
         textField.borderStyle = .none
         textField.backgroundColor = .clear
         return textField
@@ -37,8 +37,25 @@ final class NewEventView: UIView {
         return stackView
     }()
 
-    let saveButton = UIButton(type: .system)
-    let deleteButton = UIButton(type: .system)
+    let saveButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("추가", for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        button.backgroundColor = AppColors.textHighlighted
+        button.layer.cornerRadius = 12
+        return button
+    }()
+    
+    let deleteButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("삭제", for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        button.backgroundColor = UIColor.systemRed
+        button.layer.cornerRadius = 12
+        return button
+    }()
 
     // MARK: - 기간 선택 관련 컴포넌트
     
@@ -86,9 +103,9 @@ final class NewEventView: UIView {
         let button = UIButton(type: .system)
         button.setTitle("날짜 선택", for: .normal)
         button.setTitleColor(AppColors.textPrimary, for: .normal)
-        button.backgroundColor = UIColor.systemGray6
-        button.layer.cornerRadius = 8
-        button.titleLabel?.font = UIFont.systemFont(ofSize: 14)
+        button.backgroundColor = AppColors.todoBackground
+        button.layer.cornerRadius = 10
+        button.titleLabel?.font = UIFont.systemFont(ofSize: 15, weight: .medium)
         return button
     }()
     
@@ -104,9 +121,9 @@ final class NewEventView: UIView {
         let button = UIButton(type: .system)
         button.setTitle("날짜 선택", for: .normal)
         button.setTitleColor(AppColors.textPrimary, for: .normal)
-        button.backgroundColor = UIColor.systemGray6
-        button.layer.cornerRadius = 8
-        button.titleLabel?.font = UIFont.systemFont(ofSize: 14)
+        button.backgroundColor = AppColors.todoBackground
+        button.layer.cornerRadius = 10
+        button.titleLabel?.font = UIFont.systemFont(ofSize: 15, weight: .medium)
         return button
     }()
     
@@ -141,15 +158,16 @@ final class NewEventView: UIView {
     // MARK: - UI Setup
 
     private func setupUI() {
-        backgroundColor = .white
+        backgroundColor = AppColors.popupBackground
 
         // 텍스트 필드
         addSubview(textFieldBackgroundView)
         addSubview(textField)
 
+        // design-skills: 8pt 그리드 시스템
         textFieldBackgroundView.snp.makeConstraints {
-            $0.top.equalToSuperview().offset(36)
-            $0.height.equalTo(60)
+            $0.top.equalToSuperview().offset(24) // 8pt 그리드 (24 = 3 * 8)
+            $0.height.equalTo(56) // 최소 터치 타겟 44pt + 패딩
             $0.leading.trailing.equalToSuperview().inset(20)
         }
 
@@ -164,9 +182,9 @@ final class NewEventView: UIView {
         periodModeContainer.addSubview(periodModeSwitch)
 
         periodModeContainer.snp.makeConstraints {
-            $0.top.equalTo(textFieldBackgroundView.snp.bottom).offset(20)
+            $0.top.equalTo(textFieldBackgroundView.snp.bottom).offset(16) // 8pt 그리드 (16 = 2 * 8)
             $0.leading.trailing.equalToSuperview().inset(20)
-            $0.height.equalTo(50)
+            $0.height.equalTo(56) // 최소 터치 타겟 44pt + 패딩
         }
 
         periodModeLabel.snp.makeConstraints {
@@ -184,7 +202,7 @@ final class NewEventView: UIView {
         setupDateSelectionContainer()
 
         dateSelectionContainer.snp.makeConstraints {
-            $0.top.equalTo(periodModeContainer.snp.bottom).offset(12)
+            $0.top.equalTo(periodModeContainer.snp.bottom).offset(12) // 8pt 그리드 근사값
             $0.leading.trailing.equalToSuperview().inset(20)
             $0.height.equalTo(100)
         }
@@ -192,7 +210,7 @@ final class NewEventView: UIView {
         // 색상 선택
         addSubview(colorStackView)
         colorStackView.snp.makeConstraints {
-            $0.top.equalTo(dateSelectionContainer.snp.bottom).offset(20)
+            $0.top.equalTo(dateSelectionContainer.snp.bottom).offset(24) // 8pt 그리드 (24 = 3 * 8)
             $0.leading.trailing.equalToSuperview().inset(32)
             $0.height.equalTo(40)
         }
@@ -208,20 +226,35 @@ final class NewEventView: UIView {
             colorStackView.addArrangedSubview(button)
         }
 
-        addSubview(saveButton)
-        saveButton.setTitle("추가", for: .normal)
+        // 저장/삭제 버튼 컨테이너 (가로로 나란히 배치)
+        let buttonStackView: UIStackView = {
+            let stack = UIStackView()
+            stack.axis = .horizontal
+            stack.distribution = .fillEqually
+            stack.spacing = 12 // 8pt 그리드 근사값 (12 = 1.5 * 8)
+            stack.alignment = .fill
+            return stack
+        }()
+        
+        addSubview(buttonStackView)
+        buttonStackView.addArrangedSubview(saveButton)
+        buttonStackView.addArrangedSubview(deleteButton)
+        
+        buttonStackView.snp.makeConstraints {
+            $0.top.equalTo(colorStackView.snp.bottom).offset(32) // 8pt 그리드 (32 = 4 * 8)
+            $0.leading.trailing.equalToSuperview().inset(20)
+            $0.height.equalTo(52) // 최소 터치 타겟 44pt + 패딩
+        }
+        
+        // 각 버튼의 높이 제약
         saveButton.snp.makeConstraints {
-            $0.top.equalTo(colorStackView.snp.bottom).offset(30)
-            $0.centerX.equalToSuperview()
+            $0.height.equalTo(52)
         }
-
-        addSubview(deleteButton)
-        deleteButton.setTitle("삭제", for: .normal)
-        deleteButton.setTitleColor(.red, for: .normal)
+        
         deleteButton.snp.makeConstraints {
-            $0.top.equalTo(saveButton.snp.bottom).offset(16)
-            $0.centerX.equalToSuperview()
+            $0.height.equalTo(52)
         }
+        
         deleteButton.isHidden = true
         
         // 스위치 액션 설정
@@ -242,10 +275,10 @@ final class NewEventView: UIView {
         }
         
         startDateButton.snp.makeConstraints {
-            $0.top.equalTo(startDateLabel.snp.bottom).offset(8)
+            $0.top.equalTo(startDateLabel.snp.bottom).offset(8) // 8pt 그리드
             $0.leading.equalToSuperview().offset(16)
-            $0.width.equalTo(120)
-            $0.height.equalTo(32)
+            $0.width.equalTo(130)
+            $0.height.equalTo(44) // 최소 터치 타겟 44pt
         }
         
         endDateLabel.snp.makeConstraints {
@@ -254,10 +287,10 @@ final class NewEventView: UIView {
         }
         
         endDateButton.snp.makeConstraints {
-            $0.top.equalTo(endDateLabel.snp.bottom).offset(8)
+            $0.top.equalTo(endDateLabel.snp.bottom).offset(8) // 8pt 그리드
             $0.trailing.equalToSuperview().offset(-16)
-            $0.width.equalTo(120)
-            $0.height.equalTo(32)
+            $0.width.equalTo(130)
+            $0.height.equalTo(44) // 최소 터치 타겟 44pt
         }
     }
 

@@ -19,36 +19,50 @@ struct AddEventView: View {
     @Binding var isPopupVisible: Bool
 
     let colorOptions: [String] = ["skyblue", "peach", "lavender", "mintgreen", "coralred"]
+    
+    // 초기 날짜를 설정할 수 있는 초기화자
+    init(initialDate: Date? = nil, selectedColor: Binding<String>, isPopupVisible: Binding<Bool>) {
+        self._selectedColor = selectedColor
+        self._isPopupVisible = isPopupVisible
+        if let date = initialDate {
+            self._selectedDate = State(initialValue: date)
+            self._startDate = State(initialValue: date)
+            self._endDate = State(initialValue: date)
+        }
+    }
 
     var body: some View {
-        VStack {
+        ScrollView {
             VStack(alignment: .center, spacing: 20) {
                 TextField("", text: $eventText)
                     .placeholder(when: eventText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
                            Text("할 일을 입력하세요")
-                               .foregroundColor(.gray)
+                               .foregroundColor(AppColors.textFieldPlaceholder)
                                .font(.system(size: 16, weight: .medium))
                                .padding(.leading, 8)
                        }
                     .padding(.horizontal, 20)
-                    .padding(.vertical, 8)
-                    .background(AppColors.popupBackground)
+                    .padding(.vertical, 12)
+                    .background(AppColors.textFieldBackground)
                     .cornerRadius(12)
-                    .shadow(radius: 2)
+                    .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(ThemeManager.isDarkMode ? .white : .white)
+                    .foregroundColor(AppColors.textPrimary)
                     .textFieldStyle(.plain)
 
-                HStack {
+                HStack(spacing: 12) {
                     ForEach(colorOptions, id: \.self) { color in
                         Button(action: {
                             selectedColor = color
                         }) {
                             Circle()
                                 .fill(AppColors.color(for: color))
-                                .frame(width: 24, height: 24)
+                                .frame(width: 32, height: 32)
                                 .overlay(
-                                    Circle().stroke(AppColors.textWhite, lineWidth: selectedColor == color ? 1 : 0)
+                                    Circle().stroke(
+                                        selectedColor == color ? AppColors.textPrimary : Color.clear,
+                                        lineWidth: selectedColor == color ? 3 : 0
+                                    )
                                 )
                         }
                         .buttonStyle(.borderless)
@@ -62,10 +76,11 @@ struct AddEventView: View {
                             selectedDates = []
                         }) {
                             Text(type.rawValue)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(viewModel.selectedEventType == type ? AppColors.textHighlighted : AppColors.black)
-                                .foregroundColor(.white)
+                                .font(.system(size: 13, weight: .medium))
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(viewModel.selectedEventType == type ? AppColors.textHighlighted : AppColors.buttonSecondaryBackground)
+                                .foregroundColor(viewModel.selectedEventType == type ? AppColors.buttonTextColor : AppColors.textPrimary)
                                 .cornerRadius(16)
                         }
                         .buttonStyle(.borderless)
@@ -76,7 +91,7 @@ struct AddEventView: View {
                     VStack(alignment: .leading) {
                         Text("날짜 선택")
                             .font(.subheadline)
-                            .foregroundColor(.gray)
+                            .foregroundColor(AppColors.textPrimary)
                         DatePicker("", selection: $selectedDate, displayedComponents: .date)
                             .labelsHidden()
                             .datePickerStyle(GraphicalDatePickerStyle())
@@ -85,19 +100,44 @@ struct AddEventView: View {
                 }
 
                 if viewModel.selectedEventType == .duration {
-                    VStack(spacing: 10) {
-                        Text("기간 선택: 시작일 → 종료일 순서로 선택하세요")
+                    VStack(spacing: 16) {
+                        Text("기간별 일정")
+                            .font(.headline)
+                            .foregroundColor(AppColors.textPrimary)
+                        
+                        Text("시작일과 종료일을 선택하세요")
                             .font(.caption)
-                            .foregroundColor(.gray)
-
-                        DatePicker("시작 날짜", selection: $startDate, displayedComponents: .date)
-                            .datePickerStyle(CompactDatePickerStyle())
-                            .foregroundColor(.gray)
-
-                        DatePicker("종료 날짜", selection: $endDate, displayedComponents: .date)
-                            .datePickerStyle(CompactDatePickerStyle())
-                            .foregroundColor(.gray)
+                            .foregroundColor(AppColors.textFieldPlaceholder)
+                        
+                        HStack(spacing: 16) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("시작일")
+                                    .font(.subheadline)
+                                    .foregroundColor(AppColors.textPrimary)
+                                DatePicker("", selection: $startDate, displayedComponents: .date)
+                                    .labelsHidden()
+                                    .datePickerStyle(.compact)
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("종료일")
+                                    .font(.subheadline)
+                                    .foregroundColor(AppColors.textPrimary)
+                                DatePicker("", selection: $endDate, displayedComponents: .date)
+                                    .labelsHidden()
+                                    .datePickerStyle(.compact)
+                            }
+                        }
+                        
+                        if startDate > endDate {
+                            Text("⚠️ 시작일은 종료일보다 이전이어야 합니다")
+                                .font(.caption)
+                                .foregroundColor(AppColors.coralred)
+                        }
                     }
+                    .padding()
+                    .background(AppColors.textFieldBackground)
+                    .cornerRadius(12)
                     .accentColor(AppColors.textHighlighted)
                 }
 
@@ -105,7 +145,7 @@ struct AddEventView: View {
                     VStack(alignment: .center) {
                         Text("반복 시작 날짜")
                             .font(.subheadline)
-                            .foregroundColor(.gray)
+                            .foregroundColor(AppColors.textPrimary)
                         DatePicker("", selection: $selectedDate, displayedComponents: .date)
                             .datePickerStyle(GraphicalDatePickerStyle())
                             .accentColor(AppColors.primaryPink)
@@ -116,11 +156,11 @@ struct AddEventView: View {
                                     repeatOption = option
                                 }) {
                                     Text(option.rawValue)
-                                        .font(.system(size: 14))
-                                        .foregroundColor(repeatOption == option ? .black : .white)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(repeatOption == option ? Color.white : Color.gray.opacity(0.5))
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundColor(repeatOption == option ? AppColors.buttonTextColor : AppColors.textPrimary)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 8)
+                                        .background(repeatOption == option ? AppColors.buttonBackground : AppColors.buttonSecondaryBackground)
                                         .cornerRadius(8)
                                 }
                                 .buttonStyle(.plain)
@@ -134,7 +174,7 @@ struct AddEventView: View {
                     VStack(alignment: .leading) {
                         Text("여러 날짜 설정")
                             .font(.subheadline)
-                            .foregroundColor(.gray)
+                            .foregroundColor(AppColors.textPrimary)
                         DatePicker("", selection: $selectedDate, displayedComponents: .date)
                             .datePickerStyle(GraphicalDatePickerStyle())
                             .labelsHidden()
@@ -149,56 +189,89 @@ struct AddEventView: View {
                 }
             }
 
-            HStack {
+            HStack(spacing: 12) {
                 Button("취소") {
                     viewModel.isAddingEvent = false
                     isPopupVisible = false
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .foregroundColor(AppColors.textWhite)
-                .background(AppColors.black)
+                .font(.system(size: 14, weight: .semibold))
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+                .foregroundColor(AppColors.textPrimary)
+                .background(AppColors.buttonSecondaryBackground)
                 .buttonStyle(.borderless)
-                .cornerRadius(16)
+                .cornerRadius(8)
 
                 Button("저장") {
                     saveEvent()
                     viewModel.isAddingEvent = false
                     isPopupVisible = false
                 }
-                .foregroundColor(.white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(AppColors.buttonTextColor)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
                 .buttonStyle(.borderless)
-                .background(AppColors.textHighlighted)
-                .cornerRadius(16)
+                .background(AppColors.buttonBackground)
+                .cornerRadius(8)
             }
-            Spacer()
+            .padding(.bottom, 8)
         }
-        .frame(height: 400)
-        .frame(maxWidth: 400)
+        .frame(maxWidth: 500) // 기간별 일정 UI를 위해 너비 증가
+        .frame(maxHeight: 600) // 최대 높이 제한
         .padding()
         .background(AppColors.popupBackground)
         .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5) // 그림자 추가로 팝업이 더 명확하게 보이도록
+        .onAppear {
+            // selectedColor가 빈 문자열이면 기본값 설정
+            if selectedColor.isEmpty {
+                selectedColor = "skyblue"
+            }
+            // viewModel의 selectedDate도 초기 날짜로 설정
+            viewModel.selectedDate = selectedDate
+        }
     }
 
     private func saveEvent() {
-        switch viewModel.selectedEventType { // ✅ wrappedValue 없이 그냥 이렇게
+        guard !eventText.isEmpty else { return }
+        
+        switch viewModel.selectedEventType {
         case .normal:
-            viewModel.addTodo(for: selectedDate, text: eventText, colorName: selectedColor)
+            // 단일 날짜 일정 추가
+            viewModel.selectedDate = selectedDate
+            viewModel.todoText = eventText
+            viewModel.selectedColorName = selectedColor
+            viewModel.isRepeating = false
+            viewModel.addTodo()
+            
         case .repeatable:
-            viewModel.addTodo(for: selectedDate, text: eventText, colorName: selectedColor)
+            // 반복 일정 추가 (현재는 단일 날짜로 저장)
+            viewModel.selectedDate = selectedDate
+            viewModel.todoText = eventText
+            viewModel.selectedColorName = selectedColor
+            viewModel.isRepeating = true
+            viewModel.addTodo()
+            
         case .multiple:
+            // 여러 날짜에 각각 일정 추가
             for date in selectedDates {
-                viewModel.addTodo(for: date, text: eventText, colorName: selectedColor)
+                viewModel.selectedDate = date
+                viewModel.todoText = eventText
+                viewModel.selectedColorName = selectedColor
+                viewModel.isRepeating = false
+                viewModel.addTodo()
             }
+            
         case .duration:
-            let calendar = Calendar.current
-            var date = startDate
-            while date <= endDate {
-                viewModel.addTodo(for: date, text: eventText, colorName: selectedColor)
-                date = calendar.date(byAdding: .day, value: 1, to: date) ?? date
-            }
+            // 기간별 일정 추가 (iOS 버전과 동일하게 하나의 TodoItem으로 저장)
+            guard startDate <= endDate else { return }
+            viewModel.selectedStartDate = startDate
+            viewModel.selectedEndDate = endDate
+            viewModel.todoText = eventText
+            viewModel.selectedColorName = selectedColor
+            viewModel.isRepeating = false
+            viewModel.addPeriodTodo()
         }
     }
 

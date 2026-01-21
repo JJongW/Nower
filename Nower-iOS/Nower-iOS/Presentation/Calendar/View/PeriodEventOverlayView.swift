@@ -82,14 +82,6 @@ final class PeriodEventOverlayView: UIView {
         let segmentView = UIView()
         segmentView.backgroundColor = AppColors.color(for: todo.colorName)
         
-        // 각 세그먼트는 독립적으로 둥근 모서리 적용 (주 단위로 끊어짐)
-        segmentView.layer.cornerRadius = 6 // EventCapsuleView와 동일한 cornerRadius
-        
-        print("📐 [PeriodEventOverlayView] 세그먼트 프레임: \(segment.frame)")
-        print("🔄 [PeriodEventOverlayView] 세그먼트 정보 - 첫번째: \(segment.isFirstSegment), 마지막: \(segment.isLastSegment)")
-        
-        addSubview(segmentView)
-        
         // 컨테이너 프레임을 기준으로 상대적 위치 계산
         let relativeFrame = CGRect(
             x: segment.frame.minX - containerFrame.minX,
@@ -100,7 +92,40 @@ final class PeriodEventOverlayView: UIView {
         
         segmentView.frame = relativeFrame
         
-        print("📍 [PeriodEventOverlayView] 상대적 프레임: \(relativeFrame)")
+        // 연결된 형태로 표시하기 위해 cornerRadius 설정
+        // 첫 번째 세그먼트: 왼쪽만 둥글게
+        // 마지막 세그먼트: 오른쪽만 둥글게
+        // 중간 세그먼트: 직각
+        segmentView.layer.cornerRadius = 6
+        segmentView.layer.masksToBounds = true
+        
+        if segment.isFirstSegment && segment.isLastSegment {
+            // 단일 세그먼트인 경우 (한 주 안에 모두 포함)
+            segmentView.layer.maskedCorners = [
+                .layerMinXMinYCorner,
+                .layerMinXMaxYCorner,
+                .layerMaxXMinYCorner,
+                .layerMaxXMaxYCorner
+            ]
+        } else if segment.isFirstSegment {
+            // 첫 번째 세그먼트: 왼쪽만 둥글게
+            segmentView.layer.maskedCorners = [
+                .layerMinXMinYCorner,
+                .layerMinXMaxYCorner
+            ]
+        } else if segment.isLastSegment {
+            // 마지막 세그먼트: 오른쪽만 둥글게
+            segmentView.layer.maskedCorners = [
+                .layerMaxXMinYCorner,
+                .layerMaxXMaxYCorner
+            ]
+        } else {
+            // 중간 세그먼트: 직각
+            segmentView.layer.cornerRadius = 0
+            segmentView.layer.maskedCorners = []
+        }
+        
+        addSubview(segmentView)
         
         // 첫 번째 세그먼트에만 제목 라벨 추가
         if segment.isFirstSegment {
@@ -111,8 +136,6 @@ final class PeriodEventOverlayView: UIView {
             titleLabel.textAlignment = .left
             titleLabel.numberOfLines = 1
             titleLabel.lineBreakMode = .byTruncatingTail
-            
-            print("📝 [PeriodEventOverlayView] 제목 라벨 추가: \(todo.text)")
             
             segmentView.addSubview(titleLabel)
             titleLabel.snp.makeConstraints {

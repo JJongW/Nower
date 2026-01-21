@@ -1,0 +1,100 @@
+{
+    "name": "design-skills-ios",
+    "version": "1.0.0",
+    "description": "iOS UI design policy optimized for SwiftUI and UIKit following Apple Human Interface Guidelines. Focused on calm, spatial clarity, accessibility, and system-native behaviors.",
+    "scope": ["swiftui", "uikit", "ios", "ipad"],
+  
+    "principles": {
+      "philosophy": [
+        "System-native first, custom second",
+        "Clarity over decoration",
+        "Spatial hierarchy communicates meaning",
+        "Motion explains state change only",
+        "Respect platform conventions"
+      ],
+  
+      "layout": {
+        "respectSafeArea": true,
+        "avoidFixedHeights": true,
+        "preferAdaptiveStacks": true,
+        "supportDynamicType": true,
+        "minTapTargetPt": 44,
+        "ipadSupportsMultiColumn": true,
+        "avoidAbsolutePositioning": true
+      },
+  
+      "spacing": {
+        "baseUnitPt": 8,
+        "allowedMultiples": [4, 8],
+        "minimumVerticalPaddingPt": 8,
+        "enforceVisualRhythm": true
+      },
+  
+      "color": {
+        "preferSystemColors": true,
+        "supportDarkMode": true,
+        "avoidPureWhiteBackground": true,
+        "accentUsage": [
+          "primary_action",
+          "selection_state",
+          "focus_state"
+        ],
+        "avoidColorOnlyMeaning": true
+      },
+  
+      "typography": {
+        "preferSystemFont": true,
+        "dynamicTypeRequired": true,
+        "maxFontStylesPerScreen": 4,
+        "avoidUltraLightWeight": true,
+        "paragraphAlignment": "leading",
+        "lineSpacingMultiplier": {
+          "min": 1.2,
+          "max": 1.5
+        }
+      },
+  
+      "components": {
+        "preferSystemComponents": true,
+        "reuseViaViewComposition": true,
+        "avoidOverCustomization": true,
+        "tokenizeSpacingAndRadius": true
+      },
+  
+      "motion": {
+        "useSystemAnimationWhenPossible": true,
+        "defaultDurationMs": {
+          "min": 180,
+          "max": 280
+        },
+        "maxSimultaneousAnimations": 2,
+        "preferredProperties": ["opacity", "offset", "scale"],
+        "avoidGeometryHeavyAnimations": true,
+        "respectReduceMotionSetting": true
+      },
+  
+      "interaction": {
+        "provideHapticFeedbackForPrimaryActions": true,
+        "alwaysProvidePressedState": true,
+        "avoidHiddenGestures": true,
+        "gestureMustHaveVisualAffordance": true
+      },
+  
+      "accessibility": {
+        "voiceOverFriendly": true,
+        "minimumContrast": "WCAG-AA",
+        "minTapTargetPt": 44,
+        "supportBoldText": true,
+        "supportIncreaseContrast": true,
+        "labelsRequiredForControls": true
+      }
+    },
+  
+    "enforcement": {
+      "strict": true,
+      "warnOnly": [
+        "avoidPureWhiteBackground",
+        "maxFontStylesPerScreen"
+      ]
+    }
+  }

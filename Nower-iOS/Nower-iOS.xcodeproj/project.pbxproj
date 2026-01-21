@@ -8,12 +8,14 @@
 
 /* Begin PBXBuildFile section */
 		C3CE4DE02DB6168E00357F86 /* Moya in Frameworks */ = {isa = PBXBuildFile; productRef = C3CE4DDF2DB6168E00357F86 /* Moya */; };
+		C3E007B42F1F8EBA004CBAD6 /* Debug.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = C3E007B32F1F8EB1004CBAD6 /* Debug.xcconfig */; };
+		C3E007B62F1F8FDC004CBAD6 /* Release.xcconfig in Sources */ = {isa = PBXBuildFile; fileRef = C3E007B52F1F8FD2004CBAD6 /* Release.xcconfig */; };
 		C3E07EF92DA8E5D200BB0D0A /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = C3E07EF82DA8E5D200BB0D0A /* SnapKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		C3CE4DE52DB61ABF00357F86 /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = "/Users/sjw/ted.urssu/Nower/Nower-iOS/Nower-iOS/SupportingFiles/debug.xcconfig"; sourceTree = "<absolute>"; };
-		C3CE4DE72DB61B5A00357F86 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = "/Users/sjw/ted.urssu/Nower/Nower-iOS/Nower-iOS/SupportingFiles/Release.xcconfig"; sourceTree = "<absolute>"; };
+		C3E007B32F1F8EB1004CBAD6 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		C3E007B52F1F8FD2004CBAD6 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		C3E07ED12DA8E2CA00BB0D0A /* Nower.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Nower.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -54,8 +56,8 @@
 		C3C6EADB2DC5D05200302399 /* Recovered References */ = {
 			isa = PBXGroup;
 			children = (
-				C3CE4DE52DB61ABF00357F86 /* debug.xcconfig */,
-				C3CE4DE72DB61B5A00357F86 /* Release.xcconfig */,
+				C3E007B32F1F8EB1004CBAD6 /* Debug.xcconfig */,
+				C3E007B52F1F8FD2004CBAD6 /* Release.xcconfig */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -147,6 +149,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C3E007B42F1F8EBA004CBAD6 /* Debug.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -157,6 +160,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C3E007B62F1F8FDC004CBAD6 /* Release.xcconfig in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -165,8 +169,7 @@
 /* Begin XCBuildConfiguration section */
 		C3E07EE52DA8E2CB00BB0D0A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReferenceAnchor = C3E07ED32DA8E2CA00BB0D0A /* Nower-iOS */;
-			baseConfigurationReferenceRelativePath = Debug.xcconfig;
+			baseConfigurationReference = C3E007B32F1F8EB1004CBAD6 /* Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -199,8 +202,7 @@
 		};
 		C3E07EE62DA8E2CB00BB0D0A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReferenceAnchor = C3E07ED32DA8E2CA00BB0D0A /* Nower-iOS */;
-			baseConfigurationReferenceRelativePath = Release.xcconfig;
+			baseConfigurationReference = C3E007B52F1F8FD2004CBAD6 /* Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;

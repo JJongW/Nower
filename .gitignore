@@ -27,3 +27,7 @@ xcuserdata/
 
 # 사용자별 Xcode 설정
 Nower/Nower.xcodeproj/project.xcworkspace/xcuserdata/sinjong-won.xcuserdatad/UserInterfaceState.xcuserstate
+
+# macOS 시스템 파일
+.DS_Store
+**/.DS_Store

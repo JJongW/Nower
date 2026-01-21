@@ -1,0 +1,119 @@
+{
+  "designSystem": {
+    "name": "Nower iOS Design System",
+    "version": "1.0.0",
+    "baseDesignGuidelines": [
+      "Apple Human Interface Guidelines",
+      "Toss Design System Principles",
+      "WCAG 2.1 AA Accessibility Standards"
+    ]
+  },
+  "colorSystem": {
+    "darkMode": {
+      "enabled": true,
+      "mandatory": true,
+      "standard": "Apple HIG Dark Mode"
+    },
+    "contrast": {
+      "minimumRatio": 4.5,
+      "largeTextRatio": 3.0,
+      "standard": "WCAG AA"
+    },
+    "semanticColors": {
+      "background": {
+        "light": "#FFFFFF",
+        "dark": "#000000",
+        "description": "Primary background color"
+      },
+      "textPrimary": {
+        "light": "#0F0F0F",
+        "dark": "#F5F5F7",
+        "contrast": {
+          "light": 15.8,
+          "dark": 16.1
+        },
+        "description": "Primary text color with WCAG 4.5:1+ contrast"
+      },
+      "textMain": {
+        "light": "#FFFFFF",
+        "dark": "#FFFFFF",
+        "description": "Default text color for colored event capsules. For better contrast, use contrastingTextColor(for:) function which automatically selects dark text (#0F0F0F) for bright backgrounds and white text for dark backgrounds to meet WCAG 4.5:1 contrast ratio."
+      },
+      "textHighlighted": {
+        "light": "#FF7E62",
+        "dark": "#FF9A85",
+        "description": "Accent color for today's date and primary actions"
+      }
+    },
+    "themeColors": {
+      "skyblue": {
+        "light": "#A0D2EB",
+        "dark": "#73ADD9",
+        "description": "Calendar event theme color"
+      },
+      "peach": {
+        "light": "#FFD6A5",
+        "dark": "#FFBF8C",
+        "description": "Calendar event theme color"
+      },
+      "lavender": {
+        "light": "#CABBE9",
+        "dark": "#BFADE0",
+        "description": "Calendar event theme color"
+      },
+      "mintgreen": {
+        "light": "#7ECCB0",
+        "dark": "#66BFA6",
+        "description": "Calendar event theme color"
+      },
+      "coralred": {
+        "light": "#FF968A",
+        "dark": "#FFA699",
+        "description": "Calendar event theme color"
+      }
+    }
+  },
+  "spacing": {
+    "baseUnitPt": 8,
+    "allowedMultiples": [4, 8],
+    "minimumVerticalPaddingPt": 8,
+    "enforceVisualRhythm": true
+  },
+  "layout": {
+    "avoidAbsolutePositioning": true,
+    "preferAdaptiveStacks": true,
+    "minimumTouchTarget": 44
+  },
+  "accessibility": {
+    "colorContrast": {
+      "enforced": true,
+      "minimumRatio": 4.5,
+      "largeTextRatio": 3.0
+    },
+    "dynamicType": {
+      "supported": true,
+      "required": false
+    },
+    "voiceOver": {
+      "tested": true,
+      "required": true
+    }
+  },
+  "implementation": {
+    "colorDefinition": {
+      "method": "UIColor dynamic color closures",
+      "example": "UIColor { trait in trait.userInterfaceStyle == .dark ? darkColor : lightColor }",
+      "enum": "AppColors"
+    },
+    "textColorForBackground": {
+      "method": "AppColors.contrastingTextColor(for:)",
+      "description": "Automatically selects text color (dark or white) based on background color luminance to ensure WCAG 4.5:1 contrast ratio",
+      "example": "label.textColor = AppColors.contrastingTextColor(for: backgroundColor)"
+    },
+    "testing": {
+      "darkMode": "required",
+      "contrast": "automated",
+      "accessibility": "VoiceOver + automated tools"
+    }
+  }
+}

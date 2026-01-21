@@ -21,8 +21,10 @@ final class CalendarView: UIView {
         let label = UILabel()
         label.font = .systemFont(ofSize: 12, weight: .semibold)
         label.textAlignment = .left
-        label.text = "열심히 테스트 중입니다!! 아직! v0.0.1"
+        // 일일 명언으로 자동
+        label.text = DailyQuoteManager.getTodayQuote()
         label.textColor = AppColors.textPrimary
+        label.numberOfLines = 0 // 여러 줄 표시 지원
         return label
     }()
 
@@ -55,21 +57,14 @@ final class CalendarView: UIView {
 
     let collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
-        layout.minimumInteritemSpacing = 8
-        layout.minimumLineSpacing = 8
+        layout.minimumInteritemSpacing = 0 // 셀 간격 제거
+        layout.minimumLineSpacing = 0 // 행 간격 제거
+        layout.scrollDirection = .vertical
 
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
-        collectionView.backgroundColor = .white
-        collectionView.register(DateCell.self, forCellWithReuseIdentifier: DateCell.identifier)
+        collectionView.backgroundColor = AppColors.background
+        collectionView.register(WeekCell.self, forCellWithReuseIdentifier: WeekCell.identifier)
         return collectionView
-    }()
-    
-    // MARK: - 기간별 일정 오버레이를 위한 컨테이너
-    let periodEventOverlayContainer: UIView = {
-        let view = UIView()
-        view.backgroundColor = .clear
-        view.isUserInteractionEnabled = false // 터치 이벤트는 하위 collectionView로 전달
-        return view
     }()
 
     override init(frame: CGRect) {
@@ -82,7 +77,7 @@ final class CalendarView: UIView {
     }
 
     private func setupUI() {
-        backgroundColor = .white
+        backgroundColor = AppColors.background
 
         addSubview(monthLabel)
         addSubview(previousButton)
@@ -90,7 +85,6 @@ final class CalendarView: UIView {
         addSubview(textLabel)
         addSubview(weekdayStackView)
         addSubview(collectionView)
-        addSubview(periodEventOverlayContainer) // 오버레이를 가장 위에 추가
 
         for (index, day) in weekdays.enumerated() {
             let label = UILabel()
@@ -127,6 +121,7 @@ final class CalendarView: UIView {
         textLabel.snp.makeConstraints {
             $0.top.equalTo(monthLabel.snp.bottom).offset(48)
             $0.leading.equalToSuperview().offset(20)
+            $0.trailing.equalToSuperview().inset(20) // 명언이 길 경우를 대비한 제약
         }
 
         weekdayStackView.snp.makeConstraints {
@@ -137,54 +132,8 @@ final class CalendarView: UIView {
 
         collectionView.snp.makeConstraints {
             $0.top.equalTo(weekdayStackView.snp.bottom).offset(36)
-            $0.leading.equalToSuperview().offset(8)
-            $0.trailing.equalToSuperview().offset(-8)
+            $0.leading.trailing.equalToSuperview().inset(8) // 요일 헤더와 동일한 위치로 정렬
             $0.bottom.equalToSuperview()
-        }
-        
-        // 오버레이 컨테이너는 collectionView와 동일한 영역을 차지
-        periodEventOverlayContainer.snp.makeConstraints {
-            $0.edges.equalTo(collectionView)
-        }
-    }
-    
-    // MARK: - 기간별 일정 오버레이 관리
-    
-    /// 기간별 일정 오버레이를 모두 제거합니다.
-    func clearPeriodEventOverlays() {
-        periodEventOverlayContainer.subviews.forEach { $0.removeFromSuperview() }
-    }
-    
-    /// 기간별 일정 오버레이를 추가합니다.
-    /// - Parameters:
-    ///   - todo: 기간별 일정 아이템
-    ///   - segments: 기간별 일정의 각 세그먼트 정보
-    ///   - row: 해당 일정이 표시될 행 (0부터 시작)
-    func addPeriodEventOverlay(todo: TodoItem, segments: [PeriodEventSegment], row: Int) {
-        let overlayView = PeriodEventOverlayView()
-        
-        // 오버레이 뷰의 전체 프레임을 모든 세그먼트를 포함하도록 설정
-        if !segments.isEmpty {
-            let minX = segments.map { $0.frame.minX }.min() ?? 0
-            let minY = segments.map { $0.frame.minY }.min() ?? 0
-            let maxX = segments.map { $0.frame.maxX }.max() ?? 0
-            let maxY = segments.map { $0.frame.maxY }.max() ?? 0
-            
-            let overlayFrame = CGRect(
-                x: minX,
-                y: minY,
-                width: maxX - minX,
-                height: maxY - minY
-            )
-            
-            overlayView.frame = overlayFrame
-            print("🖼️ [CalendarView] 오버레이 프레임: \(overlayFrame)")
-            
-            // 프레임 설정 후 configure 호출
-            overlayView.configure(todo: todo, segments: segments, row: row)
-            
-            periodEventOverlayContainer.addSubview(overlayView)
-            print("✅ [CalendarView] 오버레이 추가됨: \(todo.text)")
         }
     }
 }

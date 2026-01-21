@@ -25,6 +25,27 @@ final class NewEventViewController: UIViewController {
         popupView.colorOptions.forEach { button in
             button.addTarget(self, action: #selector(colorSelected(_:)), for: .touchUpInside)
         }
+        
+        // 기간 모드 변경 시 기본 날짜 설정
+        popupView.periodModeSwitch.addTarget(self, action: #selector(periodModeChanged), for: .valueChanged)
+    }
+    
+    @objc private func periodModeChanged() {
+        // 기간 모드로 변경 시 시작일을 선택한 날짜로 자동 설정
+        if popupView.isPeriodMode {
+            if popupView.selectedStartDate == nil {
+                popupView.selectedStartDate = selectedDate
+                let formatter = DateFormatter()
+                formatter.dateFormat = "MM/dd"
+                popupView.startDateButton.setTitle(formatter.string(from: selectedDate), for: .normal)
+            }
+            if popupView.selectedEndDate == nil {
+                popupView.selectedEndDate = selectedDate
+                let formatter = DateFormatter()
+                formatter.dateFormat = "MM/dd"
+                popupView.endDateButton.setTitle(formatter.string(from: selectedDate), for: .normal)
+            }
+        }
     }
 
     @objc private func saveTapped() {

@@ -13,7 +13,7 @@ import Cocoa
 /// 시스템 에러에 대한 적절한 처리를 제공합니다.
 class SafeHostingView<Content: View>: NSHostingView<Content> {
     
-    override init(rootView: Content) {
+    required init(rootView: Content) {
         super.init(rootView: rootView)
         setupSafeConfiguration()
     }

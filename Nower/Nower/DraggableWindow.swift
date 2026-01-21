@@ -80,14 +80,14 @@ class DraggableWindow: NSWindow {
     }
     
     /// 윈도우가 이동될 수 있는지 여부 (macOS 10.6+)
+    /// 배경 드래그로 창 이동을 항상 비활성화 (타이틀바에서만 이동 가능)
     override var isMovableByWindowBackground: Bool {
         get {
-            return !isPositionLocked
+            return false // 배경 드래그로 창 이동 항상 비활성화
         }
         set {
-            if !isPositionLocked {
-                super.isMovableByWindowBackground = newValue
-            }
+            // 설정을 무시하고 항상 false로 유지
+            super.isMovableByWindowBackground = false
         }
     }
     
@@ -170,7 +170,11 @@ class DraggableWindow: NSWindow {
             y: screenFrame.maxY - frame.height - margin
         )
         
+        // 위치 잠금 상태를 일시적으로 해제하여 이동 허용
+        let wasLocked = isPositionLocked
+        isPositionLocked = false
         setFrameOrigin(newOrigin)
+        isPositionLocked = wasLocked
     }
     
     /// 화면 설정 변경 시 위치 재조정
@@ -194,6 +198,9 @@ class DraggableWindow: NSWindow {
         
         // 그림자 효과로 자연스러운 느낌 연출
         hasShadow = true
+        
+        // 배경 드래그로 창 이동 비활성화 (타이틀바에서만 이동 가능)
+        isMovableByWindowBackground = false
     }
     
     // MARK: - Public Interface

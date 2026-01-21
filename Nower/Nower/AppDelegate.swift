@@ -46,6 +46,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.level = .normal
         window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
         window.ignoresMouseEvents = false
+        
+        // 배경 드래그로 창 이동 비활성화 (타이틀바에서만 이동 가능)
+        window.isMovableByWindowBackground = false
 
         let contentView = ContentView().environmentObject(settingsManager)
         let hostingView = SafeHostingView(rootView: contentView)

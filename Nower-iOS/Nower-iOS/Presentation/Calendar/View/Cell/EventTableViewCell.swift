@@ -13,7 +13,7 @@ class EventTableViewCell: UITableViewCell {
         let label = UILabel()
         label.text = "일정"
         label.font = .systemFont(ofSize: 16, weight: .semibold)
-        label.textColor = AppColors.textMain
+        label.textColor = .white // 기본값, configure에서 동적으로 변경됨
         label.numberOfLines = 1
         return label
     }()
@@ -22,7 +22,7 @@ class EventTableViewCell: UITableViewCell {
         let label = UILabel()
         label.text = "일상"
         label.font = .systemFont(ofSize: 12)
-        label.textColor = AppColors.textMain
+        label.textColor = .white // 기본값, configure에서 동적으로 변경됨
         return label
     }()
 
@@ -63,8 +63,32 @@ class EventTableViewCell: UITableViewCell {
     }
 
     func configure(with todo: TodoItem) {
-        containerView.backgroundColor = AppColors.color(for: todo.colorName)
+        let backgroundColor = AppColors.color(for: todo.colorName)
+        containerView.backgroundColor = backgroundColor
+        
+        // 배경색에 맞춰 텍스트 색상 자동 조정 (WCAG 4.5:1 대비 보장)
+        let textColor = AppColors.contrastingTextColor(for: backgroundColor)
+        eventTitleLabel.textColor = textColor
+        eventSubtitleLabel.textColor = textColor
+        
         eventTitleLabel.text = todo.text
-        eventSubtitleLabel.text = "일상"
+        
+        // 기간별 일정인 경우 기간 정보 표시
+        if todo.isPeriodEvent, let startDate = todo.startDateObject, let endDate = todo.endDateObject {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MM/dd"
+            formatter.locale = Locale(identifier: "ko_KR")
+            
+            let startString = formatter.string(from: startDate)
+            let endString = formatter.string(from: endDate)
+            
+            if Calendar.current.isDate(startDate, inSameDayAs: endDate) {
+                eventSubtitleLabel.text = startString
+            } else {
+                eventSubtitleLabel.text = "\(startString) - \(endString)"
+            }
+        } else {
+            eventSubtitleLabel.text = "일상"
+        }
     }
 }

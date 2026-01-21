@@ -25,7 +25,10 @@ final class CloudSyncManager {
     // MARK: - Initialization
     private init() {
         setupiCloudObserver()
-        loadTodos()
+        // 초기 로드는 비동기로 처리하여 초기화 블로킹 방지
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.loadTodos()
+        }
     }
     
     deinit {
@@ -64,7 +67,8 @@ final class CloudSyncManager {
             // 중복 방지: 같은 ID가 이미 존재하는지 확인
             if !self.cachedTodos.contains(where: { $0.id == todo.id }) {
                 self.cachedTodos.append(todo)
-                self.saveToiCloud()
+                // 이미 syncQueue 내부이므로 직접 저장 (데드락 방지)
+                self.saveToiCloudInternal()
                 
                 DispatchQueue.main.async {
                     NotificationCenter.default.post(name: Self.todosDidUpdateNotification, object: nil)
@@ -80,7 +84,8 @@ final class CloudSyncManager {
             guard let self = self else { return }
             
             self.cachedTodos.removeAll { $0.id == todo.id }
-            self.saveToiCloud()
+            // 이미 syncQueue 내부이므로 직접 저장 (데드락 방지)
+            self.saveToiCloudInternal()
             
             DispatchQueue.main.async {
                 NotificationCenter.default.post(name: Self.todosDidUpdateNotification, object: nil)
@@ -102,7 +107,8 @@ final class CloudSyncManager {
                 updatedTodo.id = original.id
                 self.cachedTodos[index] = updatedTodo
                 
-                self.saveToiCloud()
+                // 이미 syncQueue 내부이므로 직접 저장 (데드락 방지)
+                self.saveToiCloudInternal()
                 
                 DispatchQueue.main.async {
                     NotificationCenter.default.post(name: Self.todosDidUpdateNotification, object: nil)
@@ -132,11 +138,11 @@ final class CloudSyncManager {
     /// iCloud 변경 사항을 처리합니다.
     @objc private func handleiCloudChange(_ notification: Notification) {
         print("📥 [CloudSyncManager] iCloud 변경 감지됨")
+        // loadTodos는 이미 비동기로 처리되므로 안전하게 호출 가능
         loadTodos()
         
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(name: Self.todosDidUpdateNotification, object: nil)
-        }
+        // 알림은 loadTodos 완료 후에 보내야 하므로, loadTodos 내부에서 처리하도록 변경
+        // (현재는 loadTodos가 비동기이므로 별도 처리 불필요)
     }
     
     /// iCloud에서 데이터를 로드합니다.
@@ -144,9 +150,15 @@ final class CloudSyncManager {
         syncQueue.async { [weak self] in
             guard let self = self else { return }
             
+            // 이미 syncQueue 내부에 있으므로 직접 접근 (데드락 방지)
             guard let data = self.store.data(forKey: self.todosKey) else {
                 print("⚠️ [CloudSyncManager] iCloud에 저장된 데이터가 없습니다")
                 self.cachedTodos = []
+                
+                // 데이터 로드 완료 후 알림 전송
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: Self.todosDidUpdateNotification, object: nil)
+                }
                 return
             }
             
@@ -154,15 +166,43 @@ final class CloudSyncManager {
                 let todos = try JSONDecoder().decode([TodoItem].self, from: data)
                 self.cachedTodos = todos
                 print("✅ [CloudSyncManager] \(todos.count)개의 Todo를 로드했습니다")
+                
+                // 데이터 로드 완료 후 알림 전송
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: Self.todosDidUpdateNotification, object: nil)
+                }
             } catch {
                 print("❌ [CloudSyncManager] 데이터 디코딩 실패: \(error)")
                 self.cachedTodos = []
+                
+                // 에러 발생 시에도 알림 전송
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: Self.todosDidUpdateNotification, object: nil)
+                }
             }
         }
     }
     
-    /// 데이터를 iCloud에 저장합니다.
+    /// 데이터를 iCloud에 저장합니다. (외부에서 호출 시 사용)
     private func saveToiCloud() {
+        // 동기화 큐 내에서 안전하게 데이터 복사
+        let todosToSave = syncQueue.sync {
+            return cachedTodos
+        }
+        
+        do {
+            let data = try JSONEncoder().encode(todosToSave)
+            store.set(data, forKey: todosKey)
+            store.synchronize()
+            print("✅ [CloudSyncManager] \(todosToSave.count)개의 Todo를 저장했습니다")
+        } catch {
+            print("❌ [CloudSyncManager] 데이터 인코딩 실패: \(error)")
+        }
+    }
+    
+    /// 데이터를 iCloud에 저장합니다. (syncQueue 내부에서 호출 시 사용, 데드락 방지)
+    private func saveToiCloudInternal() {
+        // 이미 syncQueue 내부에 있으므로 직접 접근 (데드락 방지)
         do {
             let data = try JSONEncoder().encode(cachedTodos)
             store.set(data, forKey: todosKey)

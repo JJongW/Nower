@@ -68,10 +68,16 @@ final class EventListView: UIView {
     let addButton: UIButton = {
         let button = UIButton()
         button.setTitle("＋", for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 28, weight: .bold)
-        button.backgroundColor = AppColors.textPrimary
-        button.tintColor = .white
-        button.layer.cornerRadius = 25
+        button.titleLabel?.font = .systemFont(ofSize: 32, weight: .bold)
+        // 강조 색상으로 변경하여 더 잘 보이게
+        button.backgroundColor = AppColors.textHighlighted
+        button.setTitleColor(.white, for: .normal)
+        button.layer.cornerRadius = 28
+        // 그림자 추가로 더 눈에 띄게
+        button.layer.shadowColor = UIColor.black.cgColor
+        button.layer.shadowOffset = CGSize(width: 0, height: 2)
+        button.layer.shadowRadius = 4
+        button.layer.shadowOpacity = 0.3
         return button
     }()
 
@@ -85,7 +91,7 @@ final class EventListView: UIView {
     }
 
     private func setupUI() {
-        backgroundColor = .white
+        backgroundColor = AppColors.background
 
         addSubview(eventDateLabel)
         addSubview(eventTableView)
@@ -113,7 +119,7 @@ final class EventListView: UIView {
         addButton.snp.makeConstraints {
             $0.trailing.equalToSuperview().inset(20)
             $0.bottom.equalTo(safeAreaLayoutGuide).inset(20)
-            $0.width.height.equalTo(50)
+            $0.width.height.equalTo(56) // 더 크게 (최소 터치 타겟 44pt + 여유)
         }
     }
 }

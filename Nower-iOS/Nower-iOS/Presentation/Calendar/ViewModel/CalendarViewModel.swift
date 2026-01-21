@@ -118,8 +118,21 @@ final class CalendarViewModel: ObservableObject {
         // CloudSyncManager가 자동으로 알림을 발송하므로 별도 처리 불필요
     }
 
-    func updateTodo(original: TodoItem, updatedText: String, updatedColor: String) {
-        let updatedTodo = TodoItem(text: updatedText, isRepeating: isRepeating, date: original.date, colorName: updatedColor)
+    func updateTodo(original: TodoItem, updatedText: String, updatedColor: String, date: Date? = nil) {
+        let targetDate = date ?? original.dateObject ?? Date()
+        let dateString = targetDate.toDateString()
+        let updatedTodo = TodoItem(text: updatedText, isRepeating: isRepeating, date: dateString, colorName: updatedColor)
+        updateTodoUseCase.execute(original: original, updated: updatedTodo)
+        // CloudSyncManager가 자동으로 알림을 발송하므로 별도 처리 불필요
+    }
+    
+    /// 기간별 일정을 수정합니다.
+    func updatePeriodTodo(original: TodoItem, updatedText: String, updatedColor: String, startDate: Date, endDate: Date) {
+        let updatedTodo = TodoItem(text: updatedText, 
+                                  isRepeating: isRepeating, 
+                                  startDate: startDate, 
+                                  endDate: endDate, 
+                                  colorName: updatedColor)
         updateTodoUseCase.execute(original: original, updated: updatedTodo)
         // CloudSyncManager가 자동으로 알림을 발송하므로 별도 처리 불필요
     }
