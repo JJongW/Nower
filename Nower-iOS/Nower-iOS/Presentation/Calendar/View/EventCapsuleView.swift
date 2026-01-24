@@ -14,7 +14,7 @@ class EventCapsuleView: UIView {
         let label = UILabel()
         label.font = UIFont.systemFont(ofSize: 10)
         label.textColor = AppColors.textMain
-        label.textAlignment = .center
+        label.textAlignment = .left // 기간별 일정은 좌측 정렬
         label.numberOfLines = 1
         label.lineBreakMode = .byTruncatingTail
         label.adjustsFontSizeToFitWidth = false
@@ -70,11 +70,16 @@ class EventCapsuleView: UIView {
         switch position {
         case .start:
             titleLabel.text = title
-            // 시작일: 텍스트를 위해 좌측 패딩만 유지, 우측은 0으로
+            // 시작일: 텍스트가 셀을 넘어가도 표시되도록 설정
+            // clipsToBounds를 false로 설정하여 텍스트가 다음 셀까지 넘어갈 수 있도록 함
+            clipsToBounds = false
+            titleLabel.lineBreakMode = .byClipping // ... 처리하지 않고 잘라냄
             titleLabel.snp.remakeConstraints {
                 $0.top.bottom.equalToSuperview()
-                $0.leading.equalToSuperview().offset(6) // 좌측만 패딩
-                $0.trailing.equalToSuperview() // 우측은 가장자리까지
+                $0.leading.equalToSuperview().offset(6) // 좌측 패딩
+                // trailing 제약을 제거하여 텍스트가 셀을 넘어가도 표시되도록 함
+                // 기간별 일정의 끝까지는 넘어가지 않도록 (다음 셀에서 처리)
+                // trailing 제약 없음 - 텍스트가 길면 셀을 넘어가서 표시됨
             }
         case .middle, .end:
             titleLabel.text = "" // 중간일과 종료일에는 제목 표시 안함

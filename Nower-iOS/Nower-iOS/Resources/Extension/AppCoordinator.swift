@@ -66,6 +66,20 @@ final class AppCoordinator {
         navigationController.topViewController?.present(listVC, animated: true)
     }
 
+    func presentEditEvent(todo: TodoItem, date: Date, viewModel: CalendarViewModel) {
+        let editVC = EditEventBottomSheetViewController()
+        editVC.todo = todo
+        editVC.viewModel = viewModel
+        editVC.selectedDate = date
+        editVC.coordinator = self
+
+        if let sheet = editVC.sheetPresentationController {
+            sheet.detents = [.medium()]
+            sheet.prefersGrabberVisible = true
+        }
+        navigationController.topViewController?.present(editVC, animated: true)
+    }
+
     func returnToBack() {
         if navigationController.presentedViewController != nil {
             navigationController.dismiss(animated: true)

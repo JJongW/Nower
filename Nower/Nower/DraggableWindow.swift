@@ -132,7 +132,9 @@ class DraggableWindow: NSWindow {
                 object: nil
             )
             
+            #if DEBUG
             print("🔒 [DraggableWindow] 위치 완전 잠금 - 타이틀바 드래그 차단")
+            #endif
         } else {
             // 이동 가능 상태로 복원
             self.isMovable = true
@@ -144,7 +146,9 @@ class DraggableWindow: NSWindow {
                 object: nil
             )
             
+            #if DEBUG
             print("🔓 [DraggableWindow] 위치 잠금 해제 - 이동 가능")
+            #endif
         }
     }
     

@@ -51,7 +51,6 @@ final class CalendarViewModel: ObservableObject {
 
         todosByDate = [:]
         let allTodos = loadAllTodosUseCase.execute()
-        print("📦 allTodos:", allTodos)
         for todo in allTodos {
             todosByDate[todo.date, default: []].append(todo)
         }
@@ -76,8 +75,6 @@ final class CalendarViewModel: ObservableObject {
                   let secondStart = second.startDateObject else { return false }
             return firstStart < secondStart
         }
-        
-        print("📅 [CalendarViewModel] \(key) - 기간별: \(sortedPeriodTodos.count), 단일: \(singleDayTodos.count)")
         
         // 기간별 일정을 우선으로 반환
         return sortedPeriodTodos + singleDayTodos
@@ -138,6 +135,7 @@ final class CalendarViewModel: ObservableObject {
     }
 
     func debugPrintICloudTodos() {
+        #if DEBUG
         NSUbiquitousKeyValueStore.default.synchronize()
         print("🔍 [iCloud] todos 확인 시작")
 
@@ -155,6 +153,7 @@ final class CalendarViewModel: ObservableObject {
         } catch {
             print("❌ 디코딩 실패:", error)
         }
+        #endif
     }
     
     // MARK: - Private Methods

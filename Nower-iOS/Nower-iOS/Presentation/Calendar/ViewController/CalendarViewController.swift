@@ -100,7 +100,6 @@ final class CalendarViewController: UIViewController {
     }
 
     @objc private func icloudDidUpdate(notification: Notification) {
-        print("📥 iCloud 변경 감지됨 - 일정 새로고침")
         //viewModel.loadAllTodos()
         DispatchQueue.main.async {
             self.calendarView.collectionView.reloadData()
@@ -109,7 +108,6 @@ final class CalendarViewController: UIViewController {
 
     @objc private func forceSync() {
         NSUbiquitousKeyValueStore.default.synchronize()
-        print("🔄 수동 iCloud 동기화 요청됨")
     }
 
     private func preloadAdjacentMonths(baseDate: Date) {
@@ -263,13 +261,11 @@ final class CalendarViewController: UIViewController {
     /// Todo 데이터가 업데이트되었을 때 UI를 새로고침합니다.
     /// CloudSyncManager에서 발송하는 알림을 수신하여 처리합니다.
     @objc private func todosUpdated() {
-        print("📱 [CalendarViewController] Todo 업데이트 알림 수신됨 - UI 새로고침 시작")
         DispatchQueue.main.async {
             // ViewModel의 데이터를 새로 로드
             self.viewModel.loadAllTodos()
             // 달력 데이터 재생성 (주 단위로 그룹화)
             self.generateCalendar()
-            print("✅ [CalendarViewController] UI 새로고침 완료")
         }
     }
 }
@@ -305,15 +301,28 @@ extension CalendarViewController: UICollectionViewDataSource {
         // TODO: 선택된 날짜에 따라 isSelected 업데이트
         
         cell.configure(weekDays: updatedWeek)
-        
+
         // 날짜 선택 콜백 설정
         cell.onDaySelected = { [weak self] dateString in
             self?.handleDaySelection(dateString: dateString)
         }
 
+        // 일정 선택 콜백 설정 (기간별 일정 터치 시)
+        cell.onTodoSelected = { [weak self] todo, dateString in
+            self?.handleTodoSelection(todo: todo, dateString: dateString)
+        }
+
         return cell
     }
-    
+
+    private func handleTodoSelection(todo: TodoItem, dateString: String) {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        guard let selectedDate = formatter.date(from: dateString) else { return }
+
+        coordinator?.presentEditEvent(todo: todo, date: selectedDate, viewModel: viewModel)
+    }
+
     private func handleDaySelection(dateString: String) {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"

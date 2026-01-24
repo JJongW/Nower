@@ -9,8 +9,16 @@ import UIKit
 import SnapKit
 
 /// 주 내의 단일 날짜를 표시하는 뷰
+/// 기간별 일정은 WeekView에서 렌더링되므로, 이 뷰는 단일 날짜 일정만 표시합니다.
 final class DayView: UIView {
-    
+
+    // MARK: - Properties
+    private var periodEventSlotCount: Int = 0
+
+    // MARK: - Layout Constants
+    private let eventHeight: CGFloat = 18
+    private let eventSpacing: CGFloat = 4
+
     // MARK: - UI Components
     private let dayLabel: UILabel = {
         let label = UILabel()
@@ -18,7 +26,7 @@ final class DayView: UIView {
         label.textAlignment = .center
         return label
     }()
-    
+
     private let holidayLabel: UILabel = {
         let label = UILabel()
         label.font = UIFont.systemFont(ofSize: 10)
@@ -27,22 +35,25 @@ final class DayView: UIView {
         label.numberOfLines = 1
         return label
     }()
-    
+
     private let eventStackView: UIStackView = {
         let stackView = UIStackView()
         stackView.axis = .vertical
-        stackView.spacing = 2
+        stackView.spacing = 4 // 일정 간 간격 4pt (8pt 그리드의 절반)
         stackView.alignment = .fill
         stackView.distribution = .fill
+        stackView.clipsToBounds = false
+        stackView.isLayoutMarginsRelativeArrangement = true // layoutMargins 사용 활성화
+        stackView.layoutMargins = UIEdgeInsets(top: 0, left: 2, bottom: 0, right: 2) // 좌우 간격 2pt
         return stackView
     }()
-    
+
     private let backgroundHighlightView: UIView = {
         let view = UIView()
         view.backgroundColor = .clear
         return view
     }()
-    
+
     private let moreLabel: UILabel = {
         let label = UILabel()
         label.font = UIFont.systemFont(ofSize: 10)
@@ -50,53 +61,72 @@ final class DayView: UIView {
         label.textAlignment = .center
         return label
     }()
-    
+
+    // 기간별 일정 공간을 위한 제약조건 참조
+    private var eventStackTopConstraint: Constraint?
+
     // MARK: - Init
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupUI()
     }
-    
+
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
+
     // MARK: - Setup
     private func setupUI() {
+        clipsToBounds = false
+
         addSubview(backgroundHighlightView)
         backgroundHighlightView.snp.makeConstraints {
             $0.edges.equalToSuperview()
         }
-        
+
         backgroundHighlightView.addSubview(dayLabel)
         backgroundHighlightView.addSubview(holidayLabel)
         backgroundHighlightView.addSubview(eventStackView)
-        
+
         dayLabel.snp.makeConstraints {
             $0.top.equalToSuperview().offset(8)
             $0.centerX.equalToSuperview()
             $0.height.equalTo(12)
         }
-        
+
         holidayLabel.snp.makeConstraints {
             $0.top.equalTo(dayLabel.snp.bottom).offset(4)
             $0.leading.trailing.equalToSuperview()
             $0.height.equalTo(10).priority(.high)
         }
-        
+
         eventStackView.snp.makeConstraints {
-            $0.top.equalTo(holidayLabel.snp.bottom).offset(4)
             $0.leading.trailing.equalToSuperview()
             $0.bottom.lessThanOrEqualToSuperview().inset(8)
+            // 기본 top 제약 - 기간별 일정 슬롯에 따라 동적으로 업데이트됨
+            self.eventStackTopConstraint = $0.top.equalTo(holidayLabel.snp.bottom).offset(4).constraint
         }
     }
-    
+
     // MARK: - Configuration
-    func configure(with dayInfo: WeekDayInfo) {
+    /// 날짜 뷰를 설정합니다.
+    /// - Parameters:
+    ///   - dayInfo: 날짜 정보
+    ///   - periodEventSlotCount: WeekView에서 렌더링되는 기간별 일정 행 수 (공간 확보용)
+    func configure(with dayInfo: WeekDayInfo, periodEventSlotCount: Int = 0) {
+        self.periodEventSlotCount = periodEventSlotCount
+
         // 기존 뷰들 제거
         eventStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         moreLabel.text = ""
-        
+
+        // 기간별 일정 공간을 확보하기 위해 eventStackView의 top 제약 업데이트
+        let periodEventAreaHeight = CGFloat(periodEventSlotCount) * (eventHeight + eventSpacing)
+        let baseOffset: CGFloat = 4 // holidayLabel 아래 기본 간격
+        let totalOffset = baseOffset + periodEventAreaHeight
+
+        eventStackTopConstraint?.update(offset: totalOffset)
+
         guard let day = dayInfo.day else {
             // 빈 날짜
             dayLabel.text = ""
@@ -104,16 +134,16 @@ final class DayView: UIView {
             backgroundHighlightView.backgroundColor = .clear
             return
         }
-        
+
         dayLabel.text = "\(day)"
         dayLabel.textColor = AppColors.textPrimary
-        
+
         if let holiday = dayInfo.holidayName {
             holidayLabel.text = holiday
             dayLabel.textColor = AppColors.coralred
         } else {
             holidayLabel.text = ""
-            
+
             if dayInfo.isToday {
                 dayLabel.textColor = AppColors.textHighlighted
             } else if dayInfo.isSunday {
@@ -122,9 +152,9 @@ final class DayView: UIView {
                 dayLabel.textColor = AppColors.skyblue
             }
         }
-        
+
         // 선택 상태 배경색 (다크모드 지원)
-        backgroundHighlightView.backgroundColor = dayInfo.isSelected ? 
+        backgroundHighlightView.backgroundColor = dayInfo.isSelected ?
             UIColor { trait in
                 if trait.userInterfaceStyle == .dark {
                     return UIColor(white: 1.0, alpha: 0.2) // 다크모드: 밝은 반투명
@@ -132,59 +162,24 @@ final class DayView: UIView {
                     return UIColor(white: 0.0, alpha: 0.1) // 라이트모드: 어두운 반투명
                 }
             } : .clear
-        
-        // 일정 표시
+
+        // 단일 날짜 일정만 필터링 (기간별 일정은 WeekView에서 렌더링됨)
         let singleDayTodos = dayInfo.todos.filter { !$0.isPeriodEvent }
-        let periodTodos = dayInfo.todos.filter { $0.isPeriodEvent }
-        
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        guard let currentDate = formatter.date(from: dayInfo.dateString) else { return }
-        
+
+        guard !singleDayTodos.isEmpty else { return }
+
         // 셀의 사용 가능한 높이 계산
         let cellHeight = frame.height > 0 ? frame.height : 80
         let topSpace: CGFloat = 8 + 12 + 4 + (dayInfo.holidayName != nil ? 10 : 0)
-        let eventStackTopOffset: CGFloat = 4
+        let eventStackTopOffset: CGFloat = totalOffset
         let bottomPadding: CGFloat = 8
         let availableHeight = cellHeight - topSpace - eventStackTopOffset - bottomPadding
-        
-        let eventHeight: CGFloat = 18
-        let eventSpacing: CGFloat = 2
-        
-        // 기간별 일정과 단일 일정을 모두 포함
-        var allEvents: [(todo: TodoItem, isPeriod: Bool, position: PeriodEventPosition?)] = []
-        
-        // 기간별 일정
-        for todo in periodTodos {
-            guard let startDate = todo.startDateObject,
-                  let endDate = todo.endDateObject else { continue }
-            
-            let position: PeriodEventPosition
-            let calendar = Calendar.current
-            
-            if calendar.isDate(currentDate, inSameDayAs: startDate) && calendar.isDate(currentDate, inSameDayAs: endDate) {
-                position = .single
-            } else if calendar.isDate(currentDate, inSameDayAs: startDate) {
-                position = .start
-            } else if calendar.isDate(currentDate, inSameDayAs: endDate) {
-                position = .end
-            } else {
-                position = .middle
-            }
-            
-            allEvents.append((todo, true, position))
-        }
-        
-        // 단일 날짜 일정
-        for todo in singleDayTodos {
-            allEvents.append((todo, false, nil))
-        }
-        
+
         // 최대 일정 개수 계산
         var maxVisibleEvents = 0
         var currentHeight: CGFloat = 0
-        
-        for (index, _) in allEvents.enumerated() {
+
+        for (index, _) in singleDayTodos.enumerated() {
             let heightForThisEvent = (index == 0 ? eventHeight : eventHeight + eventSpacing)
             if currentHeight + heightForThisEvent <= availableHeight {
                 maxVisibleEvents += 1
@@ -193,41 +188,25 @@ final class DayView: UIView {
                 break
             }
         }
-        
-        if allEvents.count > maxVisibleEvents && currentHeight + 18 <= availableHeight {
+
+        // "+N개" 라벨 공간 확보
+        if singleDayTodos.count > maxVisibleEvents && currentHeight + 18 <= availableHeight {
             maxVisibleEvents = max(0, maxVisibleEvents - 1)
         }
-        
-        // 일정 표시
-        for (_, eventInfo) in allEvents.prefix(maxVisibleEvents).enumerated() {
+
+        // 단일 일정 표시
+        for todo in singleDayTodos.prefix(maxVisibleEvents) {
             let capsule = EventCapsuleView()
-            
-            if eventInfo.isPeriod, let position = eventInfo.position {
-                capsule.configurePeriodEvent(
-                    title: eventInfo.todo.text,
-                    color: AppColors.color(for: eventInfo.todo.colorName),
-                    position: position
-                )
-                
-                eventStackView.addArrangedSubview(capsule)
-                capsule.snp.makeConstraints {
-                    $0.leading.trailing.equalToSuperview()
-                }
-            } else {
-                capsule.configure(
-                    title: eventInfo.todo.text,
-                    color: AppColors.color(for: eventInfo.todo.colorName)
-                )
-                
-                eventStackView.addArrangedSubview(capsule)
-                capsule.snp.makeConstraints {
-                    $0.leading.trailing.equalToSuperview()
-                }
-            }
+            capsule.configure(
+                title: todo.text,
+                color: AppColors.color(for: todo.colorName)
+            )
+            eventStackView.addArrangedSubview(capsule)
         }
-        
-        if allEvents.count > maxVisibleEvents {
-            let remainingCount = allEvents.count - maxVisibleEvents
+
+        // 남은 일정 개수 표시
+        if singleDayTodos.count > maxVisibleEvents {
+            let remainingCount = singleDayTodos.count - maxVisibleEvents
             moreLabel.text = "+\(remainingCount)개"
             eventStackView.addArrangedSubview(moreLabel)
         }

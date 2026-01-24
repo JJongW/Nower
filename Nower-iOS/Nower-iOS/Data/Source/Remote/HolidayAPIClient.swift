@@ -68,10 +68,6 @@ final class HolidayAPIClient {
                 do {
                     let decoded = try JSONDecoder().decode(HolidayResponse.self, from: response.data)
                     let holidays = decoded.response.body.items?.item ?? []
-                    print("✅ [공휴일 API] 성공 - 공휴일 \(holidays.count)개 조회됨")
-                    if holidays.count > 0 {
-                        holidays.forEach { print("   📅 \($0.dateName) - \($0.locdate)") }
-                    }
                     completion(.success(holidays))
                 } catch {
                     print("❌ [공휴일 API] JSON 디코딩 실패")

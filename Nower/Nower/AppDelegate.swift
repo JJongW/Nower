@@ -220,9 +220,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 투명도 적용
         window.setWindowOpacity(settingsManager.opacity)
         
+        #if DEBUG
         print("🚀 [AppDelegate] 초기 설정 적용 완료")
         print("   - 좌측 상단 고정: \(settingsManager.isPinToTopLeft)")
         print("   - 항상 위에 표시: \(settingsManager.isAlwaysOnTop)")
         print("   - 투명도: \(Int(settingsManager.opacity * 100))%")
+        #endif
     }
 }

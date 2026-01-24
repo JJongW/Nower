@@ -41,12 +41,9 @@ struct WidgetTodoItem: Identifiable, Codable {
     
     /// Date 객체로부터 단일 날짜 WidgetTodoItem 생성
     init(text: String, isRepeating: Bool, date: Date, colorName: String) {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        
         self.text = text
         self.isRepeating = isRepeating
-        self.date = formatter.string(from: date)
+        self.date = Self.dateFormatter.string(from: date)
         self.colorName = colorName
         self.startDate = nil
         self.endDate = nil
@@ -54,15 +51,12 @@ struct WidgetTodoItem: Identifiable, Codable {
     
     /// 기간별 WidgetTodoItem 생성자
     init(text: String, isRepeating: Bool, startDate: Date, endDate: Date, colorName: String) {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        
         self.text = text
         self.isRepeating = isRepeating
-        self.date = formatter.string(from: startDate)
+        self.date = Self.dateFormatter.string(from: startDate)
         self.colorName = colorName
-        self.startDate = formatter.string(from: startDate)
-        self.endDate = formatter.string(from: endDate)
+        self.startDate = Self.dateFormatter.string(from: startDate)
+        self.endDate = Self.dateFormatter.string(from: endDate)
     }
     
     /// 기간별 일정인지 확인
@@ -73,51 +67,42 @@ struct WidgetTodoItem: Identifiable, Codable {
     /// 시작 날짜를 Date 객체로 변환
     var startDateObject: Date? {
         guard let startDate = startDate else { return dateObject }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.date(from: startDate)
+        return Self.dateFormatter.date(from: startDate)
     }
     
     /// 종료 날짜를 Date 객체로 변환
     var endDateObject: Date? {
         guard let endDate = endDate else { return dateObject }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.date(from: endDate)
+        return Self.dateFormatter.date(from: endDate)
     }
     
     /// 날짜 문자열을 Date 객체로 변환
     var dateObject: Date? {
+        // 메모리 최적화: static DateFormatter 재사용
+        return WidgetTodoItem.dateFormatter.date(from: date)
+    }
+    
+    // 메모리 최적화: DateFormatter를 static으로 재사용
+    private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.date(from: date)
-    }
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter
+    }()
     
     /// 특정 날짜가 이 일정의 기간에 포함되는지 확인
     func includesDate(_ date: Date) -> Bool {
-        // 위젯에서 안정적인 날짜 파싱을 위해 로케일 설정
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.locale = Locale(identifier: "en_US_POSIX") // 위젯에서 안정적인 파싱을 위해
-        let dateString = formatter.string(from: date)
+        // 메모리 최적화: static DateFormatter 재사용
+        let dateString = Self.dateFormatter.string(from: date)
         
         if isPeriodEvent {
             guard let start = startDate, let end = endDate else {
-                print("⚠️ [WidgetTodoItem] 기간별 일정이지만 startDate 또는 endDate가 nil: \(text)")
                 return false
             }
             // 문자열 비교로 날짜 범위 확인
-            let isIncluded = dateString >= start && dateString <= end
-            if isIncluded {
-                print("  ✅ 기간별 일정 포함 확인: \(text) (\(start) ~ \(end), 확인 날짜: \(dateString))")
-            }
-            return isIncluded
+            return dateString >= start && dateString <= end
         } else {
-            let isIncluded = self.date == dateString
-            if isIncluded {
-                print("  ✅ 단일 일정 포함 확인: \(text) (일정 날짜: \(self.date), 확인 날짜: \(dateString))")
-            }
-            return isIncluded
+            return self.date == dateString
         }
     }
 }
@@ -259,6 +244,13 @@ struct TodayEntry: TimelineEntry {
 // MARK: - TimelineProvider
 
 struct TodayProvider: TimelineProvider {
+    // 메모리 최적화: DateFormatter를 static으로 재사용
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter
+    }()
 
     // placeholder에서는 더미 데이터 사용
     func placeholder(in context: Context) -> TodayEntry {
@@ -286,39 +278,26 @@ struct TodayProvider: TimelineProvider {
     private func loadTodayEntry() -> TodayEntry {
         let today = Date()
         
-        // 오늘 날짜를 문자열로 변환 (디버깅용)
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        let todayString = formatter.string(from: today)
-        print("📅 [TodayWidget] 오늘 날짜: \(todayString)")
-        
         // 안전하게 iCloud 데이터 로드
         let allTodos: [WidgetTodoItem]
         do {
             allTodos = try loadTodosFromICloud()
-            print("📦 [TodayWidget] 전체 일정 개수: \(allTodos.count)")
-            
-            // 디버깅: 모든 일정의 날짜 출력
-            for (index, todo) in allTodos.enumerated() {
-                print("  [\(index)] \(todo.text) | date: \(todo.date) | startDate: \(todo.startDate ?? "nil") | endDate: \(todo.endDate ?? "nil")")
-            }
         } catch {
             // 에러 발생 시 빈 배열 반환
-            print("⚠️ [TodayWidget] iCloud 데이터 로드 실패: \(error.localizedDescription)")
             return TodayEntry(date: today, todos: [])
         }
 
         // 오늘을 포함하는 일정 필터 (기간 일정 포함)
+        // 메모리 최적화: 최대 3개까지만 필터링 (2개 표시 + 1개 여유)
+        let todayString = Self.dateFormatter.string(from: today)
         let todayTodos = allTodos.filter { todo in
-            let includes = todo.includesDate(today)
-            if includes {
-                print("✅ [TodayWidget] 오늘 일정 포함: \(todo.text) (date: \(todo.date))")
+            if todo.isPeriodEvent {
+                guard let start = todo.startDate, let end = todo.endDate else { return false }
+                return todayString >= start && todayString <= end
+            } else {
+                return todo.date == todayString
             }
-            return includes
         }
-        
-        print("📋 [TodayWidget] 오늘 일정 개수: \(todayTodos.count)")
 
         return TodayEntry(date: today, todos: todayTodos)
     }
@@ -332,25 +311,15 @@ struct TodayProvider: TimelineProvider {
         // iCloud 동기화 강제 실행
         store.synchronize()
         
-        // 디버깅: iCloud store의 모든 키 확인
-        let allKeys = store.dictionaryRepresentation.keys
-        print("🔍 [TodayWidget] iCloud store의 모든 키: \(Array(allKeys))")
-        print("🔍 [TodayWidget] 찾는 키: '\(todosKey)'")
-        
         // iCloud 접근 권한 확인
         guard let data = store.data(forKey: todosKey) else {
-            print("⚠️ [TodayWidget] iCloud에 'SavedTodos' 키가 없습니다")
-            print("⚠️ [TodayWidget] 사용 가능한 키: \(allKeys)")
             // 데이터가 없으면 빈 배열 반환 (에러 아님)
             return []
         }
-        
-        print("✅ [TodayWidget] iCloud에서 데이터 로드 성공 (크기: \(data.count) bytes)")
 
         // iOS 앱의 TodoItem과 동일한 구조이므로 JSON 디코딩 가능
         // 위젯에서는 WidgetTodoItem으로 디코딩
         let todos = try JSONDecoder().decode([WidgetTodoItem].self, from: data)
-        print("✅ [TodayWidget] \(todos.count)개의 TodoItem 디코딩 완료")
         return todos
     }
 }
@@ -370,11 +339,16 @@ struct TodayWidgetEntryView: View {
         max(entry.todos.count - visibleTodos.count, 0)
     }
 
-    private var headerDateText: String {
+    // 메모리 최적화: DateFormatter를 static으로 재사용
+    private static let headerDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "M월 d일 EEEE"
         formatter.locale = Locale(identifier: "ko_KR")
-        return formatter.string(from: entry.date)
+        return formatter
+    }()
+    
+    private var headerDateText: String {
+        Self.headerDateFormatter.string(from: entry.date)
     }
 
     var body: some View {
@@ -457,6 +431,142 @@ private struct CapsuleRow: View {
     }
 }
 
+// MARK: - Widget View Router
+
+/// 위젯 패밀리에 따라 적절한 뷰를 표시하는 라우터
+struct WidgetView: View {
+    let entry: TodayEntry
+    @Environment(\.widgetFamily) private var family
+    
+    var body: some View {
+        #if os(iOS)
+        if #available(iOS 16.0, *) {
+            switch family {
+            case .accessoryCircular:
+                LockScreenCircularView(entry: entry)
+            case .accessoryRectangular:
+                LockScreenRectangularView(entry: entry)
+            case .accessoryInline:
+                LockScreenInlineView(entry: entry)
+            default:
+                TodayWidgetEntryView(entry: entry)
+            }
+        } else {
+            TodayWidgetEntryView(entry: entry)
+        }
+        #else
+        TodayWidgetEntryView(entry: entry)
+        #endif
+    }
+}
+
+// MARK: - Lock Screen Widget Views
+
+/// 잠금화면 원형 위젯 뷰 (일정 개수 표시)
+struct LockScreenCircularView: View {
+    let entry: TodayEntry
+    @Environment(\.widgetFamily) private var family
+    
+    var body: some View {
+        ZStack {
+            // 배경 원
+            Circle()
+                .fill(Color.white.opacity(0.15))
+            
+            VStack(spacing: 2) {
+                Text("\(entry.todos.count)")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.white)
+                
+                Text("일정")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundColor(.white.opacity(0.8))
+            }
+        }
+        .containerBackground(for: .widget) {
+            Color.clear // 잠금화면 위젯은 투명 배경
+        }
+    }
+}
+
+/// 잠금화면 사각형 위젯 뷰 (일정 최대 2개까지 표시)
+struct LockScreenRectangularView: View {
+    let entry: TodayEntry
+    
+    // 잠금화면 위젯에서 표시할 일정 (최대 2개)
+    private var visibleTodos: [WidgetTodoItem] {
+        Array(entry.todos.prefix(2))
+    }
+    
+    private var remainingCount: Int {
+        max(entry.todos.count - visibleTodos.count, 0)
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            // 좌측 상단 제목
+            Text("Nower")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(.white.opacity(0.9))
+            
+            // 일정 목록 (최대 2개)
+            if visibleTodos.isEmpty {
+                Text("일정 없음")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.white.opacity(0.7))
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(visibleTodos, id: \.id) { todo in
+                        HStack(spacing: 6) {
+                            // 색상 인디케이터
+                            Circle()
+                                .fill(WidgetAppColors.color(for: todo.colorName, scheme: .dark))
+                                .frame(width: 4, height: 4)
+                            
+                            // 일정 텍스트
+                            Text(todo.text)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                        }
+                    }
+                    
+                    // 일정이 2개 초과면 개수 표시
+                    if remainingCount > 0 {
+                        Text("+\(remainingCount)개")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(.white.opacity(0.7))
+                            .padding(.leading, 10) // 인디케이터 위치에 맞춤
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 8)
+        .containerBackground(for: .widget) {
+            Color.clear // 잠금화면 위젯은 투명 배경
+        }
+    }
+}
+
+/// 잠금화면 인라인 위젯 뷰 (간단한 텍스트)
+struct LockScreenInlineView: View {
+    let entry: TodayEntry
+    
+    var body: some View {
+        Group {
+            if entry.todos.isEmpty {
+                Label("일정 없음", systemImage: "calendar")
+            } else {
+                Label("오늘 \(entry.todos.count)개 일정", systemImage: "calendar")
+            }
+        }
+        .containerBackground(for: .widget) {
+            Color.clear // 잠금화면 위젯은 투명 배경
+        }
+    }
+}
+
 // MARK: - Widget
 
 struct NowerTodayWidget: Widget {
@@ -464,11 +574,24 @@ struct NowerTodayWidget: Widget {
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: TodayProvider()) { entry in
-            TodayWidgetEntryView(entry: entry)
+            WidgetView(entry: entry)
         }
         .configurationDisplayName("오늘의 일정")
         .description("오늘 할 일과 기간 일정을 한 눈에 확인합니다.")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .supportedFamilies({
+            var families: [WidgetFamily] = [.systemSmall, .systemMedium]
+            #if os(iOS)
+            // iOS 16+ 잠금화면 위젯 지원
+            if #available(iOS 16.0, *) {
+                families.append(contentsOf: [
+                    .accessoryCircular,    // 잠금화면 원형
+                    .accessoryRectangular, // 잠금화면 사각형
+                    .accessoryInline       // 잠금화면 인라인
+                ])
+            }
+            #endif
+            return families
+        }())
     }
 }
 

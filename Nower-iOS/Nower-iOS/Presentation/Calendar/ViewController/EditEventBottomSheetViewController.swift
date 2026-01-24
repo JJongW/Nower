@@ -124,7 +124,9 @@ final class EditEventBottomSheetViewController: UIViewController {
                 NotificationCenter.default.post(name: Notification.Name("CloudSyncManager.todosDidUpdate"), object: nil)
                 
                 if let vc = self.coordinator?.navigationController.topViewController {
+                    #if DEBUG
                     print("일정 삭제됨.")
+                    #endif
                     vc.showToast(message: "❌ 일정이 삭제되었습니다")
                 }
                 self.coordinator?.returnToBack()

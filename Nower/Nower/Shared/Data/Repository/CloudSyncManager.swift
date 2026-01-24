@@ -137,7 +137,6 @@ final class CloudSyncManager {
     
     /// iCloud 변경 사항을 처리합니다.
     @objc private func handleiCloudChange(_ notification: Notification) {
-        print("📥 [CloudSyncManager] iCloud 변경 감지됨")
         // loadTodos는 이미 비동기로 처리되므로 안전하게 호출 가능
         loadTodos()
         
@@ -165,7 +164,6 @@ final class CloudSyncManager {
             do {
                 let todos = try JSONDecoder().decode([TodoItem].self, from: data)
                 self.cachedTodos = todos
-                print("✅ [CloudSyncManager] \(todos.count)개의 Todo를 로드했습니다")
                 
                 // 데이터 로드 완료 후 알림 전송
                 DispatchQueue.main.async {
@@ -194,7 +192,6 @@ final class CloudSyncManager {
             let data = try JSONEncoder().encode(todosToSave)
             store.set(data, forKey: todosKey)
             store.synchronize()
-            print("✅ [CloudSyncManager] \(todosToSave.count)개의 Todo를 저장했습니다")
         } catch {
             print("❌ [CloudSyncManager] 데이터 인코딩 실패: \(error)")
         }
@@ -207,7 +204,6 @@ final class CloudSyncManager {
             let data = try JSONEncoder().encode(cachedTodos)
             store.set(data, forKey: todosKey)
             store.synchronize()
-            print("✅ [CloudSyncManager] \(cachedTodos.count)개의 Todo를 저장했습니다")
         } catch {
             print("❌ [CloudSyncManager] 데이터 인코딩 실패: \(error)")
         }
@@ -218,6 +214,7 @@ final class CloudSyncManager {
 extension CloudSyncManager {
     /// 디버깅용 iCloud 상태를 출력합니다.
     func debugPrintStatus() {
+        #if DEBUG
         print("🔍 [CloudSyncManager] 디버그 정보:")
         print("  - 캐시된 Todo 수: \(cachedTodos.count)")
         print("  - iCloud 동기화 상태: \(store.dictionaryRepresentation)")
@@ -225,5 +222,6 @@ extension CloudSyncManager {
         for (index, todo) in cachedTodos.enumerated() {
             print("  - [\(index)] \(todo.text) | \(todo.date) | \(todo.colorName)")
         }
+        #endif
     }
 }
