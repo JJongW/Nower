@@ -13,7 +13,6 @@ import ServiceManagement
 class AppDelegate: NSObject, NSApplicationDelegate {
     var window: DraggableWindow?
     var settingsManager = SettingsManager()
-    var statusItem: NSStatusItem?
     let appBundleID = "pr.jongwon.Nower"
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -25,10 +24,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // }
 
         setupMainWindow()
-        setupStatusBar()
+        setupMenuBar()
         enableAutoLaunch()
-
-        NotificationCenter.default.addObserver(self, selector: #selector(updateContentView), name: .init("SettingsChanged"), object: nil)
 
         // 윈도우 설정 관련 알림 설정
         NotificationCenter.default.addObserver(self, selector: #selector(pinToTopLeftChanged), name: .init("PinToTopLeftChanged"), object: nil)
@@ -75,15 +72,92 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.applyInitialSettings()
         }
     }
-
-    @objc func updateContentView() {
-        guard let window = window else { return }
-        DispatchQueue.main.async {
-            let contentView = ContentView().environmentObject(self.settingsManager)
-            let hostingView = SafeHostingView(rootView: contentView)
-            window.contentView = hostingView
-        }
+    
+    func setupMenuBar() {
+        let mainMenu = NSMenu()
+        
+        // Nower 메뉴 (앱 이름)
+        let appMenuItem = NSMenuItem()
+        mainMenu.addItem(appMenuItem)
+        let appMenu = NSMenu()
+        appMenuItem.submenu = appMenu
+        
+        appMenu.addItem(NSMenuItem(title: "Nower 정보", action: nil, keyEquivalent: ""))
+        appMenu.addItem(NSMenuItem.separator())
+        appMenu.addItem(NSMenuItem(title: "서비스", action: nil, keyEquivalent: ""))
+        appMenu.addItem(NSMenuItem.separator())
+        appMenu.addItem(NSMenuItem(title: "Nower 숨기기", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h"))
+        let hideOthersItem = NSMenuItem(title: "다른 항목 모두 숨기기", action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
+        hideOthersItem.keyEquivalentModifierMask = [.command, .option]
+        appMenu.addItem(hideOthersItem)
+        appMenu.addItem(NSMenuItem(title: "모두 보이기", action: #selector(NSApplication.unhideAllApplications(_:)), keyEquivalent: ""))
+        appMenu.addItem(NSMenuItem.separator())
+        appMenu.addItem(NSMenuItem(title: "종료 Nower", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        
+        // 파일 메뉴
+        let fileMenuItem = NSMenuItem()
+        mainMenu.addItem(fileMenuItem)
+        let fileMenu = NSMenu(title: "파일")
+        fileMenuItem.submenu = fileMenu
+        fileMenu.addItem(NSMenuItem(title: "새 일정...", action: nil, keyEquivalent: "n"))
+        fileMenu.addItem(NSMenuItem.separator())
+        fileMenu.addItem(NSMenuItem(title: "닫기", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w"))
+        
+        // 편집 메뉴
+        let editMenuItem = NSMenuItem()
+        mainMenu.addItem(editMenuItem)
+        let editMenu = NSMenu(title: "편집")
+        editMenuItem.submenu = editMenu
+        editMenu.addItem(NSMenuItem(title: "실행 취소", action: #selector(UndoManager.undo), keyEquivalent: "z"))
+        let redoItem = NSMenuItem(title: "다시 실행", action: #selector(UndoManager.redo), keyEquivalent: "z")
+        redoItem.keyEquivalentModifierMask = [.command, .shift]
+        editMenu.addItem(redoItem)
+        editMenu.addItem(NSMenuItem.separator())
+        editMenu.addItem(NSMenuItem(title: "잘라내기", action: #selector(NSText.cut(_:)), keyEquivalent: "x"))
+        editMenu.addItem(NSMenuItem(title: "복사", action: #selector(NSText.copy(_:)), keyEquivalent: "c"))
+        editMenu.addItem(NSMenuItem(title: "붙여넣기", action: #selector(NSText.paste(_:)), keyEquivalent: "v"))
+        editMenu.addItem(NSMenuItem(title: "모두 선택", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a"))
+        
+        // 선택영역 메뉴 (View 메뉴)
+        let viewMenuItem = NSMenuItem()
+        mainMenu.addItem(viewMenuItem)
+        let viewMenu = NSMenu(title: "선택영역")
+        viewMenuItem.submenu = viewMenu
+        viewMenu.addItem(NSMenuItem(title: "이전 달", action: nil, keyEquivalent: ""))
+        viewMenu.addItem(NSMenuItem(title: "다음 달", action: nil, keyEquivalent: ""))
+        viewMenu.addItem(NSMenuItem.separator())
+        viewMenu.addItem(NSMenuItem(title: "오늘로 이동", action: nil, keyEquivalent: ""))
+        
+        // 설정 메뉴
+        let settingsMenuItem = NSMenuItem()
+        mainMenu.addItem(settingsMenuItem)
+        let settingsMenu = NSMenu(title: "설정")
+        settingsMenuItem.submenu = settingsMenu
+        
+        // 빠른 설정 서브메뉴
+        let quickSettingsItem = NSMenuItem(title: "빠른 설정", action: nil, keyEquivalent: "")
+        let quickSettingsMenu = NSMenu()
+        
+        let pinTopLeftItem = NSMenuItem(title: "좌측 상단 고정", action: #selector(togglePinToTopLeft), keyEquivalent: "")
+        pinTopLeftItem.state = settingsManager.isPinToTopLeft ? .on : .off
+        
+        let alwaysOnTopItem = NSMenuItem(title: "항상 위에 표시", action: #selector(toggleAlwaysOnTop), keyEquivalent: "")
+        alwaysOnTopItem.state = settingsManager.isAlwaysOnTop ? .on : .off
+        
+        quickSettingsMenu.addItem(pinTopLeftItem)
+        quickSettingsMenu.addItem(alwaysOnTopItem)
+        quickSettingsItem.submenu = quickSettingsMenu
+        
+        settingsMenu.addItem(quickSettingsItem)
+        settingsMenu.addItem(NSMenuItem.separator())
+        settingsMenu.addItem(NSMenuItem(title: "설정...", action: #selector(openSettings), keyEquivalent: ","))
+        settingsMenu.addItem(NSMenuItem.separator())
+        settingsMenu.addItem(NSMenuItem(title: "자동 실행 활성화", action: #selector(enableAutoLaunch), keyEquivalent: ""))
+        settingsMenu.addItem(NSMenuItem(title: "자동 실행 비활성화", action: #selector(disableAutoLaunch), keyEquivalent: ""))
+        
+        NSApp.mainMenu = mainMenu
     }
+
 
     func applicationWillTerminate(_ notification: Notification) {
         saveWindowPosition()
@@ -103,60 +177,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return NSPoint(x: x, y: y)
     }
 
-    func setupStatusBar() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-
-        if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "calendar", accessibilityDescription: "Calendar App")
-        }
-
-        let menu = NSMenu()
-        
-        // 빠른 설정 메뉴
-        let quickSettingsItem = NSMenuItem(title: "빠른 설정", action: nil, keyEquivalent: "")
-        let quickSettingsMenu = NSMenu()
-        
-        let pinTopLeftItem = NSMenuItem(title: "좌측 상단 고정", action: #selector(togglePinToTopLeft), keyEquivalent: "")
-        pinTopLeftItem.state = settingsManager.isPinToTopLeft ? .on : .off
-        
-        let alwaysOnTopItem = NSMenuItem(title: "항상 위에 표시", action: #selector(toggleAlwaysOnTop), keyEquivalent: "")
-        alwaysOnTopItem.state = settingsManager.isAlwaysOnTop ? .on : .off
-        
-        quickSettingsMenu.addItem(pinTopLeftItem)
-        quickSettingsMenu.addItem(alwaysOnTopItem)
-        quickSettingsItem.submenu = quickSettingsMenu
-        
-        menu.addItem(quickSettingsItem)
-        menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "설정", action: #selector(openSettings), keyEquivalent: ""))
-        menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "자동 실행 활성화", action: #selector(enableAutoLaunch), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "자동 실행 비활성화", action: #selector(disableAutoLaunch), keyEquivalent: ""))
-        menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "종료", action: #selector(quitApp), keyEquivalent: "q"))
-
-        statusItem?.menu = menu
-    }
-
     @objc func openSettings() {
         let settingsView = SettingsView().environmentObject(settingsManager)
 
         let settingsWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 300, height: 200),
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 500),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
 
-        settingsWindow.title = "설정"
+        settingsWindow.title = "Nower 설정"
         settingsWindow.center()
         settingsWindow.isReleasedWhenClosed = false
         settingsWindow.contentView = SafeHostingView(rootView: settingsView)
         settingsWindow.makeKeyAndOrderFront(nil)
-    }
-
-    @objc func quitApp() {
-        NSApplication.shared.terminate(nil)
     }
 
     @objc func enableAutoLaunch() {
@@ -193,23 +228,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
-    // MARK: - Quick Settings Toggle Methods
-    
     /// 좌측 상단 고정 토글
     @objc func togglePinToTopLeft() {
         settingsManager.isPinToTopLeft.toggle()
-        updateStatusBarMenu()
+        updateMenuBar()
     }
     
     /// 항상 위에 표시 토글
     @objc func toggleAlwaysOnTop() {
         settingsManager.isAlwaysOnTop.toggle()
-        updateStatusBarMenu()
+        updateMenuBar()
     }
     
-    /// 상태바 메뉴 업데이트 (토글 상태 반영)
-    private func updateStatusBarMenu() {
-        setupStatusBar() // 간단하게 메뉴를 다시 생성
+    /// 메뉴바 업데이트 (토글 상태 반영)
+    private func updateMenuBar() {
+        setupMenuBar()
     }
     
     /// 앱 시작 시 저장된 설정들을 적용
@@ -226,14 +259,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             window.setAlwaysOnTop(true)
         }
         
-        // 투명도 적용
-        window.setWindowOpacity(settingsManager.opacity)
-        
         #if DEBUG
         print("🚀 [AppDelegate] 초기 설정 적용 완료")
         print("   - 좌측 상단 고정: \(settingsManager.isPinToTopLeft)")
         print("   - 항상 위에 표시: \(settingsManager.isAlwaysOnTop)")
-        print("   - 투명도: \(Int(settingsManager.opacity * 100))%")
         #endif
     }
 }

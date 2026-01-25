@@ -66,23 +66,28 @@ struct WeekView: View {
     @ViewBuilder
     private func allEventsView(geometry: GeometryProxy) -> some View {
         let cellWidth = geometry.size.width / 7
-        let eventHeight: CGFloat = 20 // macOS HIG: 일정 높이 20pt
-        let eventSpacing: CGFloat = 4 // macOS HIG: 일정 간 간격 4pt
-        let topPadding: CGFloat = 12 // macOS HIG: 상단 여백 12pt
-        let dayLabelHeight: CGFloat = 14 // macOS HIG: dayLabel 높이 14pt
-        let dayLabelToHolidaySpacing: CGFloat = 6 // macOS HIG: dayLabel과 holidayLabel 사이 간격 6pt
-        let holidayLabelHeight: CGFloat = 12 // macOS HIG: holidayLabel 높이 12pt
-        let holidayToEventSpacing: CGFloat = 6 // macOS HIG: holidayLabel과 eventStackView 사이 간격 6pt
+        let eventHeight: CGFloat = 18 // iOS와 동일 (20 → 18)
+        let eventSpacing: CGFloat = 2 // iOS와 동일 (4 → 2)
+        let topPadding: CGFloat = 2 // iOS와 동일 (12 → 2)
+        let dayLabelHeight: CGFloat = 14
+        let dayLabelToHolidaySpacing: CGFloat = 2 // iOS와 동일 (6 → 2)
+        let holidayLabelHeight: CGFloat = 8 // iOS와 동일 (12 → 8)
+        let holidayToEventSpacing: CGFloat = 0 // iOS와 동일 (6 → 0)
+        let periodEventTopOffset: CGFloat = 28 // iOS와 동일
+        let maxVisiblePeriodEventRows: Int = 3 // 최대 표시 가능한 기간일정 행 수
         
         let hasHoliday = weekDays.contains { $0.holidayName != nil }
-        let headerHeight = topPadding + dayLabelHeight + dayLabelToHolidaySpacing + (hasHoliday ? holidayLabelHeight : 0)
-        let eventAreaStartY = headerHeight + holidayToEventSpacing
+        let headerHeight = topPadding + 24 + dayLabelToHolidaySpacing + (hasHoliday ? holidayLabelHeight : 0) // 24는 원형 배경 높이
+        let eventAreaStartY = periodEventTopOffset // iOS와 동일하게 고정 오프셋 사용
         
         // 주 내 모든 일정 수집 및 행 배치 계산
-        let eventRows = calculateEventRows()
+        let (eventRows, hiddenPeriodEventCount, hiddenSingleEventCounts) = calculateEventRows()
+        
+        // 표시 가능한 행까지만 렌더링
+        let visibleRows = Array(eventRows.prefix(maxVisiblePeriodEventRows))
         
         // 각 행의 일정들을 렌더링
-        ForEach(Array(eventRows.enumerated()), id: \.offset) { rowIndex, rowEvents in
+        ForEach(Array(visibleRows.enumerated()), id: \.offset) { rowIndex, rowEvents in
             ForEach(rowEvents, id: \.id) { eventInfo in
                 eventView(
                     eventInfo: eventInfo,
@@ -94,11 +99,45 @@ struct WeekView: View {
                 )
             }
         }
+        
+        // 기간별 일정 "+N개" 표시 (3행 이상일 때)
+        if hiddenPeriodEventCount > 0 {
+            let y = eventAreaStartY + CGFloat(visibleRows.count) * (eventHeight + eventSpacing) + eventHeight / 2
+            Text("+\(hiddenPeriodEventCount)개")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(AppColors.textFieldPlaceholder)
+                .frame(width: cellWidth, height: eventHeight)
+                .position(x: cellWidth / 2, y: y)
+        }
+        
+        // 각 날짜별 단일 일정 "+N개" 표시
+        // 계산을 미리 수행하여 배열로 만들기
+        let moreEventLabels: [(dayIndex: Int, hiddenCount: Int)] = (0..<weekDays.count).compactMap { dayIndex in
+            if let hiddenCount = hiddenSingleEventCounts[dayIndex], hiddenCount > 0 {
+                return (dayIndex: dayIndex, hiddenCount: hiddenCount)
+            }
+            return nil
+        }
+        
+        ForEach(moreEventLabels, id: \.dayIndex) { item in
+            moreEventLabelView(
+                dayIndex: item.dayIndex,
+                hiddenCount: item.hiddenCount,
+                cellWidth: cellWidth,
+                eventHeight: eventHeight,
+                eventAreaStartY: eventAreaStartY,
+                eventSpacing: eventSpacing,
+                visibleRows: visibleRows
+            )
+        }
     }
     
     /// 일정 행 배치 계산 (기간별 일정과 단일 일정을 함께 배치)
-    private func calculateEventRows() -> [[(id: UUID, todo: TodoItem, startIndex: Int, endIndex: Int, isPeriod: Bool)]] {
+    /// Returns: (표시할 행들, 숨겨진 기간별 일정 개수, 각 날짜별 숨겨진 단일 일정 개수)
+    private func calculateEventRows() -> (rows: [[(id: UUID, todo: TodoItem, startIndex: Int, endIndex: Int, isPeriod: Bool)]], hiddenPeriodCount: Int, hiddenSingleCounts: [Int: Int]) {
         var rows: [[(id: UUID, todo: TodoItem, startIndex: Int, endIndex: Int, isPeriod: Bool)]] = []
+        let maxVisiblePeriodEventRows: Int = 3 // 최대 표시 가능한 기간일정 행 수
+        let maxVisibleSingleEventsPerDay: Int = 2 // 각 날짜별 최대 표시 가능한 단일 일정 개수
         
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
@@ -142,39 +181,46 @@ struct WeekView: View {
         // 행 배치: 기간별 일정과 단일 일정을 겹치지 않게 배치
         var usedRows: Set<Int> = []
         
-        // 기간별 일정 배치
+        // 기간별 일정 배치 (최대 3행까지만)
+        var periodEventIndex = 0
         for periodEvent in periodEvents {
+            if periodEventIndex >= maxVisiblePeriodEventRows {
+                break // 최대 3행까지만 배치
+            }
+            
             var placed = false
-            for rowIndex in 0..<10 { // 최대 10행
+            for rowIndex in 0..<maxVisiblePeriodEventRows {
                 if !usedRows.contains(rowIndex) {
                     rows.append([(id: periodEvent.id, todo: periodEvent.todo, startIndex: periodEvent.startIndex, endIndex: periodEvent.endIndex, isPeriod: true)])
                     usedRows.insert(rowIndex)
                     placed = true
+                    periodEventIndex += 1
                     break
                 }
             }
-            if !placed {
+            if !placed && periodEventIndex < maxVisiblePeriodEventRows {
                 rows.append([(id: periodEvent.id, todo: periodEvent.todo, startIndex: periodEvent.startIndex, endIndex: periodEvent.endIndex, isPeriod: true)])
+                periodEventIndex += 1
             }
+        }
+        
+        // 숨겨진 기간별 일정 개수
+        let hiddenPeriodEventCount = max(0, periodEvents.count - maxVisiblePeriodEventRows)
+        
+        // 각 날짜별 단일 일정 개수 추적
+        var dayEventCounts: [Int: Int] = [:]
+        for dayIndex in 0..<7 {
+            dayEventCounts[dayIndex] = 0
         }
         
         // 단일 일정 배치 (각 날짜별로 최대 2개)
         for singleEvent in singleEvents {
             let dayIndex = singleEvent.dayIndex
-            var placed = false
+            let currentCount = dayEventCounts[dayIndex] ?? 0
             
-            // 해당 날짜에 이미 배치된 일정 개수 확인
-            var dayEventCount = 0
-            for row in rows {
-                for event in row {
-                    if !event.isPeriod && (event.startIndex == dayIndex || event.endIndex == dayIndex) {
-                        dayEventCount += 1
-                    }
-                }
-            }
-            
-            if dayEventCount < 2 {
+            if currentCount < maxVisibleSingleEventsPerDay {
                 // 기존 행에 추가 가능한지 확인
+                var placed = false
                 for (rowIndex, row) in rows.enumerated() {
                     var canAdd = true
                     for event in row {
@@ -191,7 +237,7 @@ struct WeekView: View {
                                 for e in row where !e.isPeriod && e.startIndex == dayIndex {
                                     count += 1
                                 }
-                                if count >= 2 {
+                                if count >= maxVisibleSingleEventsPerDay {
                                     canAdd = false
                                     break
                                 }
@@ -203,6 +249,7 @@ struct WeekView: View {
                         var newRow = row
                         newRow.append((id: singleEvent.id, todo: singleEvent.todo, startIndex: dayIndex, endIndex: dayIndex, isPeriod: false))
                         rows[rowIndex] = newRow
+                        dayEventCounts[dayIndex] = (dayEventCounts[dayIndex] ?? 0) + 1
                         placed = true
                         break
                     }
@@ -210,11 +257,67 @@ struct WeekView: View {
                 
                 if !placed {
                     rows.append([(id: singleEvent.id, todo: singleEvent.todo, startIndex: dayIndex, endIndex: dayIndex, isPeriod: false)])
+                    dayEventCounts[dayIndex] = (dayEventCounts[dayIndex] ?? 0) + 1
                 }
             }
         }
         
-        return rows
+        // 각 날짜별 숨겨진 단일 일정 개수 계산
+        var hiddenSingleEventCounts: [Int: Int] = [:]
+        for (dayIndex, dayInfo) in weekDays.enumerated() {
+            let singleDayTodos = dayInfo.todos.filter { !$0.isPeriodEvent }
+            let visibleCount = dayEventCounts[dayIndex] ?? 0
+            let hiddenCount = max(0, singleDayTodos.count - visibleCount)
+            if hiddenCount > 0 {
+                hiddenSingleEventCounts[dayIndex] = hiddenCount
+            }
+        }
+        
+        return (rows, hiddenPeriodEventCount, hiddenSingleEventCounts)
+    }
+    
+    /// "+N개" 라벨 뷰 생성
+    private func moreEventLabelView(
+        dayIndex: Int,
+        hiddenCount: Int,
+        cellWidth: CGFloat,
+        eventHeight: CGFloat,
+        eventAreaStartY: CGFloat,
+        eventSpacing: CGFloat,
+        visibleRows: [[(id: UUID, todo: TodoItem, startIndex: Int, endIndex: Int, isPeriod: Bool)]]
+    ) -> some View {
+        // 해당 날짜의 표시된 단일 일정 개수 확인 (기간별 일정이 차지하는 행 수 고려)
+        var visibleSingleEventCount = 0
+        var maxPeriodEventRow = -1
+        
+        // 기간별 일정이 해당 날짜에 차지하는 최대 행 인덱스 찾기
+        for (rowIdx, row) in visibleRows.enumerated() {
+            for event in row {
+                if event.isPeriod && dayIndex >= event.startIndex && dayIndex <= event.endIndex {
+                    maxPeriodEventRow = max(maxPeriodEventRow, rowIdx)
+                }
+            }
+        }
+        
+        // 해당 날짜의 표시된 단일 일정 개수 계산
+        for row in visibleRows {
+            for event in row {
+                if !event.isPeriod && event.startIndex == dayIndex {
+                    visibleSingleEventCount += 1
+                }
+            }
+        }
+        
+        // "+N개" 라벨 위치 계산 (기간별 일정 행 수 + 단일 일정 개수)
+        let baseRowCount = maxPeriodEventRow + 1
+        let y = eventAreaStartY + CGFloat(baseRowCount + visibleSingleEventCount) * (eventHeight + eventSpacing) + eventHeight / 2
+        let x = CGFloat(dayIndex) * cellWidth + cellWidth / 2
+        
+        return Text("+\(hiddenCount)개")
+            .font(.system(size: 10, weight: .medium))
+            .foregroundColor(AppColors.textFieldPlaceholder)
+            .frame(width: cellWidth - 8, height: eventHeight)
+            .position(x: x, y: y)
     }
     
     /// 개별 일정 뷰 렌더링
@@ -283,17 +386,17 @@ struct WeekView: View {
     
     
     /// 주 내 최대 일정 개수를 기반으로 최소 높이를 계산
-    /// macOS HIG 준수: macOS에 최적화된 간격 값 사용
+    /// iOS와 동일한 간격 값 사용
     private func calculateMinHeight() -> CGFloat {
-        // macOS HIG 준수: macOS에 최적화된 간격 값
-        let topPadding: CGFloat = 12 // 상단 여백 12pt (macOS는 더 넓은 화면)
-        let dayLabelHeight: CGFloat = 14 // dayLabel 높이 14pt (macOS는 더 큰 폰트)
-        let dayLabelToHolidaySpacing: CGFloat = 6 // dayLabel과 holidayLabel 사이 간격 6pt (macOS는 더 넓은 간격)
-        let holidayLabelHeight: CGFloat = 12 // holidayLabel 높이 12pt (macOS는 더 큰 폰트)
-        let holidayToEventSpacing: CGFloat = 6 // holidayLabel과 eventStackView 사이 간격 6pt (macOS는 더 넓은 간격)
-        let bottomPadding: CGFloat = 12 // 하단 여백 12pt (macOS는 더 넓은 화면)
-        let eventHeight: CGFloat = 20 // 일정 높이 20pt (macOS는 더 큰 클릭 타겟)
-        let eventSpacing: CGFloat = 4 // 일정 간 간격 4pt (macOS는 더 넓은 간격으로 가독성 향상)
+        // iOS와 동일한 간격 값
+        let topPadding: CGFloat = 2
+        let dayLabelHeight: CGFloat = 14
+        let dayLabelToHolidaySpacing: CGFloat = 2
+        let holidayLabelHeight: CGFloat = 8
+        let periodEventTopOffset: CGFloat = 28
+        let bottomPadding: CGFloat = 4
+        let eventHeight: CGFloat = 18
+        let eventSpacing: CGFloat = 2
         
         // 주 내 모든 날짜의 일정 개수 중 최대값 찾기
         var maxVisibleEventCount = 0
@@ -311,10 +414,10 @@ struct WeekView: View {
             }
         }
         
-        // macOS HIG 준수: macOS에 최적화된 높이 계산
-        // topSpace = 12 + 14 + 6 + (holidayName != nil ? 12 : 0)
-        let topSpace = topPadding + dayLabelHeight + dayLabelToHolidaySpacing + (hasHoliday ? holidayLabelHeight : 0)
-        let eventStackTopOffset = holidayToEventSpacing // 6pt (macOS HIG)
+        // iOS와 동일한 높이 계산
+        // topSpace = 2 + 24 + 2 + (holidayName != nil ? 8 : 0) (24는 원형 배경 높이)
+        let topSpace = topPadding + 24 + dayLabelToHolidaySpacing + (hasHoliday ? holidayLabelHeight : 0)
+        let eventStackTopOffset = periodEventTopOffset // 28pt
         
         // 최소 1개의 일정을 표시할 수 있는 높이 계산 (일정이 없는 날짜도 최소 높이 보장)
         // 최대 2개 + "+N개" 라벨(1개) = 총 3개 높이 필요
@@ -330,11 +433,11 @@ struct WeekView: View {
     }
     
     /// 일정 영역의 고정 높이를 계산 (주 내 최대 일정 개수 기준)
-    /// macOS HIG 준수: macOS에 최적화된 간격 값 사용
+    /// iOS와 동일한 간격 값 사용
     private func calculateEventAreaHeight() -> CGFloat {
-        // macOS HIG 준수: macOS에 최적화된 간격 값
-        let eventHeight: CGFloat = 20 // 일정 높이 20pt (macOS는 더 큰 클릭 타겟)
-        let eventSpacing: CGFloat = 4 // 일정 간 간격 4pt (macOS는 더 넓은 간격으로 가독성 향상)
+        // iOS와 동일한 간격 값
+        let eventHeight: CGFloat = 18
+        let eventSpacing: CGFloat = 2
         
         // 주 내 모든 날짜의 일정 개수 중 최대값 찾기
         var maxVisibleEventCount = 0

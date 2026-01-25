@@ -30,44 +30,55 @@ struct DayView: View {
         self.onTodoDropped = onTodoDropped
     }
     
-    // macOS HIG 준수: macOS에 최적화된 간격 값 사용 (더 넓은 화면과 마우스 인터랙션 고려)
-    private let topPadding: CGFloat = 12 // 상단 여백 12pt (macOS는 더 넓은 화면)
-    private let dayLabelHeight: CGFloat = 14 // dayLabel 높이 14pt (macOS는 더 큰 폰트)
-    private let dayLabelToHolidaySpacing: CGFloat = 6 // dayLabel과 holidayLabel 사이 간격 6pt (macOS는 더 넓은 간격)
-    private let holidayLabelHeight: CGFloat = 12 // holidayLabel 높이 12pt (macOS는 더 큰 폰트)
-    private let holidayToEventSpacing: CGFloat = 6 // holidayLabel과 eventStackView 사이 간격 6pt (macOS는 더 넓은 간격)
-    private let bottomPadding: CGFloat = 12 // 하단 여백 12pt (macOS는 더 넓은 화면)
-    private let maxEventHeight: CGFloat = 20 // 일정 높이 20pt (macOS는 더 큰 클릭 타겟)
-    private let eventSpacing: CGFloat = 4 // 일정 간 간격 4pt (macOS는 더 넓은 간격으로 가독성 향상)
+    // iOS와 동일한 간격으로 최적화
+    private let topPadding: CGFloat = 2 // 상단 여백 축소 (12 → 2)
+    private let dayLabelHeight: CGFloat = 14 // dayLabel 높이 14pt
+    private let dayLabelToHolidaySpacing: CGFloat = 2 // dayLabel과 holidayLabel 사이 간격 축소 (6 → 2)
+    private let holidayLabelHeight: CGFloat = 8 // holidayLabel 높이 축소 (12 → 8)
+    private let holidayToEventSpacing: CGFloat = 0 // holidayLabel과 eventStackView 사이 간격 제거
+    private let periodEventTopOffset: CGFloat = 28 // 기간일정 시작 오프셋 (iOS와 동일)
+    private let bottomPadding: CGFloat = 4 // 하단 여백 축소 (12 → 4)
+    private let maxEventHeight: CGFloat = 18 // 일정 높이 (iOS와 동일)
+    private let eventSpacing: CGFloat = 2 // 일정 간 간격 축소 (4 → 2)
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // 날짜 표시 - HIG 준수: 정확한 간격 적용
+            // 날짜 표시 - iOS 스타일로 개선
             if let day = dayInfo.day {
                 VStack(spacing: 0) {
-                    // 상단 여백 12pt (macOS HIG)
+                    // 상단 여백
                     Spacer()
                         .frame(height: topPadding)
                     
-                    // dayLabel: 높이 14pt (macOS는 더 큰 폰트)
-                    Text("\(day)")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(dayLabelColor)
-                        .frame(height: dayLabelHeight)
+                    // 오늘 날짜 원형 배경
+                    ZStack {
+                        if dayInfo.isToday {
+                            Circle()
+                                .fill(AppColors.textHighlighted)
+                                .frame(width: 24, height: 24)
+                        }
+                        
+                        // dayLabel: 원형 배경 중앙에 배치
+                        Text("\(day)")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(dayLabelColor)
+                            .frame(height: dayLabelHeight)
+                    }
+                    .frame(height: 24) // 원형 배경 높이
                     
-                    // dayLabel과 holidayLabel 사이 간격 6pt (macOS는 더 넓은 간격)
+                    // dayLabel과 holidayLabel 사이 간격
                     Spacer()
                         .frame(height: dayLabelToHolidaySpacing)
                     
-                    // holidayLabel: 높이 12pt (macOS는 더 큰 폰트)
+                    // holidayLabel
                     if let holidayName = dayInfo.holidayName {
                         Text(holidayName)
-                            .font(.system(size: 11))
+                            .font(.system(size: 11, weight: .medium))
                             .foregroundColor(AppColors.coralred)
                             .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                             .frame(height: holidayLabelHeight)
                     } else {
-                        // 공휴일이 없어도 공간 유지 (높이 0)
                         Spacer()
                             .frame(height: 0)
                     }
@@ -77,15 +88,10 @@ struct DayView: View {
                     onDaySelected()
                 }
                 
-                // holidayLabel과 일정 영역 사이 간격 6pt (macOS HIG)
-                // 일정은 WeekView에서 직접 렌더링되므로 여기서는 공간만 확보
-                Spacer()
-                    .frame(height: holidayToEventSpacing)
-                
                 // 일정 영역 공간 확보 (실제 일정은 WeekView에서 렌더링)
                 Spacer()
                     .frame(height: fixedEventAreaHeight ?? 0)
-                    .padding(.bottom, bottomPadding) // 하단 여백 12pt (macOS HIG)
+                    .padding(.bottom, bottomPadding)
                     .onDrop(of: [.text], isTargeted: nil) { providers in
                         let result = handleDrop(providers, for: dayInfo.dateString)
                         if result {
@@ -98,17 +104,17 @@ struct DayView: View {
                 Spacer()
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top) // alignment를 top으로 설정하여 날짜가 항상 상단에 고정
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(dayBackgroundColor)
-        // SwiftUI는 기본적으로 클리핑하지 않으므로 기간별 일정이 셀 경계를 넘어서 렌더링됨
     }
     
-    /// 날짜 라벨 색상
+    /// 날짜 라벨 색상 (iOS 스타일)
     private var dayLabelColor: Color {
-        if let holidayName = dayInfo.holidayName, !holidayName.isEmpty {
+        if dayInfo.isToday {
+            // 오늘 날짜는 원형 배경 위에 흰색 텍스트
+            return Color.white
+        } else if let holidayName = dayInfo.holidayName, !holidayName.isEmpty {
             return AppColors.coralred
-        } else if dayInfo.isToday {
-            return AppColors.textHighlighted
         } else if dayInfo.isSunday {
             return AppColors.coralred
         } else if dayInfo.isSaturday {

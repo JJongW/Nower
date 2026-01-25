@@ -92,31 +92,30 @@ struct ContentView: View {
                     }
                     .padding()
 
-                    // iOS 버전과 동일하게 일일 명언 표시
+                    // iOS 버전과 동일하게 일일 명언 표시 (간격 최적화)
                     Text(todayQuote)
                         .foregroundColor(AppColors.textPrimary)
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: 11, weight: .medium))
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(EdgeInsets(top: 8, leading: 20, bottom: 32, trailing: 20))
-                        .lineLimit(nil)
+                        .padding(EdgeInsets(top: 12, leading: 20, bottom: 16, trailing: 20))
+                        .lineLimit(1)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: .infinity)
                 .frame(alignment: .leading)
 
-                // Weekday Headers
-                // CalendarGridView와 동일한 패딩을 적용하여 정렬 일치
+                // Weekday Headers (iOS 스타일)
                 HStack(spacing: 0) {
                     ForEach(days, id: \..self) { day in
                         Text(day)
-                            .foregroundColor(day == "SUN" ? AppColors.holidayHighlight : AppColors.textColor1)
-                            .font(.caption)
+                            .foregroundColor(day == "SUN" ? AppColors.coralred : (day == "SAT" ? AppColors.skyblue : AppColors.textPrimary))
+                            .font(.system(size: 14, weight: .medium))
                             .frame(maxWidth: .infinity)
                     }
                 }
-                .padding(.top, 8)
-                .padding(.bottom, 8)
-                .padding(.horizontal, 8) // CalendarGridView와 동일한 horizontal padding 적용
+                .padding(.top, 16)
+                .padding(.bottom, 4)
+                .padding(.horizontal, 8)
 
                 // Calendar Grid
                 CalendarGridView(toastMessage: $toastMessage, showToast: $showToast)
@@ -141,7 +140,7 @@ struct ContentView: View {
 
     func getMonthYear(from date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMM` yyyy"
+        formatter.dateFormat = "yy MMM" // iOS 스타일: "26 Jan"
         return formatter.string(from: date)
     }
 

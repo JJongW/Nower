@@ -122,8 +122,11 @@ struct AppColors {
         ThemeManager.isDarkMode ? Color(hex: "#F28073") : Color(hex: "#F28C80")
     }
     
-    /// 테마 색상 이름으로 색상 가져오기
-    static func color(for name: String) -> Color {
+    /// 기본 색상 이름 목록
+    static let baseColorNames: [String] = ["skyblue", "peach", "lavender", "mintgreen", "coralred"]
+    
+    /// 기본 색상의 기본 톤 (기존 호환성 유지)
+    static func baseColor(for name: String) -> Color {
         switch name {
         case "skyblue": return skyblue
         case "peach": return peach
@@ -132,6 +135,102 @@ struct AppColors {
         case "coralred": return coralred
         default: return Color.gray
         }
+    }
+    
+    /// 색상 톤 생성 (1: 가장 밝음, 8: 가장 어두움)
+    /// - Parameters:
+    ///   - baseColor: 기본 색상 (Color)
+    ///   - tone: 톤 레벨 (1-8)
+    /// - Returns: 조정된 색상
+    private static func colorTone(baseColor: Color, tone: Int) -> Color {
+        let isDark = ThemeManager.isDarkMode
+        let toneFactor: CGFloat
+        
+        if isDark {
+            // 다크모드: 1이 가장 밝고 8이 가장 어두움
+            // 밝기 범위: 0.3 ~ 0.95
+            toneFactor = 0.95 - (CGFloat(tone - 1) / 7.0) * 0.65
+        } else {
+            // 라이트모드: 1이 가장 밝고 8이 가장 어두움
+            // 밝기 범위: 0.4 ~ 0.95
+            toneFactor = 0.95 - (CGFloat(tone - 1) / 7.0) * 0.55
+        }
+        
+        // 기본 색상의 RGB 값을 추출하기 위해 hex 값 사용
+        // 각 기본 색상의 hex 값을 직접 사용
+        let baseName = baseColorName(from: "")
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0
+        
+        // 기본 색상의 hex 값에서 RGB 추출
+        #if os(macOS)
+        let nsColor = NSColor(baseColor)
+        nsColor.getRed(&r, green: &g, blue: &b, alpha: nil)
+        #else
+        // iOS에서는 UIColor 사용
+        return baseColor
+        #endif
+        
+        // 톤에 따라 밝기 조정
+        let luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        let targetLuminance = toneFactor
+        
+        if luminance > 0 {
+            let ratio = targetLuminance / luminance
+            r = min(1.0, max(0.0, r * ratio))
+            g = min(1.0, max(0.0, g * ratio))
+            b = min(1.0, max(0.0, b * ratio))
+        }
+        
+        return Color(red: Double(r), green: Double(g), blue: Double(b))
+    }
+    
+    /// 특정 색상의 모든 톤 반환 (1-8)
+    /// - Parameter baseColorName: 기본 색상 이름
+    /// - Returns: 8가지 톤 배열 (1이 가장 밝음)
+    static func colorTones(for baseColorName: String) -> [Color] {
+        let base = baseColor(for: baseColorName)
+        return (1...8).map { tone in
+            colorTone(baseColor: base, tone: tone)
+        }
+    }
+    
+    /// 색상 이름으로 색상 가져오기 (기본 색상 및 톤 지원)
+    /// 지원 형식: "skyblue", "skyblue-1", "skyblue-2", ... "skyblue-8"
+    /// 기존 색상 이름(톤 없음)은 중간 톤(4)으로 표시
+    static func color(for name: String) -> Color {
+        // 톤이 포함된 경우 (예: "skyblue-3")
+        if let dashIndex = name.lastIndex(of: "-"),
+           let tone = Int(String(name[name.index(after: dashIndex)...])),
+           tone >= 1 && tone <= 8 {
+            let baseName = String(name[..<dashIndex])
+            let base = baseColor(for: baseName)
+            return colorTone(baseColor: base, tone: tone)
+        }
+        
+        // 기본 색상 (기존 호환성) - 중간 톤(4)으로 표시
+        let base = baseColor(for: name)
+        return colorTone(baseColor: base, tone: 4)
+    }
+    
+    /// 색상 이름에서 기본 색상 이름 추출 (톤 제거)
+    /// 예: "skyblue-3" -> "skyblue"
+    static func baseColorName(from colorName: String) -> String {
+        if let dashIndex = colorName.lastIndex(of: "-"),
+           Int(String(colorName[colorName.index(after: dashIndex)...])) != nil {
+            return String(colorName[..<dashIndex])
+        }
+        return colorName
+    }
+    
+    /// 색상 이름에서 톤 번호 추출
+    /// 예: "skyblue-3" -> 3, "skyblue" -> nil
+    static func toneNumber(from colorName: String) -> Int? {
+        guard let dashIndex = colorName.lastIndex(of: "-"),
+              let tone = Int(String(colorName[colorName.index(after: dashIndex)...])),
+              tone >= 1 && tone <= 8 else {
+            return nil
+        }
+        return tone
     }
     
     // MARK: - Legacy Support (기존 코드 호환성)
@@ -159,8 +258,24 @@ extension Color {
         let b = Double(rgb & 0xFF) / 255.0
         self.init(red: r, green: g, blue: b)
     }
-    
 }
+
+#if os(macOS)
+extension NSColor {
+    /// SwiftUI Color를 NSColor로 변환
+    convenience init(_ color: Color) {
+        // SwiftUI Color를 CGColor로 변환 후 NSColor 생성
+        if let cgColor = color.cgColor {
+            // init(cgColor:)는 failable이므로 force unwrap 사용
+            // CGColor는 일반적으로 유효하므로 안전함
+            self.init(cgColor: cgColor)!
+        } else {
+            // fallback: 검정색
+            self.init(red: 0, green: 0, blue: 0, alpha: 1)
+        }
+    }
+}
+#endif
 
 struct ThemeManager {
     static var isDarkMode: Bool {

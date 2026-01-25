@@ -16,27 +16,6 @@ struct SettingsView: View {
                 .font(.headline)
                 .padding(.bottom, 10)
             
-            // 기본 설정 섹션
-            GroupBox("기본 설정") {
-                VStack(spacing: 10) {
-                    HStack {
-                        Text("투명도:")
-                        Slider(value: $settingsManager.opacity, in: 0.1...1.0, step: 0.1)
-                        Text("\(Int(settingsManager.opacity * 100))%")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        Text("배경 색상:")
-                        Spacer()
-                        ColorPicker("", selection: $settingsManager.backgroundColor, supportsOpacity: false)
-                            .labelsHidden()
-                    }
-                }
-                .padding(.vertical, 5)
-            }
-            
             // 윈도우 동작 설정 섹션
             GroupBox("윈도우 동작") {
                 VStack(spacing: 8) {
@@ -66,12 +45,6 @@ struct SettingsView: View {
             .padding(.top)
         }
         .padding()
-        .frame(width: 380, height: 320)
-        .onReceive(settingsManager.$opacity) { _ in
-            NotificationCenter.default.post(name: .init("SettingsChanged"), object: nil)
-        }
-        .onReceive(settingsManager.$backgroundColor) { _ in
-            NotificationCenter.default.post(name: .init("SettingsChanged"), object: nil)
-        }
+        .frame(width: 380, height: 200)
     }
 }
