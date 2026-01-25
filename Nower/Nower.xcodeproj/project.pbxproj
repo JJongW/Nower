@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		C3E00DEC2F25A18E004CBAD6 /* NowerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C3E00DEB2F25A18E004CBAD6 /* NowerCore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		C3B113652D6C6A1C00D142B5 /* Nower.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Nower.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C3E00DEC2F25A18E004CBAD6 /* NowerCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -33,6 +38,7 @@
 			isa = PBXGroup;
 			children = (
 				C3B113672D6C6A1C00D142B5 /* Nower */,
+				C3E00DEA2F25A18E004CBAD6 /* Frameworks */,
 				C3B113662D6C6A1C00D142B5 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -43,6 +49,13 @@
 				C3B113652D6C6A1C00D142B5 /* Nower.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		C3E00DEA2F25A18E004CBAD6 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -65,6 +78,7 @@
 			);
 			name = Nower;
 			packageProductDependencies = (
+				C3E00DEB2F25A18E004CBAD6 /* NowerCore */,
 			);
 			productName = Nower;
 			productReference = C3B113652D6C6A1C00D142B5 /* Nower.app */;
@@ -94,6 +108,9 @@
 			);
 			mainGroup = C3B1135C2D6C6A1C00D142B5;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				C3E00DE72F25A112004CBAD6 /* XCLocalSwiftPackageReference "../NowerCore" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C3B113662D6C6A1C00D142B5 /* Products */;
 			projectDirPath = "";
@@ -321,6 +338,21 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		C3E00DE72F25A112004CBAD6 /* XCLocalSwiftPackageReference "../NowerCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../NowerCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C3E00DEB2F25A18E004CBAD6 /* NowerCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C3E00DE72F25A112004CBAD6 /* XCLocalSwiftPackageReference "../NowerCore" */;
+			productName = NowerCore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = C3B1135D2D6C6A1C00D142B5 /* Project object */;
 }

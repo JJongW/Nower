@@ -51,7 +51,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		C3E008ED2F20E16C004CBAD6 /* Exceptions for "NowerTodayWidgetExtension" folder in "NowerTodayWidgetExtensionExtension" target */ = {
+		C3E008D92F20E16B004CBAD6 /* Exceptions for "NowerTodayWidgetExtension" folder in "NowerTodayWidgetExtensionExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -71,7 +71,7 @@
 		C3E008D82F20E16B004CBAD6 /* NowerTodayWidgetExtension */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				C3E008ED2F20E16C004CBAD6 /* Exceptions for "NowerTodayWidgetExtension" folder in "NowerTodayWidgetExtensionExtension" target */,
+				C3E008D92F20E16B004CBAD6 /* Exceptions for "NowerTodayWidgetExtension" folder in "NowerTodayWidgetExtensionExtension" target */,
 			);
 			path = NowerTodayWidgetExtension;
 			sourceTree = "<group>";
@@ -295,7 +295,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 39MK2JX9R4;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NowerTodayWidgetExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = NowerTodayWidgetExtension;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -328,7 +328,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 39MK2JX9R4;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NowerTodayWidgetExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = NowerTodayWidgetExtension;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
