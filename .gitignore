@@ -31,3 +31,7 @@ Nower/Nower.xcodeproj/project.xcworkspace/xcuserdata/sinjong-won.xcuserdatad/Use
 # macOS 시스템 파일
 .DS_Store
 **/.DS_Store
+
+# NowerCore (Swift Package)
+NowerCore/.build/
+NowerCore/.swiftpm/
