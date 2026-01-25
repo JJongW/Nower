@@ -14,25 +14,43 @@ final class DayView: UIView {
 
     // MARK: - Properties
     private var periodEventSlotCount: Int = 0
+    private var currentDateString: String = ""
+    private var allSingleDayTodos: [TodoItem] = []
+
+    /// "+N개" 라벨 탭 시 호출되는 콜백 (dateString, todos)
+    var onMoreTapped: ((String, [TodoItem]) -> Void)?
 
     // MARK: - Layout Constants
     private let eventHeight: CGFloat = 18
-    private let eventSpacing: CGFloat = 4
+    private let eventSpacing: CGFloat = 2 // 간격 축소 (4 → 2)
+    private let periodEventTopOffset: CGFloat = 28 // 축소 (38 → 28)
 
     // MARK: - UI Components
+
+    /// 오늘 날짜 표시를 위한 원형 배경 뷰
+    private let todayCircleView: UIView = {
+        let view = UIView()
+        view.backgroundColor = AppColors.textHighlighted
+        view.layer.cornerRadius = 12 // 24pt 원형
+        view.isHidden = true
+        return view
+    }()
+
     private let dayLabel: UILabel = {
         let label = UILabel()
-        label.font = UIFont.systemFont(ofSize: 12)
+        label.font = UIFont.systemFont(ofSize: 12, weight: .medium)
         label.textAlignment = .center
         return label
     }()
 
     private let holidayLabel: UILabel = {
         let label = UILabel()
-        label.font = UIFont.systemFont(ofSize: 10)
+        label.font = UIFont.systemFont(ofSize: 11, weight: .medium) // 가독성 향상
         label.textColor = AppColors.coralred
         label.textAlignment = .center
         label.numberOfLines = 1
+        label.adjustsFontSizeToFitWidth = true
+        label.minimumScaleFactor = 0.8
         return label
     }()
 
@@ -56,9 +74,11 @@ final class DayView: UIView {
 
     private let moreLabel: UILabel = {
         let label = UILabel()
-        label.font = UIFont.systemFont(ofSize: 10)
-        label.textColor = .lightGray
+        label.font = UIFont.systemFont(ofSize: 10, weight: .medium)
+        label.textColor = AppColors.textFieldPlaceholder // 덜 강조되는 색상
         label.textAlignment = .center
+        label.backgroundColor = .clear // 배경 제거
+        label.isUserInteractionEnabled = true
         return label
     }()
 
@@ -84,27 +104,33 @@ final class DayView: UIView {
             $0.edges.equalToSuperview()
         }
 
+        backgroundHighlightView.addSubview(todayCircleView)
         backgroundHighlightView.addSubview(dayLabel)
         backgroundHighlightView.addSubview(holidayLabel)
         backgroundHighlightView.addSubview(eventStackView)
 
-        dayLabel.snp.makeConstraints {
-            $0.top.equalToSuperview().offset(8)
+        todayCircleView.snp.makeConstraints {
             $0.centerX.equalToSuperview()
-            $0.height.equalTo(12)
+            $0.top.equalToSuperview().offset(2)
+            $0.width.height.equalTo(24) // 원형 크기
+        }
+
+        dayLabel.snp.makeConstraints {
+            $0.center.equalTo(todayCircleView) // 원형 중앙에 배치
+            $0.height.equalTo(14)
         }
 
         holidayLabel.snp.makeConstraints {
-            $0.top.equalTo(dayLabel.snp.bottom).offset(4)
+            $0.top.equalTo(dayLabel.snp.bottom).offset(2) // 축소 (4 → 2)
             $0.leading.trailing.equalToSuperview()
-            $0.height.equalTo(10).priority(.high)
+            $0.height.equalTo(8).priority(.high) // 축소 (10 → 8)
         }
 
         eventStackView.snp.makeConstraints {
             $0.leading.trailing.equalToSuperview()
-            $0.bottom.lessThanOrEqualToSuperview().inset(8)
-            // 기본 top 제약 - 기간별 일정 슬롯에 따라 동적으로 업데이트됨
-            self.eventStackTopConstraint = $0.top.equalTo(holidayLabel.snp.bottom).offset(4).constraint
+            $0.bottom.lessThanOrEqualToSuperview().inset(4)
+            // superview 기준으로 top 설정 (WeekView의 periodEventTopOffset과 동기화)
+            self.eventStackTopConstraint = $0.top.equalToSuperview().offset(periodEventTopOffset).constraint
         }
     }
 
@@ -115,15 +141,16 @@ final class DayView: UIView {
     ///   - periodEventSlotCount: WeekView에서 렌더링되는 기간별 일정 행 수 (공간 확보용)
     func configure(with dayInfo: WeekDayInfo, periodEventSlotCount: Int = 0) {
         self.periodEventSlotCount = periodEventSlotCount
+        self.currentDateString = dayInfo.dateString
 
         // 기존 뷰들 제거
         eventStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         moreLabel.text = ""
 
         // 기간별 일정 공간을 확보하기 위해 eventStackView의 top 제약 업데이트
+        // periodEventTopOffset(38) + 기간일정 영역 높이
         let periodEventAreaHeight = CGFloat(periodEventSlotCount) * (eventHeight + eventSpacing)
-        let baseOffset: CGFloat = 4 // holidayLabel 아래 기본 간격
-        let totalOffset = baseOffset + periodEventAreaHeight
+        let totalOffset = periodEventTopOffset + periodEventAreaHeight
 
         eventStackTopConstraint?.update(offset: totalOffset)
 
@@ -132,20 +159,29 @@ final class DayView: UIView {
             dayLabel.text = ""
             holidayLabel.text = ""
             backgroundHighlightView.backgroundColor = .clear
+            todayCircleView.isHidden = true
+            allSingleDayTodos = []
             return
         }
 
         dayLabel.text = "\(day)"
         dayLabel.textColor = AppColors.textPrimary
 
+        // 오늘 날짜 원형 배경 표시
+        todayCircleView.isHidden = !dayInfo.isToday
+
         if let holiday = dayInfo.holidayName {
             holidayLabel.text = holiday
-            dayLabel.textColor = AppColors.coralred
+            if dayInfo.isToday {
+                dayLabel.textColor = .white // 원형 배경 위에 흰색 텍스트
+            } else {
+                dayLabel.textColor = AppColors.coralred
+            }
         } else {
             holidayLabel.text = ""
 
             if dayInfo.isToday {
-                dayLabel.textColor = AppColors.textHighlighted
+                dayLabel.textColor = .white // 원형 배경 위에 흰색 텍스트
             } else if dayInfo.isSunday {
                 dayLabel.textColor = AppColors.coralred
             } else if dayInfo.isSaturday {
@@ -165,36 +201,15 @@ final class DayView: UIView {
 
         // 단일 날짜 일정만 필터링 (기간별 일정은 WeekView에서 렌더링됨)
         let singleDayTodos = dayInfo.todos.filter { !$0.isPeriodEvent }
+        allSingleDayTodos = singleDayTodos
 
         guard !singleDayTodos.isEmpty else { return }
 
-        // 셀의 사용 가능한 높이 계산
-        let cellHeight = frame.height > 0 ? frame.height : 80
-        let topSpace: CGFloat = 8 + 12 + 4 + (dayInfo.holidayName != nil ? 10 : 0)
-        let eventStackTopOffset: CGFloat = totalOffset
-        let bottomPadding: CGFloat = 8
-        let availableHeight = cellHeight - topSpace - eventStackTopOffset - bottomPadding
+        // 최대 표시 일정 개수: 3개 (2개 표시 + "+N개" 라벨)
+        let maxVisibleEvents = 2
+        let shouldShowMore = singleDayTodos.count > maxVisibleEvents
 
-        // 최대 일정 개수 계산
-        var maxVisibleEvents = 0
-        var currentHeight: CGFloat = 0
-
-        for (index, _) in singleDayTodos.enumerated() {
-            let heightForThisEvent = (index == 0 ? eventHeight : eventHeight + eventSpacing)
-            if currentHeight + heightForThisEvent <= availableHeight {
-                maxVisibleEvents += 1
-                currentHeight += heightForThisEvent
-            } else {
-                break
-            }
-        }
-
-        // "+N개" 라벨 공간 확보
-        if singleDayTodos.count > maxVisibleEvents && currentHeight + 18 <= availableHeight {
-            maxVisibleEvents = max(0, maxVisibleEvents - 1)
-        }
-
-        // 단일 일정 표시
+        // 단일 일정 표시 (최대 2개)
         for todo in singleDayTodos.prefix(maxVisibleEvents) {
             let capsule = EventCapsuleView()
             capsule.configure(
@@ -204,11 +219,22 @@ final class DayView: UIView {
             eventStackView.addArrangedSubview(capsule)
         }
 
-        // 남은 일정 개수 표시
-        if singleDayTodos.count > maxVisibleEvents {
+        // 남은 일정 개수 표시 (3개 이상일 때)
+        if shouldShowMore {
             let remainingCount = singleDayTodos.count - maxVisibleEvents
             moreLabel.text = "+\(remainingCount)개"
+
+            // 탭 제스처 추가
+            moreLabel.gestureRecognizers?.forEach { moreLabel.removeGestureRecognizer($0) }
+            let tapGesture = UITapGestureRecognizer(target: self, action: #selector(moreLabelTapped))
+            moreLabel.addGestureRecognizer(tapGesture)
+
             eventStackView.addArrangedSubview(moreLabel)
         }
+    }
+
+    @objc private func moreLabelTapped() {
+        guard !currentDateString.isEmpty else { return }
+        onMoreTapped?(currentDateString, allSingleDayTodos)
     }
 }

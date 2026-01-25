@@ -37,6 +37,15 @@ final class NewEventView: UIView {
         return stackView
     }()
 
+    private let colorHintLabel: UILabel = {
+        let label = UILabel()
+        label.text = "탭하여 색상 톤 선택"
+        label.font = UIFont.systemFont(ofSize: 12, weight: .regular)
+        label.textColor = AppColors.textFieldPlaceholder
+        label.textAlignment = .center
+        return label
+    }()
+
     let saveButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("추가", for: .normal)
@@ -50,10 +59,12 @@ final class NewEventView: UIView {
     let deleteButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("삭제", for: .normal)
-        button.setTitleColor(.white, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
-        button.backgroundColor = UIColor.systemRed
+        button.setTitleColor(UIColor.systemRed, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .medium)
+        button.backgroundColor = .clear
         button.layer.cornerRadius = 12
+        button.layer.borderWidth = 1.5
+        button.layer.borderColor = UIColor.systemRed.cgColor
         return button
     }()
 
@@ -130,19 +141,34 @@ final class NewEventView: UIView {
     // MARK: - 기존 컴포넌트들
     
     private(set) var colorOptions: [UIButton] = []
-    private(set) var selectedColorName: String = "skyblue"
+    var selectedColorName: String = "skyblue-4" { // 기본값을 중간 톤으로 설정
+        didSet {
+            updateColorSelection()
+        }
+    }
     let colorNames: [String] = ["skyblue", "peach", "lavender", "mintgreen", "coralred"]
+    private var colorVariationPicker: ColorVariationPickerView?
     
     // MARK: - 기간 선택 관련 프로퍼티
-    
+
     var isPeriodMode: Bool = false {
         didSet {
             updateDateSelectionVisibility()
+            // 기간 모드 활성화 시 기본 날짜 자동 설정
+            if isPeriodMode && selectedStartDate == nil {
+                let defaultDate = initialSelectedDate ?? Date()
+                selectedStartDate = defaultDate
+                selectedEndDate = defaultDate
+                updateDateButtonTitles()
+            }
         }
     }
-    
+
     var selectedStartDate: Date?
     var selectedEndDate: Date?
+
+    /// 외부에서 주입받은 선택된 날짜 (기간 모드 기본값용)
+    var initialSelectedDate: Date?
 
     // MARK: - Init
 
@@ -209,89 +235,163 @@ final class NewEventView: UIView {
 
         // 색상 선택
         addSubview(colorStackView)
+        addSubview(colorHintLabel)
+
         colorStackView.snp.makeConstraints {
             $0.top.equalTo(dateSelectionContainer.snp.bottom).offset(24) // 8pt 그리드 (24 = 3 * 8)
             $0.leading.trailing.equalToSuperview().inset(32)
             $0.height.equalTo(40)
         }
 
+        colorHintLabel.snp.makeConstraints {
+            $0.top.equalTo(colorStackView.snp.bottom).offset(8)
+            $0.centerX.equalToSuperview()
+        }
+
         for color in colorNames {
             let button = UIButton()
-            button.backgroundColor = AppColors.color(for: color)
+            // 기본 색상의 중간 톤(4)을 기본값으로 표시
+            button.backgroundColor = AppColors.color(for: "\(color)-4")
             button.layer.cornerRadius = 20
-            button.layer.borderColor = AppColors.textHighlighted.cgColor
-            button.layer.borderWidth = 1
             button.tag = colorOptions.count
             colorOptions.append(button)
             colorStackView.addArrangedSubview(button)
+
+            // 탭: 색상 톤 선택 팝업 표시 (Discoverability 개선)
+            button.addTarget(self, action: #selector(colorButtonTapped(_:)), for: .touchUpInside)
+
+            // 색상 버튼 눌림 효과
+            button.addPressAnimation()
         }
+
+        // 초기 선택 상태 업데이트
+        updateColorSelection()
 
         // 저장/삭제 버튼 컨테이너 (가로로 나란히 배치)
         let buttonStackView: UIStackView = {
             let stack = UIStackView()
             stack.axis = .horizontal
-            stack.distribution = .fillEqually
+            stack.distribution = .fill // 수정 버튼이 더 넓게
             stack.spacing = 12 // 8pt 그리드 근사값 (12 = 1.5 * 8)
             stack.alignment = .fill
             return stack
         }()
-        
+
         addSubview(buttonStackView)
         buttonStackView.addArrangedSubview(saveButton)
         buttonStackView.addArrangedSubview(deleteButton)
-        
+
         buttonStackView.snp.makeConstraints {
-            $0.top.equalTo(colorStackView.snp.bottom).offset(32) // 8pt 그리드 (32 = 4 * 8)
+            $0.top.equalTo(colorHintLabel.snp.bottom).offset(24) // 8pt 그리드 (24 = 3 * 8)
             $0.leading.trailing.equalToSuperview().inset(20)
             $0.height.equalTo(52) // 최소 터치 타겟 44pt + 패딩
         }
-        
-        // 각 버튼의 높이 제약
+
+        // 수정 버튼이 삭제 버튼보다 2배 넓게
         saveButton.snp.makeConstraints {
             $0.height.equalTo(52)
+            $0.width.equalTo(deleteButton).multipliedBy(2)
         }
-        
+
         deleteButton.snp.makeConstraints {
             $0.height.equalTo(52)
         }
-        
+
         deleteButton.isHidden = true
-        
+
         // 스위치 액션 설정
         periodModeSwitch.addTarget(self, action: #selector(periodModeSwitchChanged(_:)), for: .valueChanged)
         startDateButton.addTarget(self, action: #selector(startDateButtonTapped), for: .touchUpInside)
         endDateButton.addTarget(self, action: #selector(endDateButtonTapped), for: .touchUpInside)
+
+        // 버튼 눌림 효과 적용
+        saveButton.addPressAnimation()
+        deleteButton.addPressAnimation()
+        startDateButton.addPressAnimation()
+        endDateButton.addPressAnimation()
+
+        // 접근성 설정
+        setupAccessibility()
+    }
+
+    // MARK: - Accessibility
+
+    private func setupAccessibility() {
+        // 텍스트 필드
+        textField.accessibilityLabel = "일정 이름"
+        textField.accessibilityHint = "일정 이름을 입력하세요"
+
+        // 기간 모드 스위치
+        periodModeSwitch.accessibilityLabel = "기간별 일정"
+        periodModeSwitch.accessibilityHint = "활성화하면 여러 날에 걸친 일정을 만들 수 있습니다"
+
+        // 날짜 버튼
+        startDateButton.accessibilityLabel = "시작일"
+        startDateButton.accessibilityHint = "탭하여 시작 날짜를 선택하세요"
+        endDateButton.accessibilityLabel = "종료일"
+        endDateButton.accessibilityHint = "탭하여 종료 날짜를 선택하세요"
+
+        // 색상 버튼
+        let colorLabels = ["하늘색", "피치", "라벤더", "민트그린", "코랄레드"]
+        for (index, button) in colorOptions.enumerated() {
+            button.accessibilityLabel = "\(colorLabels[index]) 색상"
+            button.accessibilityHint = "탭하여 색상 톤을 선택하세요"
+        }
+
+        // 저장/삭제 버튼
+        saveButton.accessibilityLabel = "저장"
+        saveButton.accessibilityHint = "일정을 저장합니다"
+        deleteButton.accessibilityLabel = "삭제"
+        deleteButton.accessibilityHint = "일정을 삭제합니다"
     }
     
     private func setupDateSelectionContainer() {
+        // 화살표 아이콘 추가
+        let arrowLabel = UILabel()
+        arrowLabel.text = "→"
+        arrowLabel.font = UIFont.systemFont(ofSize: 18, weight: .medium)
+        arrowLabel.textColor = AppColors.textFieldPlaceholder
+        arrowLabel.textAlignment = .center
+
         dateSelectionContainer.addSubview(startDateLabel)
         dateSelectionContainer.addSubview(startDateButton)
+        dateSelectionContainer.addSubview(arrowLabel)
         dateSelectionContainer.addSubview(endDateLabel)
         dateSelectionContainer.addSubview(endDateButton)
-        
+
         startDateLabel.snp.makeConstraints {
             $0.top.equalToSuperview().offset(12)
             $0.leading.equalToSuperview().offset(16)
         }
-        
+
         startDateButton.snp.makeConstraints {
             $0.top.equalTo(startDateLabel.snp.bottom).offset(8) // 8pt 그리드
             $0.leading.equalToSuperview().offset(16)
-            $0.width.equalTo(130)
+            $0.width.greaterThanOrEqualTo(100) // 최소 너비
             $0.height.equalTo(44) // 최소 터치 타겟 44pt
         }
-        
+
+        arrowLabel.snp.makeConstraints {
+            $0.centerY.equalTo(startDateButton)
+            $0.centerX.equalToSuperview()
+            $0.width.equalTo(24)
+        }
+
         endDateLabel.snp.makeConstraints {
             $0.top.equalToSuperview().offset(12)
             $0.trailing.equalToSuperview().offset(-16)
         }
-        
+
         endDateButton.snp.makeConstraints {
             $0.top.equalTo(endDateLabel.snp.bottom).offset(8) // 8pt 그리드
             $0.trailing.equalToSuperview().offset(-16)
-            $0.width.equalTo(130)
+            $0.width.greaterThanOrEqualTo(100) // 최소 너비
             $0.height.equalTo(44) // 최소 터치 타겟 44pt
         }
+
+        // 버튼 내부 패딩 설정
+        startDateButton.contentEdgeInsets = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
+        endDateButton.contentEdgeInsets = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
     }
 
     // MARK: - Actions
@@ -311,8 +411,36 @@ final class NewEventView: UIView {
     // MARK: - Helper Methods
     
     private func updateDateSelectionVisibility() {
-        UIView.animate(withDuration: 0.3) {
-            self.dateSelectionContainer.isHidden = !self.isPeriodMode
+        if isPeriodMode {
+            // 표시 애니메이션
+            dateSelectionContainer.isHidden = false
+            dateSelectionContainer.alpha = 0
+            dateSelectionContainer.transform = CGAffineTransform(translationX: 0, y: -10)
+
+            UIView.animate(
+                withDuration: 0.3,
+                delay: 0,
+                usingSpringWithDamping: 0.8,
+                initialSpringVelocity: 0.5,
+                options: [.curveEaseOut]
+            ) {
+                self.dateSelectionContainer.alpha = 1
+                self.dateSelectionContainer.transform = .identity
+                self.layoutIfNeeded()
+            }
+        } else {
+            // 숨김 애니메이션
+            UIView.animate(
+                withDuration: 0.25,
+                delay: 0,
+                options: [.curveEaseIn]
+            ) {
+                self.dateSelectionContainer.alpha = 0
+                self.dateSelectionContainer.transform = CGAffineTransform(translationX: 0, y: -10)
+            } completion: { _ in
+                self.dateSelectionContainer.isHidden = true
+                self.dateSelectionContainer.transform = .identity
+            }
         }
     }
     
@@ -375,47 +503,183 @@ final class NewEventView: UIView {
     }
     
     private func updateSelectedDate(_ date: Date, for type: DatePickerType) {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MM/dd"
-        formatter.locale = Locale(identifier: "ko_KR")
-        
         switch type {
         case .start:
             selectedStartDate = date
-            startDateButton.setTitle(formatter.string(from: date), for: .normal)
         case .end:
             selectedEndDate = date
-            endDateButton.setTitle(formatter.string(from: date), for: .normal)
+        }
+        updateDateButtonTitles()
+    }
+
+    private func updateDateButtonTitles() {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "M월 d일"
+        formatter.locale = Locale(identifier: "ko_KR")
+
+        if let startDate = selectedStartDate {
+            startDateButton.setTitle(formatter.string(from: startDate), for: .normal)
+        } else {
+            startDateButton.setTitle("날짜 선택", for: .normal)
+        }
+
+        if let endDate = selectedEndDate {
+            endDateButton.setTitle(formatter.string(from: endDate), for: .normal)
+        } else {
+            endDateButton.setTitle("날짜 선택", for: .normal)
         }
     }
     
-    func selectColor(_ sender: UIButton) {
+    // MARK: - Color Selection
+
+    @objc private func colorButtonTapped(_ sender: UIButton) {
+        // 햅틱 피드백
+        let feedback = UIImpactFeedbackGenerator(style: .light)
+        feedback.impactOccurred()
+
+        // 탭 시 바로 톤 선택 팝업 표시 (Discoverability 개선)
+        let baseColorName = colorNames[sender.tag]
+        showColorVariationPicker(for: baseColorName, sourceButton: sender)
+    }
+    
+    private func showColorVariationPicker(for baseColorName: String, sourceButton: UIButton) {
+        // 기존 picker 제거
+        colorVariationPicker?.removeFromSuperview()
+        
+        // 새 picker 생성
+        let picker = ColorVariationPickerView(baseColorName: baseColorName)
+        picker.onColorSelected = { [weak self] colorName in
+            self?.selectedColorName = colorName
+            self?.updateColorSelection()
+        }
+        
+        // 현재 선택된 색상이 이 baseColorName인 경우 톤 하이라이트
+        let currentBaseName = AppColors.baseColorName(from: selectedColorName)
+        if currentBaseName == baseColorName {
+            let tone = AppColors.toneNumber(from: selectedColorName)
+            picker.highlightTone(tone)
+        }
+        
+        colorVariationPicker = picker
+        
+        // 부모 뷰에 추가
+        guard let parentView = findViewController()?.view else { return }
+        parentView.addSubview(picker)
+        picker.snp.makeConstraints {
+            $0.edges.equalToSuperview()
+        }
+    }
+    
+    func updateColorSelection(animated: Bool = true) {
+        let selectedBaseName = AppColors.baseColorName(from: selectedColorName)
+
         for (index, button) in colorOptions.enumerated() {
-            button.layer.borderWidth = (button == sender) ? 3 : 0
-            if button == sender {
-                selectedColorName = colorNames[index]
+            let baseName = colorNames[index]
+            let isSelected = baseName == selectedBaseName
+
+            let updateBlock = {
+                if isSelected {
+                    // 선택된 색상의 테두리: 다크모드면 흰색, 라이트모드면 검정색
+                    let borderColor = UIColor { trait in
+                        if trait.userInterfaceStyle == .dark {
+                            return UIColor.white
+                        } else {
+                            return UIColor(red: 0.06, green: 0.06, blue: 0.06, alpha: 1.0) // #0F0F0F
+                        }
+                    }
+                    button.layer.borderColor = borderColor.cgColor
+                    button.layer.borderWidth = 3
+
+                    // 선택된 톤으로 색상 업데이트
+                    let tone = AppColors.toneNumber(from: self.selectedColorName) ?? 4
+                    button.backgroundColor = AppColors.color(for: "\(baseName)-\(tone)")
+
+                    // 선택 시 살짝 확대
+                    button.transform = CGAffineTransform(scaleX: 1.1, y: 1.1)
+                } else {
+                    button.layer.borderWidth = 0
+                    // 선택되지 않은 색상은 중간 톤(4)으로 표시
+                    button.backgroundColor = AppColors.color(for: "\(baseName)-4")
+                    button.transform = .identity
+                }
+            }
+
+            if animated {
+                UIView.animate(
+                    withDuration: 0.2,
+                    delay: 0,
+                    usingSpringWithDamping: 0.7,
+                    initialSpringVelocity: 0.5,
+                    options: [.curveEaseOut]
+                ) {
+                    updateBlock()
+                }
+            } else {
+                updateBlock()
             }
         }
     }
     
+    func selectColor(_ sender: UIButton) {
+        // 기존 메서드 호환성 유지
+        let baseColorName = colorNames[sender.tag]
+        selectedColorName = "\(baseColorName)-4"
+        updateColorSelection()
+    }
+    
     /// 기간 모드 설정 (외부에서 호출)
     func setPeriodMode(_ enabled: Bool, startDate: Date? = nil, endDate: Date? = nil) {
-        isPeriodMode = enabled
-        periodModeSwitch.isOn = enabled
-        
         if let startDate = startDate {
             selectedStartDate = startDate
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MM/dd"
-            startDateButton.setTitle(formatter.string(from: startDate), for: .normal)
         }
-        
         if let endDate = endDate {
             selectedEndDate = endDate
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MM/dd"
-            endDateButton.setTitle(formatter.string(from: endDate), for: .normal)
         }
+
+        isPeriodMode = enabled
+        periodModeSwitch.isOn = enabled
+        updateDateButtonTitles()
+    }
+
+    /// 선택된 날짜 설정 (새 일정 추가 시 외부에서 호출)
+    func setInitialSelectedDate(_ date: Date) {
+        initialSelectedDate = date
+    }
+
+    // MARK: - Error Feedback
+
+    /// 텍스트 필드 에러 시 흔들림 애니메이션 표시
+    func shakeTextField() {
+        // 햅틱 피드백
+        let feedback = UINotificationFeedbackGenerator()
+        feedback.notificationOccurred(.error)
+
+        // 흔들림 애니메이션
+        let animation = CAKeyframeAnimation(keyPath: "transform.translation.x")
+        animation.timingFunction = CAMediaTimingFunction(name: .linear)
+        animation.duration = 0.5
+        animation.values = [-10, 10, -8, 8, -5, 5, -2, 2, 0]
+        textFieldBackgroundView.layer.add(animation, forKey: "shake")
+
+        // 테두리 색상 변경 (잠시 빨간색)
+        let originalBorderWidth = textFieldBackgroundView.layer.borderWidth
+        let originalBorderColor = textFieldBackgroundView.layer.borderColor
+
+        textFieldBackgroundView.layer.borderWidth = 1.5
+        textFieldBackgroundView.layer.borderColor = UIColor.systemRed.cgColor
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            UIView.animate(withDuration: 0.3) {
+                self.textFieldBackgroundView.layer.borderWidth = originalBorderWidth
+                self.textFieldBackgroundView.layer.borderColor = originalBorderColor
+            }
+        }
+    }
+
+    /// 저장 성공 시 햅틱 피드백
+    func triggerSuccessFeedback() {
+        let feedback = UINotificationFeedbackGenerator()
+        feedback.notificationOccurred(.success)
     }
 }
 
@@ -428,6 +692,39 @@ extension UIView {
             return nextResponder.findViewController()
         } else {
             return nil
+        }
+    }
+}
+
+// MARK: - UIButton Extension for Press Animation
+extension UIButton {
+    /// 버튼 눌림 효과 애니메이션 추가
+    func addPressAnimation() {
+        addTarget(self, action: #selector(buttonPressed), for: .touchDown)
+        addTarget(self, action: #selector(buttonReleased), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+    }
+
+    @objc private func buttonPressed() {
+        UIView.animate(
+            withDuration: 0.1,
+            delay: 0,
+            options: [.curveEaseIn, .allowUserInteraction]
+        ) {
+            self.transform = CGAffineTransform(scaleX: 0.96, y: 0.96)
+            self.alpha = 0.9
+        }
+    }
+
+    @objc private func buttonReleased() {
+        UIView.animate(
+            withDuration: 0.15,
+            delay: 0,
+            usingSpringWithDamping: 0.5,
+            initialSpringVelocity: 0.5,
+            options: [.curveEaseOut, .allowUserInteraction]
+        ) {
+            self.transform = .identity
+            self.alpha = 1.0
         }
     }
 }

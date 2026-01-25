@@ -19,12 +19,11 @@ final class CalendarView: UIView {
 
     let textLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 12, weight: .semibold)
+        label.font = .systemFont(ofSize: 11, weight: .medium) // 축소 (12 → 11)
         label.textAlignment = .left
-        // 일일 명언으로 자동
         label.text = DailyQuoteManager.getTodayQuote()
-        label.textColor = AppColors.textPrimary
-        label.numberOfLines = 0 // 여러 줄 표시 지원
+        label.textColor = AppColors.textFieldPlaceholder // 덜 강조
+        label.numberOfLines = 1 // 한 줄로 제한
         return label
     }()
 
@@ -64,6 +63,9 @@ final class CalendarView: UIView {
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         collectionView.backgroundColor = AppColors.background
         collectionView.register(WeekCell.self, forCellWithReuseIdentifier: WeekCell.identifier)
+        collectionView.isScrollEnabled = false // 스크롤 비활성화 (한 화면에 모두 표시)
+        collectionView.showsVerticalScrollIndicator = false
+        collectionView.clipsToBounds = true // 가장자리 클리핑으로 겹침 방지
         return collectionView
     }()
 
@@ -78,6 +80,7 @@ final class CalendarView: UIView {
 
     private func setupUI() {
         backgroundColor = AppColors.background
+        clipsToBounds = true // 부모 뷰도 클리핑 설정으로 겹침 방지
 
         addSubview(monthLabel)
         addSubview(previousButton)
@@ -104,7 +107,7 @@ final class CalendarView: UIView {
         }
 
         monthLabel.snp.makeConstraints {
-            $0.top.equalTo(safeAreaLayoutGuide.snp.top).offset(16)
+            $0.top.equalTo(safeAreaLayoutGuide.snp.top).offset(8) // 축소 (16 → 8)
             $0.centerX.equalToSuperview()
         }
 
@@ -119,21 +122,21 @@ final class CalendarView: UIView {
         }
 
         textLabel.snp.makeConstraints {
-            $0.top.equalTo(monthLabel.snp.bottom).offset(48)
+            $0.top.equalTo(monthLabel.snp.bottom).offset(12) // 축소 (48 → 12)
             $0.leading.equalToSuperview().offset(20)
-            $0.trailing.equalToSuperview().inset(20) // 명언이 길 경우를 대비한 제약
+            $0.trailing.equalToSuperview().inset(20)
         }
 
         weekdayStackView.snp.makeConstraints {
-            $0.top.equalTo(textLabel.snp.bottom).offset(36)
+            $0.top.equalTo(textLabel.snp.bottom).offset(16) // 축소 (36 → 16)
             $0.leading.trailing.equalToSuperview().inset(8)
             $0.height.equalTo(20)
         }
 
         collectionView.snp.makeConstraints {
-            $0.top.equalTo(weekdayStackView.snp.bottom).offset(36)
-            $0.leading.trailing.equalToSuperview().inset(8) // 요일 헤더와 동일한 위치로 정렬
-            $0.bottom.equalToSuperview()
+            $0.top.equalTo(weekdayStackView.snp.bottom).offset(4)
+            $0.leading.trailing.equalToSuperview().inset(8)
+            $0.bottom.equalTo(safeAreaLayoutGuide.snp.bottom)
         }
     }
 }

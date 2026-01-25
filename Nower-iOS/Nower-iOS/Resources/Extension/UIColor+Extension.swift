@@ -220,8 +220,11 @@ enum AppColors {
         }
     }
 
-    /// 테마 색상 이름으로 색상 가져오기
-    static func color(for name: String) -> UIColor {
+    /// 기본 색상 이름 목록
+    static let baseColorNames: [String] = ["skyblue", "peach", "lavender", "mintgreen", "coralred"]
+    
+    /// 기본 색상의 기본 톤 (기존 호환성 유지)
+    static func baseColor(for name: String) -> UIColor {
         switch name {
         case "skyblue": return skyblue
         case "peach": return peach
@@ -236,6 +239,103 @@ enum AppColors {
             }
         }
         }
+    }
+    
+    /// 색상 톤 생성 (1: 가장 밝음, 8: 가장 어두움)
+    /// - Parameters:
+    ///   - baseColor: 기본 색상 (UIColor)
+    ///   - tone: 톤 레벨 (1-8)
+    ///   - trait: 현재 trait collection
+    /// - Returns: 조정된 색상
+    private static func colorTone(baseColor: UIColor, tone: Int, trait: UITraitCollection) -> UIColor {
+        let resolvedColor = baseColor.resolvedColor(with: trait)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        guard resolvedColor.getRed(&r, green: &g, blue: &b, alpha: &a) else {
+            return baseColor
+        }
+        
+        // 톤에 따라 밝기 조정 (1: 밝게, 8: 어둡게)
+        // 다크모드와 라이트모드에 따라 다른 조정 방식 적용
+        let isDark = trait.userInterfaceStyle == .dark
+        let toneFactor: CGFloat
+        
+        if isDark {
+            // 다크모드: 1이 가장 밝고 8이 가장 어두움
+            // 밝기 범위: 0.3 ~ 0.95
+            toneFactor = 0.95 - (CGFloat(tone - 1) / 7.0) * 0.65
+        } else {
+            // 라이트모드: 1이 가장 밝고 8이 가장 어두움
+            // 밝기 범위: 0.4 ~ 0.95
+            toneFactor = 0.95 - (CGFloat(tone - 1) / 7.0) * 0.55
+        }
+        
+        // RGB 값을 톤에 맞게 조정 (채도는 유지하면서 밝기만 조정)
+        let luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        let targetLuminance = toneFactor
+        
+        if luminance > 0 {
+            let ratio = targetLuminance / luminance
+            r = min(1.0, max(0.0, r * ratio))
+            g = min(1.0, max(0.0, g * ratio))
+            b = min(1.0, max(0.0, b * ratio))
+        }
+        
+        return UIColor(red: r, green: g, blue: b, alpha: a)
+    }
+    
+    /// 특정 색상의 모든 톤 반환 (1-8)
+    /// - Parameter baseColorName: 기본 색상 이름
+    /// - Returns: 8가지 톤 배열 (1이 가장 밝음)
+    static func colorTones(for baseColorName: String) -> [UIColor] {
+        let base = baseColor(for: baseColorName)
+        return (1...8).map { tone in
+            UIColor { trait in
+                colorTone(baseColor: base, tone: tone, trait: trait)
+            }
+        }
+    }
+    
+    /// 색상 이름으로 색상 가져오기 (기본 색상 및 톤 지원)
+    /// 지원 형식: "skyblue", "skyblue-1", "skyblue-2", ... "skyblue-8"
+    /// 기존 색상 이름(톤 없음)은 중간 톤(4)으로 표시
+    static func color(for name: String) -> UIColor {
+        // 톤이 포함된 경우 (예: "skyblue-3")
+        if let dashIndex = name.lastIndex(of: "-"),
+           let tone = Int(String(name[name.index(after: dashIndex)...])),
+           tone >= 1 && tone <= 8 {
+            let baseName = String(name[..<dashIndex])
+            let base = baseColor(for: baseName)
+            return UIColor { trait in
+                colorTone(baseColor: base, tone: tone, trait: trait)
+            }
+        }
+        
+        // 기본 색상 (기존 호환성) - 중간 톤(4)으로 표시
+        let base = baseColor(for: name)
+        return UIColor { trait in
+            colorTone(baseColor: base, tone: 4, trait: trait)
+        }
+    }
+    
+    /// 색상 이름에서 기본 색상 이름 추출 (톤 제거)
+    /// 예: "skyblue-3" -> "skyblue"
+    static func baseColorName(from colorName: String) -> String {
+        if let dashIndex = colorName.lastIndex(of: "-"),
+           Int(String(colorName[colorName.index(after: dashIndex)...])) != nil {
+            return String(colorName[..<dashIndex])
+        }
+        return colorName
+    }
+    
+    /// 색상 이름에서 톤 번호 추출
+    /// 예: "skyblue-3" -> 3, "skyblue" -> nil
+    static func toneNumber(from colorName: String) -> Int? {
+        guard let dashIndex = colorName.lastIndex(of: "-"),
+              let tone = Int(String(colorName[colorName.index(after: dashIndex)...])),
+              tone >= 1 && tone <= 8 else {
+            return nil
+        }
+        return tone
     }
 }
 

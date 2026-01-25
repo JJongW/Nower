@@ -29,14 +29,17 @@ final class WeekView: UIView {
     private var weekDays: [WeekDayInfo] = []
     private var periodEventViews: [PeriodEventOverlayView] = []
     private var periodEventRows: [[PeriodEventLayoutInfo]] = []
+    private var moreEventLabel: UILabel? // "+N개" 라벨
 
     var onDaySelected: ((String) -> Void)? // 날짜 선택 콜백 (dateString 전달)
     var onTodoSelected: ((TodoItem, String) -> Void)? // 일정 선택 콜백 (TodoItem, dateString 전달)
+    var onMoreTapped: ((String, [TodoItem]) -> Void)? // "+N개" 탭 콜백 (dateString, todos 전달)
 
     // MARK: - Layout Constants
     private let eventHeight: CGFloat = 18
-    private let eventSpacing: CGFloat = 4
-    private let periodEventTopOffset: CGFloat = 38 // 날짜 라벨 + 공휴일 라벨 아래
+    private let eventSpacing: CGFloat = 2 // 간격 축소 (4 → 2)
+    private let periodEventTopOffset: CGFloat = 28 // 축소 (38 → 28)
+    private let maxVisiblePeriodEventRows: Int = 3 // 최대 표시 가능한 기간일정 행 수
 
     // MARK: - UI Components
 
@@ -87,6 +90,10 @@ final class WeekView: UIView {
         // 7개의 DayView 생성
         for _ in 0..<7 {
             let dayView = DayView()
+            // DayView의 "+N개" 탭 콜백 연결
+            dayView.onMoreTapped = { [weak self] dateString, todos in
+                self?.onMoreTapped?(dateString, todos)
+            }
             dayViews.append(dayView)
             dayContainerStackView.addArrangedSubview(dayView)
         }
@@ -100,20 +107,59 @@ final class WeekView: UIView {
 
         // 기간별 일정 행 계산
         periodEventRows = calculatePeriodEventRows()
-        let periodEventSlotCount = periodEventRows.count
 
-        // DayView 설정 (기간별 일정 슬롯 수 전달)
+        // 최대 표시 가능한 행 수 제한
+        let visibleRows = min(periodEventRows.count, maxVisiblePeriodEventRows)
+        let hiddenEventCount = max(0, periodEventRows.count - maxVisiblePeriodEventRows)
+
+        // 각 날짜별로 해당 날짜에 기간 일정이 있는 행 수 계산
+        let periodEventRowsPerDay = calculatePeriodEventRowsPerDay(visibleRows: visibleRows)
+
+        // DayView 설정 (각 날짜별로 실제 기간 일정이 있는 행 수만 전달)
         for (index, dayInfo) in weekDays.enumerated() {
             guard index < dayViews.count else { break }
-            dayViews[index].configure(with: dayInfo, periodEventSlotCount: periodEventSlotCount)
+            let periodEventCount = periodEventRowsPerDay[index] ?? 0
+            dayViews[index].configure(with: dayInfo, periodEventSlotCount: periodEventCount)
         }
 
-        // 기간별 일정 컨테이너 높이 업데이트
-        let containerHeight = CGFloat(periodEventSlotCount) * (eventHeight + eventSpacing)
+        // 기간별 일정 컨테이너 높이 업데이트 (표시되는 행 수만)
+        let containerHeight = CGFloat(visibleRows) * (eventHeight + eventSpacing)
         periodEventContainer.snp.updateConstraints {
             $0.height.equalTo(containerHeight)
         }
+
+        // 숨겨진 일정 개수 저장 (렌더링 시 사용)
+        self.hiddenPeriodEventCount = hiddenEventCount
     }
+
+    /// 각 날짜별로 기간일정이 차지하는 행 수를 계산합니다.
+    private func calculatePeriodEventRowsPerDay(visibleRows: Int) -> [Int: Int] {
+        var rowsPerDay: [Int: Int] = [:]
+
+        // 각 날짜 인덱스별로 0으로 초기화
+        for dayIndex in 0..<7 {
+            rowsPerDay[dayIndex] = 0
+        }
+
+        // 표시되는 행까지만 확인
+        let visiblePeriodEventRows = Array(periodEventRows.prefix(visibleRows))
+
+        // 각 행의 각 기간일정을 확인하여 해당 날짜 범위에 포함되는지 체크
+        for (rowIndex, row) in visiblePeriodEventRows.enumerated() {
+            for eventInfo in row {
+                // 이 기간일정이 포함하는 모든 날짜 인덱스에 대해 행 수 업데이트
+                for dayIndex in eventInfo.startDayIndex...eventInfo.endDayIndex {
+                    let currentMaxRow = rowsPerDay[dayIndex] ?? 0
+                    rowsPerDay[dayIndex] = max(currentMaxRow, rowIndex + 1)
+                }
+            }
+        }
+
+        return rowsPerDay
+    }
+    
+    // 숨겨진 기간일정 개수
+    private var hiddenPeriodEventCount: Int = 0
 
     override func layoutSubviews() {
         super.layoutSubviews()
@@ -254,12 +300,16 @@ final class WeekView: UIView {
         // 기존 뷰 제거
         periodEventViews.forEach { $0.removeFromSuperview() }
         periodEventViews.removeAll()
+        moreEventLabel?.removeFromSuperview()
+        moreEventLabel = nil
 
         guard bounds.width > 0 else { return }
 
         let cellWidth = bounds.width / 7
+        let visibleRows = Array(periodEventRows.prefix(maxVisiblePeriodEventRows))
 
-        for row in periodEventRows {
+        // 표시 가능한 행까지만 렌더링
+        for row in visibleRows {
             for eventInfo in row {
                 let overlayView = PeriodEventOverlayView()
 
@@ -287,6 +337,25 @@ final class WeekView: UIView {
                 periodEventContainer.addSubview(overlayView)
                 periodEventViews.append(overlayView)
             }
+        }
+        
+        // 숨겨진 일정이 있으면 "+N개" 표시 (첫 번째 날짜 열에 표시)
+        if hiddenPeriodEventCount > 0 {
+            let moreLabel = UILabel()
+            moreLabel.text = "+\(hiddenPeriodEventCount)개"
+            moreLabel.font = UIFont.systemFont(ofSize: 10, weight: .medium)
+            moreLabel.textColor = AppColors.textFieldPlaceholder // 덜 강조되는 색상
+            moreLabel.textAlignment = .center
+            moreLabel.backgroundColor = .clear // 배경 제거
+
+            // 마지막 행 아래에 표시 (첫 번째 날짜 열)
+            let y = CGFloat(visibleRows.count) * (eventHeight + eventSpacing)
+            let x: CGFloat = 0
+            let width = cellWidth
+            moreLabel.frame = CGRect(x: x, y: y, width: width, height: eventHeight)
+
+            periodEventContainer.addSubview(moreLabel)
+            moreEventLabel = moreLabel
         }
     }
 

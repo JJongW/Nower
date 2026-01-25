@@ -33,6 +33,32 @@ final class EventListViewController: UIViewController {
         eventListView.eventTableView.reloadData()
         eventListView.eventDateLabel.text = selectedDate.formatted("dd")
         eventListView.eventWeekLabel.text = selectedDate.formattedUS("EEE.").uppercased()
+
+        // 날짜에 따른 라벨 표시
+        eventListView.eventLabel.text = getDateDescription(for: selectedDate)
+    }
+
+    private func getDateDescription(for date: Date) -> String {
+        let calendar = Calendar.current
+        let today = Date()
+
+        if calendar.isDateInToday(date) {
+            return "오늘"
+        } else if calendar.isDateInYesterday(date) {
+            return "어제"
+        } else if calendar.isDateInTomorrow(date) {
+            return "내일"
+        } else {
+            // 같은 연도면 월만, 다른 연도면 연도.월 표시
+            let dateYear = calendar.component(.year, from: date)
+            let todayYear = calendar.component(.year, from: today)
+
+            if dateYear == todayYear {
+                return date.formatted("M월")
+            } else {
+                return date.formatted("yyyy.M월")
+            }
+        }
     }
 
     @objc private func didTapAdd() {

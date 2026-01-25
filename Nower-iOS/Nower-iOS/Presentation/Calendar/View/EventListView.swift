@@ -26,10 +26,10 @@ final class EventListView: UIView {
 
     let eventLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 18, weight: .bold)
-        label.textColor = AppColors.textPrimary
+        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.textColor = AppColors.textFieldPlaceholder
         label.textAlignment = .center
-        label.text = "Today"
+        label.text = "" // 동적으로 설정
         return label
     }()
 
