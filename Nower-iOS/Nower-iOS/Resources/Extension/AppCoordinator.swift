@@ -6,6 +6,8 @@
 //
 
 import UIKit
+// NOTE: Import NowerCore when package is linked
+// import NowerCore
 
 final class AppCoordinator {
     let window: UIWindow
@@ -18,6 +20,13 @@ final class AppCoordinator {
     }
 
     func start() {
+        // NowerCore 마이그레이션 실행
+        // TODO: Uncomment when NowerCore package is linked
+        // Task { @MainActor in
+        //     DependencyContainer.shared.runMigrationIfNeeded()
+        //     DependencyContainer.shared.startSyncListening()
+        // }
+
         let calendarVC = makeCalendarViewController()
         calendarVC.coordinator = self
         navigationController.viewControllers = [calendarVC]
