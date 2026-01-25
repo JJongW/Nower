@@ -7,6 +7,8 @@
 import Cocoa
 import SwiftUI
 import ServiceManagement
+// NOTE: Import NowerCore when package is linked
+// import NowerCore
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var window: DraggableWindow?
@@ -15,12 +17,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let appBundleID = "pr.jongwon.Nower"
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // NowerCore 마이그레이션 실행
+        // TODO: Uncomment when NowerCore package is linked
+        // Task { @MainActor in
+        //     DependencyContainer.shared.runMigrationIfNeeded()
+        //     DependencyContainer.shared.startSyncListening()
+        // }
+
         setupMainWindow()
         setupStatusBar()
         enableAutoLaunch()
 
         NotificationCenter.default.addObserver(self, selector: #selector(updateContentView), name: .init("SettingsChanged"), object: nil)
-        
+
         // 윈도우 설정 관련 알림 설정
         NotificationCenter.default.addObserver(self, selector: #selector(pinToTopLeftChanged), name: .init("PinToTopLeftChanged"), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(alwaysOnTopChanged), name: .init("AlwaysOnTopChanged"), object: nil)

@@ -65,13 +65,32 @@ struct TodoItem: Identifiable, Codable {
     init(text: String, isRepeating: Bool, startDate: Date, endDate: Date, colorName: String) {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        
+
         self.text = text
         self.isRepeating = isRepeating
         self.date = formatter.string(from: startDate) // 기존 호환성을 위해 시작일을 date에 저장
         self.colorName = colorName
         self.startDate = formatter.string(from: startDate)
         self.endDate = formatter.string(from: endDate)
+    }
+
+    /// 모든 필드를 직접 지정하는 이니셜라이저 (NowerCore 변환용)
+    /// - Parameters:
+    ///   - id: 고유 식별자
+    ///   - text: Todo 내용
+    ///   - isRepeating: 반복 여부
+    ///   - date: 날짜 문자열
+    ///   - colorName: 색상 이름
+    ///   - startDate: 시작 날짜 문자열 (기간별 일정용)
+    ///   - endDate: 종료 날짜 문자열 (기간별 일정용)
+    init(id: UUID, text: String, isRepeating: Bool, date: String, colorName: String, startDate: String? = nil, endDate: String? = nil) {
+        self.id = id
+        self.text = text
+        self.isRepeating = isRepeating
+        self.date = date
+        self.colorName = colorName
+        self.startDate = startDate
+        self.endDate = endDate
     }
 }
 
