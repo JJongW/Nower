@@ -217,6 +217,7 @@ final class NewEventView: UIView {
 
     var isPeriodMode: Bool = false {
         didSet {
+            guard !isSettingPeriodMode else { return }
             updateDateSelectionVisibility()
             // 기간 모드 활성화 시 기본 날짜 자동 설정
             if isPeriodMode && selectedStartDate == nil {
@@ -237,6 +238,8 @@ final class NewEventView: UIView {
     /// 날짜 선택 컨테이너 높이/여백 제약 (접었다 펼치기용)
     private var dateContainerHeightConstraint: NSLayoutConstraint?
     private var dateContainerTopConstraint: NSLayoutConstraint?
+    /// setPeriodMode에서 애니메이션 없이 설정 중일 때 didSet 중복 실행 방지
+    private var isSettingPeriodMode = false
 
     // MARK: - 시간/알림 프로퍼티
 
@@ -987,6 +990,7 @@ final class NewEventView: UIView {
         }
 
         // 애니메이션 없이 즉시 제약 반영 (초기 설정용)
+        isSettingPeriodMode = true
         if enabled {
             dateSelectionContainer.isHidden = false
             dateSelectionContainer.alpha = 1
@@ -998,10 +1002,9 @@ final class NewEventView: UIView {
             dateContainerHeightConstraint?.constant = 0
             dateContainerTopConstraint?.constant = 0
         }
-        // didSet의 updateDateSelectionVisibility가 중복 실행되지 않도록 내부 값 직접 설정
         periodModeSwitch.isOn = enabled
-        // isPeriodMode setter → didSet 호출 (이미 제약 반영됨, layoutIfNeeded만 수행)
         isPeriodMode = enabled
+        isSettingPeriodMode = false
         updateDateButtonTitles()
         layoutIfNeeded()
     }
