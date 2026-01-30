@@ -36,6 +36,10 @@ final class EditEventBottomSheetViewController: UIViewController {
             }
         }
         
+        // 시간/알림 설정 복원
+        popupView.selectedScheduledTime = todo.scheduledTime
+        popupView.selectedReminderMinutesBefore = todo.reminderMinutesBefore
+
         // 기간별 일정인 경우 설정
         if todo.isPeriodEvent {
             popupView.isPeriodMode = true
@@ -85,6 +89,20 @@ final class EditEventBottomSheetViewController: UIViewController {
         }
 
         let updatedColor = popupView.selectedColorName
+        let updatedTime = popupView.selectedScheduledTime
+        let updatedReminder = popupView.selectedReminderMinutesBefore
+
+        // 알림 설정 시 권한 요청
+        if updatedReminder != nil {
+            Task {
+                let granted = await LocalNotificationManager.shared.requestPermission()
+                if !granted {
+                    await MainActor.run {
+                        self.showAlert(title: "알림 권한", message: "알림을 받으려면 설정에서 알림 권한을 허용해주세요.")
+                    }
+                }
+            }
+        }
 
         // 기간별 일정 처리
         if popupView.isPeriodMode {
@@ -99,10 +117,10 @@ final class EditEventBottomSheetViewController: UIViewController {
                 return
             }
 
-            viewModel.updatePeriodTodo(original: todo, updatedText: updatedText, updatedColor: updatedColor, startDate: startDate, endDate: endDate)
+            viewModel.updatePeriodTodo(original: todo, updatedText: updatedText, updatedColor: updatedColor, startDate: startDate, endDate: endDate, scheduledTime: updatedTime, reminderMinutesBefore: updatedReminder)
         } else {
             // 단일 날짜 일정으로 변경
-            viewModel.updateTodo(original: todo, updatedText: updatedText, updatedColor: updatedColor, date: selectedDate)
+            viewModel.updateTodo(original: todo, updatedText: updatedText, updatedColor: updatedColor, date: selectedDate, scheduledTime: updatedTime, reminderMinutesBefore: updatedReminder)
         }
 
         // 성공 햅틱 피드백

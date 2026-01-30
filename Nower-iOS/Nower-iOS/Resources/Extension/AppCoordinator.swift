@@ -60,7 +60,7 @@ final class AppCoordinator {
         newEventVC.coordinator = self
 
         if let sheet = newEventVC.sheetPresentationController {
-            sheet.detents = [.medium()]
+            sheet.detents = [.medium(), .large()]
             sheet.prefersGrabberVisible = true
         }
 
@@ -83,7 +83,7 @@ final class AppCoordinator {
         editVC.coordinator = self
 
         if let sheet = editVC.sheetPresentationController {
-            sheet.detents = [.medium()]
+            sheet.detents = [.medium(), .large()]
             sheet.prefersGrabberVisible = true
         }
         navigationController.topViewController?.present(editVC, animated: true)

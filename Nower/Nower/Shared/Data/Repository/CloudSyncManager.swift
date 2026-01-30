@@ -7,6 +7,9 @@
 //
 
 import Foundation
+#if canImport(NowerCore)
+import NowerCore
+#endif
 
 /// iCloud 동기화를 담당하는 공통 매니저
 /// MacOS와 iOS에서 동일한 동기화 로직을 사용하여 데이터 일관성을 보장합니다.
@@ -18,9 +21,16 @@ final class CloudSyncManager {
     private let todosKey = "SavedTodos"
     private var cachedTodos: [TodoItem] = []
     private let syncQueue = DispatchQueue(label: "com.nower.sync", qos: .userInitiated)
-    
+
+    // MARK: - Snapshot Tracking
+    private var localSnapshot: [UUID: TodoItem] = [:]
+    private var pendingLocalChanges: Set<UUID> = []
+
     // MARK: - Notifications
     static let todosDidUpdateNotification = Notification.Name("CloudSyncManager.todosDidUpdate")
+    private static let syncDidStartName = Notification.Name("NowerCore.syncDidStart")
+    private static let syncDidCompleteName = Notification.Name("NowerCore.syncDidComplete")
+    private static let syncDidFailName = Notification.Name("NowerCore.syncDidFail")
     
     // MARK: - Initialization
     private init() {
@@ -63,13 +73,14 @@ final class CloudSyncManager {
     func addTodo(_ todo: TodoItem) {
         syncQueue.async { [weak self] in
             guard let self = self else { return }
-            
+
             // 중복 방지: 같은 ID가 이미 존재하는지 확인
             if !self.cachedTodos.contains(where: { $0.id == todo.id }) {
                 self.cachedTodos.append(todo)
-                // 이미 syncQueue 내부이므로 직접 저장 (데드락 방지)
+                self.pendingLocalChanges.insert(todo.id)
                 self.saveToiCloudInternal()
-                
+                self.updateSnapshot()
+
                 DispatchQueue.main.async {
                     NotificationCenter.default.post(name: Self.todosDidUpdateNotification, object: nil)
                 }
@@ -82,11 +93,12 @@ final class CloudSyncManager {
     func deleteTodo(_ todo: TodoItem) {
         syncQueue.async { [weak self] in
             guard let self = self else { return }
-            
+
             self.cachedTodos.removeAll { $0.id == todo.id }
-            // 이미 syncQueue 내부이므로 직접 저장 (데드락 방지)
+            self.pendingLocalChanges.insert(todo.id)
             self.saveToiCloudInternal()
-            
+            self.updateSnapshot()
+
             DispatchQueue.main.async {
                 NotificationCenter.default.post(name: Self.todosDidUpdateNotification, object: nil)
             }
@@ -100,16 +112,16 @@ final class CloudSyncManager {
     func updateTodo(original: TodoItem, with updated: TodoItem) {
         syncQueue.async { [weak self] in
             guard let self = self else { return }
-            
+
             if let index = self.cachedTodos.firstIndex(where: { $0.id == original.id }) {
                 // 업데이트된 Todo의 ID를 원본과 동일하게 유지
                 var updatedTodo = updated
                 updatedTodo.id = original.id
                 self.cachedTodos[index] = updatedTodo
-                
-                // 이미 syncQueue 내부이므로 직접 저장 (데드락 방지)
+                self.pendingLocalChanges.insert(original.id)
                 self.saveToiCloudInternal()
-                
+                self.updateSnapshot()
+
                 DispatchQueue.main.async {
                     NotificationCenter.default.post(name: Self.todosDidUpdateNotification, object: nil)
                 }
@@ -122,9 +134,74 @@ final class CloudSyncManager {
         store.synchronize()
         loadTodos()
     }
-    
+
+    // MARK: - Snapshot Access
+
+    /// 마지막 성공적인 쓰기 이후의 로컬 스냅샷을 반환합니다.
+    func getLocalSnapshot() -> [UUID: TodoItem] {
+        syncQueue.sync { localSnapshot }
+    }
+
+    /// 마지막 서버 동기화 이후 로컬에서 변경된 항목 ID를 반환합니다.
+    func getPendingChanges() -> Set<UUID> {
+        syncQueue.sync { pendingLocalChanges }
+    }
+
+    /// 보류 중인 변경 사항을 초기화합니다.
+    func clearPendingChanges() {
+        syncQueue.async { [weak self] in
+            self?.pendingLocalChanges.removeAll()
+        }
+    }
+
+    #if canImport(NowerCore)
+    /// 충돌 해결을 적용합니다.
+    func applyResolution(_ resolution: ConflictResolution, for conflict: SyncConflict) {
+        syncQueue.async { [weak self] in
+            guard let self = self else { return }
+
+            switch resolution {
+            case .keepLocal:
+                if let localVersion = self.localSnapshot[conflict.id] {
+                    if let index = self.cachedTodos.firstIndex(where: { $0.id == conflict.id }) {
+                        self.cachedTodos[index] = localVersion
+                    } else {
+                        self.cachedTodos.append(localVersion)
+                    }
+                    self.saveToiCloudInternal()
+                }
+
+            case .keepRemote:
+                break
+
+            case .keepBoth:
+                if let localVersion = self.localSnapshot[conflict.id] {
+                    let duplicated = TodoItem(
+                        id: UUID(),
+                        text: localVersion.text,
+                        isRepeating: localVersion.isRepeating,
+                        date: localVersion.date,
+                        colorName: localVersion.colorName,
+                        startDate: localVersion.startDate,
+                        endDate: localVersion.endDate
+                    )
+                    self.cachedTodos.append(duplicated)
+                    self.saveToiCloudInternal()
+                }
+            }
+
+            self.pendingLocalChanges.remove(conflict.id)
+            self.updateSnapshot()
+
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: Self.todosDidUpdateNotification, object: nil)
+            }
+        }
+    }
+    #endif
+
     // MARK: - Private Methods
-    
+
     /// iCloud 변경 사항을 감지하는 옵저버를 설정합니다.
     private func setupiCloudObserver() {
         NotificationCenter.default.addObserver(
@@ -137,45 +214,48 @@ final class CloudSyncManager {
     
     /// iCloud 변경 사항을 처리합니다.
     @objc private func handleiCloudChange(_ notification: Notification) {
-        // loadTodos는 이미 비동기로 처리되므로 안전하게 호출 가능
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: Self.syncDidStartName, object: nil)
+        }
+
         loadTodos()
-        
-        // 알림은 loadTodos 완료 후에 보내야 하므로, loadTodos 내부에서 처리하도록 변경
-        // (현재는 loadTodos가 비동기이므로 별도 처리 불필요)
     }
     
     /// iCloud에서 데이터를 로드합니다.
     private func loadTodos() {
         syncQueue.async { [weak self] in
             guard let self = self else { return }
-            
-            // 이미 syncQueue 내부에 있으므로 직접 접근 (데드락 방지)
+
             guard let data = self.store.data(forKey: self.todosKey) else {
                 print("⚠️ [CloudSyncManager] iCloud에 저장된 데이터가 없습니다")
                 self.cachedTodos = []
-                
-                // 데이터 로드 완료 후 알림 전송
+
                 DispatchQueue.main.async {
                     NotificationCenter.default.post(name: Self.todosDidUpdateNotification, object: nil)
+                    NotificationCenter.default.post(name: Self.syncDidCompleteName, object: nil)
                 }
                 return
             }
-            
+
             do {
                 let todos = try JSONDecoder().decode([TodoItem].self, from: data)
                 self.cachedTodos = todos
-                
-                // 데이터 로드 완료 후 알림 전송
+
                 DispatchQueue.main.async {
                     NotificationCenter.default.post(name: Self.todosDidUpdateNotification, object: nil)
+                    NotificationCenter.default.post(name: Self.syncDidCompleteName, object: nil)
                 }
             } catch {
                 print("❌ [CloudSyncManager] 데이터 디코딩 실패: \(error)")
                 self.cachedTodos = []
-                
-                // 에러 발생 시에도 알림 전송
+
                 DispatchQueue.main.async {
                     NotificationCenter.default.post(name: Self.todosDidUpdateNotification, object: nil)
+                    NotificationCenter.default.post(
+                        name: Self.syncDidFailName,
+                        object: nil,
+                        userInfo: ["error": error]
+                    )
                 }
             }
         }
@@ -183,30 +263,65 @@ final class CloudSyncManager {
     
     /// 데이터를 iCloud에 저장합니다. (외부에서 호출 시 사용)
     private func saveToiCloud() {
-        // 동기화 큐 내에서 안전하게 데이터 복사
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: Self.syncDidStartName, object: nil)
+        }
+
         let todosToSave = syncQueue.sync {
             return cachedTodos
         }
-        
+
         do {
             let data = try JSONEncoder().encode(todosToSave)
             store.set(data, forKey: todosKey)
             store.synchronize()
+
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: Self.syncDidCompleteName, object: nil)
+            }
         } catch {
             print("❌ [CloudSyncManager] 데이터 인코딩 실패: \(error)")
+
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: Self.syncDidFailName,
+                    object: nil,
+                    userInfo: ["error": error]
+                )
+            }
         }
     }
-    
+
     /// 데이터를 iCloud에 저장합니다. (syncQueue 내부에서 호출 시 사용, 데드락 방지)
     private func saveToiCloudInternal() {
-        // 이미 syncQueue 내부에 있으므로 직접 접근 (데드락 방지)
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: Self.syncDidStartName, object: nil)
+        }
+
         do {
             let data = try JSONEncoder().encode(cachedTodos)
             store.set(data, forKey: todosKey)
             store.synchronize()
+
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: Self.syncDidCompleteName, object: nil)
+            }
         } catch {
             print("❌ [CloudSyncManager] 데이터 인코딩 실패: \(error)")
+
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: Self.syncDidFailName,
+                    object: nil,
+                    userInfo: ["error": error]
+                )
+            }
         }
+    }
+
+    /// 로컬 스냅샷을 현재 캐시 상태로 갱신합니다. syncQueue 내부에서 호출합니다.
+    private func updateSnapshot() {
+        localSnapshot = Dictionary(uniqueKeysWithValues: cachedTodos.map { ($0.id, $0) })
     }
 }
 
@@ -218,10 +333,46 @@ extension CloudSyncManager {
         print("🔍 [CloudSyncManager] 디버그 정보:")
         print("  - 캐시된 Todo 수: \(cachedTodos.count)")
         print("  - iCloud 동기화 상태: \(store.dictionaryRepresentation)")
-        
+
         for (index, todo) in cachedTodos.enumerated() {
             print("  - [\(index)] \(todo.text) | \(todo.date) | \(todo.colorName)")
         }
         #endif
     }
 }
+
+// MARK: - SyncDataSource
+#if canImport(NowerCore)
+extension CloudSyncManager: SyncDataSource {
+    func allItemSnapshots() -> [SyncItemSnapshot] {
+        getAllTodos().map {
+            SyncItemSnapshot(id: $0.id, title: $0.text, colorName: $0.colorName, date: $0.date)
+        }
+    }
+
+    func localItemSnapshots() -> [UUID: SyncItemSnapshot] {
+        let snapshot = getLocalSnapshot()
+        var result: [UUID: SyncItemSnapshot] = [:]
+        for (id, item) in snapshot {
+            result[id] = SyncItemSnapshot(id: id, title: item.text, colorName: item.colorName, date: item.date)
+        }
+        return result
+    }
+
+    func pendingChangeIDs() -> Set<UUID> {
+        getPendingChanges()
+    }
+
+    func clearPendingChangeIDs() {
+        clearPendingChanges()
+    }
+
+    func applyConflictResolution(_ resolution: ConflictResolution, for conflict: SyncConflict) {
+        applyResolution(resolution, for: conflict)
+    }
+
+    func performForceSynchronize() {
+        forceSynchronize()
+    }
+}
+#endif

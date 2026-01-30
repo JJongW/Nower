@@ -21,6 +21,10 @@ struct TodoItem: Identifiable, Codable {
     // 기간별 일정을 위한 새로운 필드들
     let startDate: String? // yyyy-MM-dd 형식, nil이면 단일 날짜 일정
     let endDate: String?   // yyyy-MM-dd 형식, nil이면 단일 날짜 일정
+
+    // 시간대별 일정 및 알림을 위한 필드들
+    let scheduledTime: String?       // "HH:mm" 형식, nil = 하루 종일
+    let reminderMinutesBefore: Int?  // nil = 알림 없음, 0 = 정시, 5/10/30/60/1440
     
     /// 단일 날짜 TodoItem을 생성합니다. (기존 호환성 유지)
     /// - Parameters:
@@ -28,13 +32,15 @@ struct TodoItem: Identifiable, Codable {
     ///   - isRepeating: 반복 여부
     ///   - date: 날짜 (yyyy-MM-dd 형식)
     ///   - colorName: 색상 이름
-    init(text: String, isRepeating: Bool, date: String, colorName: String) {
+    init(text: String, isRepeating: Bool, date: String, colorName: String, scheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
         self.text = text
         self.isRepeating = isRepeating
         self.date = date
         self.colorName = colorName
         self.startDate = nil
         self.endDate = nil
+        self.scheduledTime = scheduledTime
+        self.reminderMinutesBefore = reminderMinutesBefore
     }
     
     /// Date 객체로부터 단일 날짜 TodoItem을 생성하는 편의 생성자 (기존 호환성 유지)
@@ -43,16 +49,18 @@ struct TodoItem: Identifiable, Codable {
     ///   - isRepeating: 반복 여부
     ///   - date: Date 객체
     ///   - colorName: 색상 이름
-    init(text: String, isRepeating: Bool, date: Date, colorName: String) {
+    init(text: String, isRepeating: Bool, date: Date, colorName: String, scheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        
+
         self.text = text
         self.isRepeating = isRepeating
         self.date = formatter.string(from: date)
         self.colorName = colorName
         self.startDate = nil
         self.endDate = nil
+        self.scheduledTime = scheduledTime
+        self.reminderMinutesBefore = reminderMinutesBefore
     }
     
     /// 기간별 TodoItem을 생성합니다.
@@ -62,7 +70,7 @@ struct TodoItem: Identifiable, Codable {
     ///   - startDate: 시작 날짜
     ///   - endDate: 종료 날짜
     ///   - colorName: 색상 이름
-    init(text: String, isRepeating: Bool, startDate: Date, endDate: Date, colorName: String) {
+    init(text: String, isRepeating: Bool, startDate: Date, endDate: Date, colorName: String, scheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
 
@@ -72,6 +80,8 @@ struct TodoItem: Identifiable, Codable {
         self.colorName = colorName
         self.startDate = formatter.string(from: startDate)
         self.endDate = formatter.string(from: endDate)
+        self.scheduledTime = scheduledTime
+        self.reminderMinutesBefore = reminderMinutesBefore
     }
 
     /// 모든 필드를 직접 지정하는 이니셜라이저 (NowerCore 변환용)
@@ -83,7 +93,7 @@ struct TodoItem: Identifiable, Codable {
     ///   - colorName: 색상 이름
     ///   - startDate: 시작 날짜 문자열 (기간별 일정용)
     ///   - endDate: 종료 날짜 문자열 (기간별 일정용)
-    init(id: UUID, text: String, isRepeating: Bool, date: String, colorName: String, startDate: String? = nil, endDate: String? = nil) {
+    init(id: UUID, text: String, isRepeating: Bool, date: String, colorName: String, startDate: String? = nil, endDate: String? = nil, scheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
         self.id = id
         self.text = text
         self.isRepeating = isRepeating
@@ -91,6 +101,8 @@ struct TodoItem: Identifiable, Codable {
         self.colorName = colorName
         self.startDate = startDate
         self.endDate = endDate
+        self.scheduledTime = scheduledTime
+        self.reminderMinutesBefore = reminderMinutesBefore
     }
 }
 
@@ -170,9 +182,39 @@ extension TodoItem {
         guard isPeriodEvent,
               let startDate = startDateObject,
               let endDate = endDateObject else { return 1 } // 단일 날짜는 1일
-        
+
         let calendar = Calendar.current
         let components = calendar.dateComponents([.day], from: startDate, to: endDate)
         return (components.day ?? 0) + 1 // 시작일과 종료일을 모두 포함
+    }
+
+    // MARK: - 시간/알림 관련 편의 프로퍼티
+
+    /// 시간이 설정된 일정인지 확인합니다.
+    var hasScheduledTime: Bool {
+        return scheduledTime != nil
+    }
+
+    /// 알림이 설정된 일정인지 확인합니다.
+    var hasReminder: Bool {
+        return reminderMinutesBefore != nil
+    }
+
+    /// 날짜 + scheduledTime을 결합하여 Date 객체를 반환합니다.
+    var scheduledDateTime: Date? {
+        guard let timeString = scheduledTime,
+              let baseDate = dateObject else { return nil }
+        let parts = timeString.split(separator: ":")
+        guard parts.count == 2,
+              let hour = Int(parts[0]),
+              let minute = Int(parts[1]) else { return nil }
+        return Calendar.current.date(bySettingHour: hour, minute: minute, second: 0, of: baseDate)
+    }
+
+    /// 알림 발송 시각을 반환합니다.
+    var reminderDate: Date? {
+        guard let scheduled = scheduledDateTime,
+              let minutes = reminderMinutesBefore else { return nil }
+        return scheduled.addingTimeInterval(-Double(minutes) * 60)
     }
 }

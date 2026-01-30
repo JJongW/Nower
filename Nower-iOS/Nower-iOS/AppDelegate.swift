@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import UserNotifications
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -13,6 +14,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         NSUbiquitousKeyValueStore.default.synchronize()
+
+        // 알림 초기화: 모든 일정에 대해 알림 재예약
+        let allTodos = CloudSyncManager.shared.getAllTodos()
+        LocalNotificationManager.shared.rescheduleAll(todos: allTodos)
+
         return true
     }
 

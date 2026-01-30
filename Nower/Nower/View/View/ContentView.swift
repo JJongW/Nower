@@ -12,6 +12,7 @@ struct ContentView: View {
     let days: [String] = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
 
     @StateObject private var viewModel = CalendarViewModel()
+    @StateObject private var syncViewModel = SyncStatusViewModel()
     @State private var newTodoText: String = ""
     @State private var selectedDate: String? = nil
     @State private var selectedColor: String = ""
@@ -79,6 +80,8 @@ struct ContentView: View {
 
                         Spacer()
 
+                        SyncStatusView(viewModel: syncViewModel)
+
                         Button(action: { isPopupVisible = true }) {
                             Text("Add Event")
                                 .foregroundColor(AppColors.buttonTextColor)
@@ -133,6 +136,16 @@ struct ContentView: View {
                         isPopupVisible: $isPopupVisible
                     )
                     .environmentObject(viewModel)
+                }
+            }
+
+            // Popup for conflict resolution
+            if syncViewModel.showConflicts {
+                PopupBackgroundView(isPresented: $syncViewModel.showConflicts) {
+                    ConflictResolutionView(
+                        viewModel: syncViewModel,
+                        isPresented: $syncViewModel.showConflicts
+                    )
                 }
             }
         }

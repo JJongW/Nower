@@ -27,6 +27,10 @@ final class CalendarViewModel: ObservableObject {
     @Published var selectedStartDate: Date?
     @Published var selectedEndDate: Date?
 
+    // 시간/알림 프로퍼티
+    @Published var selectedScheduledTime: String?      // "HH:mm" or nil
+    @Published var selectedReminderMinutesBefore: Int?  // minutes or nil
+
     init(
         addTodoUseCase: AddTodoUseCase,
         deleteTodoUseCase: DeleteTodoUseCase,
@@ -90,9 +94,9 @@ final class CalendarViewModel: ObservableObject {
 
     func addTodo() {
         guard let date = selectedDate, !todoText.isEmpty else { return }
-        let newTodo = TodoItem(text: todoText, isRepeating: isRepeating, date: date.toDateString(), colorName: selectedColorName)
+        let newTodo = TodoItem(text: todoText, isRepeating: isRepeating, date: date.toDateString(), colorName: selectedColorName, scheduledTime: selectedScheduledTime, reminderMinutesBefore: selectedReminderMinutesBefore)
         addTodoUseCase.execute(todo: newTodo)
-        // CloudSyncManager가 자동으로 알림을 발송하므로 별도 처리 불필요
+        LocalNotificationManager.shared.scheduleNotification(for: newTodo)
     }
     
     /// 기간별 일정을 추가합니다.
@@ -100,38 +104,44 @@ final class CalendarViewModel: ObservableObject {
         guard let startDate = selectedStartDate,
               let endDate = selectedEndDate,
               !todoText.isEmpty else { return }
-        
-        let newTodo = TodoItem(text: todoText, 
-                              isRepeating: isRepeating, 
-                              startDate: startDate, 
-                              endDate: endDate, 
-                              colorName: selectedColorName)
+
+        let newTodo = TodoItem(text: todoText,
+                              isRepeating: isRepeating,
+                              startDate: startDate,
+                              endDate: endDate,
+                              colorName: selectedColorName,
+                              scheduledTime: selectedScheduledTime,
+                              reminderMinutesBefore: selectedReminderMinutesBefore)
         addTodoUseCase.execute(todo: newTodo)
-        // CloudSyncManager가 자동으로 알림을 발송하므로 별도 처리 불필요
+        LocalNotificationManager.shared.scheduleNotification(for: newTodo)
     }
 
     func deleteTodo(_ todo: TodoItem) {
+        LocalNotificationManager.shared.cancelNotification(for: todo.id)
         deleteTodoUseCase.execute(todo: todo)
-        // CloudSyncManager가 자동으로 알림을 발송하므로 별도 처리 불필요
     }
 
-    func updateTodo(original: TodoItem, updatedText: String, updatedColor: String, date: Date? = nil) {
+    func updateTodo(original: TodoItem, updatedText: String, updatedColor: String, date: Date? = nil, scheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
         let targetDate = date ?? original.dateObject ?? Date()
         let dateString = targetDate.toDateString()
-        let updatedTodo = TodoItem(text: updatedText, isRepeating: isRepeating, date: dateString, colorName: updatedColor)
+        let updatedTodo = TodoItem(text: updatedText, isRepeating: isRepeating, date: dateString, colorName: updatedColor, scheduledTime: scheduledTime, reminderMinutesBefore: reminderMinutesBefore)
+        LocalNotificationManager.shared.cancelNotification(for: original.id)
         updateTodoUseCase.execute(original: original, updated: updatedTodo)
-        // CloudSyncManager가 자동으로 알림을 발송하므로 별도 처리 불필요
+        LocalNotificationManager.shared.scheduleNotification(for: updatedTodo)
     }
     
     /// 기간별 일정을 수정합니다.
-    func updatePeriodTodo(original: TodoItem, updatedText: String, updatedColor: String, startDate: Date, endDate: Date) {
-        let updatedTodo = TodoItem(text: updatedText, 
-                                  isRepeating: isRepeating, 
-                                  startDate: startDate, 
-                                  endDate: endDate, 
-                                  colorName: updatedColor)
+    func updatePeriodTodo(original: TodoItem, updatedText: String, updatedColor: String, startDate: Date, endDate: Date, scheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
+        let updatedTodo = TodoItem(text: updatedText,
+                                  isRepeating: isRepeating,
+                                  startDate: startDate,
+                                  endDate: endDate,
+                                  colorName: updatedColor,
+                                  scheduledTime: scheduledTime,
+                                  reminderMinutesBefore: reminderMinutesBefore)
+        LocalNotificationManager.shared.cancelNotification(for: original.id)
         updateTodoUseCase.execute(original: original, updated: updatedTodo)
-        // CloudSyncManager가 자동으로 알림을 발송하므로 별도 처리 불필요
+        LocalNotificationManager.shared.scheduleNotification(for: updatedTodo)
     }
 
     func debugPrintICloudTodos() {

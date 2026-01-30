@@ -71,8 +71,13 @@ class EventTableViewCell: UITableViewCell {
         eventTitleLabel.textColor = textColor
         eventSubtitleLabel.textColor = textColor
         
-        eventTitleLabel.text = todo.text
-        
+        // 시간이 있으면 제목 앞에 표시
+        if let time = todo.scheduledTime {
+            eventTitleLabel.text = "\(time) \(todo.text)"
+        } else {
+            eventTitleLabel.text = todo.text
+        }
+
         // 기간별 일정인 경우 기간 정보 표시
         if todo.isPeriodEvent, let startDate = todo.startDateObject, let endDate = todo.endDateObject {
             let formatter = DateFormatter()

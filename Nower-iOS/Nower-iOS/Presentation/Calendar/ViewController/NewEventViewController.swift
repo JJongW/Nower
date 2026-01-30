@@ -21,11 +21,14 @@ final class NewEventViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        // 선택한 날짜를 기간 모드 기본값으로 설정
+        popupView.setInitialSelectedDate(selectedDate)
+
         popupView.saveButton.addTarget(self, action: #selector(saveTapped), for: .touchUpInside)
         popupView.colorOptions.forEach { button in
             button.addTarget(self, action: #selector(colorSelected(_:)), for: .touchUpInside)
         }
-        
+
         // 기간 모드 변경 시 기본 날짜 설정
         popupView.periodModeSwitch.addTarget(self, action: #selector(periodModeChanged), for: .valueChanged)
     }
@@ -53,7 +56,21 @@ final class NewEventViewController: UIViewController {
 
         viewModel.todoText = text
         viewModel.selectedColorName = popupView.selectedColorName
-        
+        viewModel.selectedScheduledTime = popupView.selectedScheduledTime
+        viewModel.selectedReminderMinutesBefore = popupView.selectedReminderMinutesBefore
+
+        // 알림 설정 시 권한 요청
+        if popupView.selectedReminderMinutesBefore != nil {
+            Task {
+                let granted = await LocalNotificationManager.shared.requestPermission()
+                if !granted {
+                    await MainActor.run {
+                        self.showAlert(title: "알림 권한", message: "알림을 받으려면 설정에서 알림 권한을 허용해주세요.")
+                    }
+                }
+            }
+        }
+
         // 기간별 일정 처리
         if popupView.isPeriodMode {
             // 기간별 일정인 경우
@@ -63,12 +80,12 @@ final class NewEventViewController: UIViewController {
                 showAlert(title: "알림", message: "시작일과 종료일을 모두 선택해주세요.")
                 return
             }
-            
+
             if startDate > endDate {
                 showAlert(title: "알림", message: "시작일은 종료일보다 이전이어야 합니다.")
                 return
             }
-            
+
             viewModel.selectedStartDate = startDate
             viewModel.selectedEndDate = endDate
             viewModel.addPeriodTodo()

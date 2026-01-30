@@ -47,8 +47,12 @@ class EventCapsuleView: UIView {
         }
     }
 
-    func configure(title: String, color: UIColor) {
-        titleLabel.text = title
+    func configure(title: String, color: UIColor, time: String? = nil) {
+        if let time = time {
+            titleLabel.text = "\(time) \(title)"
+        } else {
+            titleLabel.text = title
+        }
         backgroundColor = color
         // 배경색에 맞춰 텍스트 색상 자동 조정 (WCAG 4.5:1 대비 보장)
         titleLabel.textColor = AppColors.contrastingTextColor(for: color)

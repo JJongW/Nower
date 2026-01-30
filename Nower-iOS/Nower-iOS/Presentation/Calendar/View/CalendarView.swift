@@ -43,6 +43,8 @@ final class CalendarView: UIView {
         return button
     }()
 
+    let syncStatusView = SyncStatusBarView()
+
     private let weekdayStackView: UIStackView = {
         let stack = UIStackView()
         stack.axis = .horizontal
@@ -85,6 +87,7 @@ final class CalendarView: UIView {
         addSubview(monthLabel)
         addSubview(previousButton)
         addSubview(nextButton)
+        addSubview(syncStatusView)
         addSubview(textLabel)
         addSubview(weekdayStackView)
         addSubview(collectionView)
@@ -116,9 +119,14 @@ final class CalendarView: UIView {
             $0.leading.equalToSuperview().offset(20)
         }
 
+        syncStatusView.snp.makeConstraints {
+            $0.centerY.equalTo(monthLabel)
+            $0.trailing.equalToSuperview().inset(16)
+        }
+
         nextButton.snp.makeConstraints {
             $0.centerY.equalTo(monthLabel)
-            $0.trailing.equalToSuperview().inset(20)
+            $0.trailing.equalTo(syncStatusView.snp.leading).offset(-4)
         }
 
         textLabel.snp.makeConstraints {

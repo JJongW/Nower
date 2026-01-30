@@ -5,6 +5,9 @@
 //  Created by 신종원 on 4/11/25.
 
 import UIKit
+#if canImport(NowerCore)
+import NowerCore
+#endif
 
 final class CalendarViewController: UIViewController {
 
@@ -18,6 +21,7 @@ final class CalendarViewController: UIViewController {
 
     private let viewModel: CalendarViewModel
     private let holidayUseCase: HolidayUseCase
+    private var syncStatusViewModel: SyncStatusViewModel?
 
     // MARK: - Interactive Swipe Properties
     private var panStartLocation: CGPoint = .zero
@@ -78,6 +82,85 @@ final class CalendarViewController: UIViewController {
 
         calendarView.previousButton.addTarget(self, action: #selector(didTapPreviousMonth), for: .touchUpInside)
         calendarView.nextButton.addTarget(self, action: #selector(didTapNextMonth), for: .touchUpInside)
+
+        setupSyncStatus()
+    }
+
+    // MARK: - Sync Status
+
+    private func setupSyncStatus() {
+        let observer = DependencyContainer.shared.syncStateObserver
+        observer.startObserving()
+
+        let vm = SyncStatusViewModel(syncStateObserver: observer)
+        self.syncStatusViewModel = vm
+
+        vm.onStateChange = { [weak self] vm in
+            guard let self = self else { return }
+            self.calendarView.syncStatusView.update(
+                iconName: vm.iconName,
+                color: vm.iconColor,
+                animate: vm.isAnimating,
+                accessibilityLabel: vm.accessibilityLabel
+            )
+            // Task #1: Hide in idle/synced states
+            self.calendarView.syncStatusView.setVisible(vm.isVisible, animated: true)
+            // Task #5: Update conflict badge
+            self.calendarView.syncStatusView.updateBadge(count: vm.conflictCount)
+        }
+
+        calendarView.syncStatusView.iconButton.addTarget(self, action: #selector(didTapSyncStatus), for: .touchUpInside)
+    }
+
+    @objc private func didTapSyncStatus() {
+        guard let vm = syncStatusViewModel else { return }
+
+        if vm.shouldShowAlert {
+            // Task #6: Improved error message
+            let alert = UIAlertController(
+                title: "동기화 문제",
+                message: "일정 데이터를 iCloud와 동기화하지 못했습니다. 네트워크 연결을 확인하고 다시 시도해 주세요.",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "다시 시도", style: .default) { _ in
+                vm.retrySync()
+            })
+            alert.addAction(UIAlertAction(title: "나중에", style: .cancel))
+            present(alert, animated: true)
+        } else if vm.shouldShowConflicts {
+            let conflictVC = ConflictResolutionViewController(viewModel: vm)
+            if let sheet = conflictVC.sheetPresentationController {
+                sheet.detents = [.medium(), .large()]
+                sheet.prefersGrabberVisible = true
+            }
+            present(conflictVC, animated: true)
+        } else if let text = vm.lastSyncedText {
+            // Task #2: Show last synced timestamp
+            showSyncToast(text)
+        }
+    }
+
+    private func showSyncToast(_ message: String) {
+        let toast = UILabel()
+        toast.text = message
+        toast.font = .systemFont(ofSize: 12, weight: .medium)
+        toast.textColor = AppColors.textPrimary
+        toast.backgroundColor = AppColors.popupBackground
+        toast.textAlignment = .center
+        toast.layer.cornerRadius = 8
+        toast.layer.masksToBounds = true
+        toast.alpha = 0
+        toast.sizeToFit()
+        toast.frame.size = CGSize(width: toast.frame.width + 24, height: 32)
+        toast.center = CGPoint(x: view.center.x, y: view.safeAreaInsets.top + 60)
+        view.addSubview(toast)
+
+        UIView.animate(withDuration: 0.3) { toast.alpha = 1 }
+        UIView.animate(withDuration: 0.3, delay: 2.0, options: []) {
+            toast.alpha = 0
+        } completion: { _ in
+            toast.removeFromSuperview()
+        }
     }
 
     private func setupCollectionView() {

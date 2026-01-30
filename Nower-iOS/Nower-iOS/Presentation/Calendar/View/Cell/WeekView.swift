@@ -38,7 +38,7 @@ final class WeekView: UIView {
     // MARK: - Layout Constants
     private let eventHeight: CGFloat = 18
     private let eventSpacing: CGFloat = 2 // 간격 축소 (4 → 2)
-    private let periodEventTopOffset: CGFloat = 28 // 축소 (38 → 28)
+    private let periodEventTopOffset: CGFloat = 38 // 공휴일 라벨 공간 포함 (dayLabel 26pt + holidayLabel 10pt = 36pt)
     private let maxVisiblePeriodEventRows: Int = 3 // 최대 표시 가능한 기간일정 행 수
 
     // MARK: - UI Components

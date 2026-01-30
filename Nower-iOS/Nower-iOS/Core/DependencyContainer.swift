@@ -40,6 +40,12 @@ public final class DependencyContainer {
     /// 동기화 관리자
     public lazy var syncManager: SyncManager = iCloudSyncManager(storage: storageProvider, eventRepository: eventRepository)
 
+    /// 동기화 상태 옵저버
+    public lazy var syncStateObserver: SyncStateObserving = DefaultSyncStateObserver(
+        syncManager: syncManager,
+        dataSource: CloudSyncManager.shared
+    )
+
     // MARK: - Use Cases (NowerCore)
 
     public lazy var addEventUseCase: NowerCore.AddEventUseCase = DefaultAddEventUseCase(repository: eventRepository)

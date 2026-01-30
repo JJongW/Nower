@@ -14,6 +14,7 @@ public extension Notification.Name {
     static let syncDidStart = Notification.Name("NowerCore.syncDidStart")
     static let syncDidComplete = Notification.Name("NowerCore.syncDidComplete")
     static let syncDidFail = Notification.Name("NowerCore.syncDidFail")
+    static let syncStateDidChange = Notification.Name("NowerCore.syncStateDidChange")
 }
 
 /// 동기화 관리자 프로토콜

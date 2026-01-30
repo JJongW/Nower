@@ -39,7 +39,7 @@ final class NewEventView: UIView {
 
     private let colorHintLabel: UILabel = {
         let label = UILabel()
-        label.text = "탭하여 색상 톤 선택"
+        label.text = "꾹 눌러 색상 톤 선택"
         label.font = UIFont.systemFont(ofSize: 12, weight: .regular)
         label.textColor = AppColors.textFieldPlaceholder
         label.textAlignment = .center
@@ -138,8 +138,72 @@ final class NewEventView: UIView {
         return button
     }()
     
+    // MARK: - 시간/알림 설정 컴포넌트
+
+    let timeSettingContainer: UIView = {
+        let view = UIView()
+        view.backgroundColor = AppColors.textFieldBackground
+        view.layer.cornerRadius = 10
+        view.layer.masksToBounds = true
+        return view
+    }()
+
+    private let timeIconLabel: UILabel = {
+        let label = UILabel()
+        label.text = "\u{1F552}" // clock emoji
+        label.font = UIFont.systemFont(ofSize: 18)
+        return label
+    }()
+
+    private let timeTitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "시간"
+        label.textColor = AppColors.textPrimary
+        label.font = UIFont.systemFont(ofSize: 16, weight: .medium)
+        return label
+    }()
+
+    let timeValueButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("하루 종일", for: .normal)
+        button.setTitleColor(AppColors.textHighlighted, for: .normal)
+        button.titleLabel?.font = UIFont.systemFont(ofSize: 15, weight: .medium)
+        return button
+    }()
+
+    let reminderSettingContainer: UIView = {
+        let view = UIView()
+        view.backgroundColor = AppColors.textFieldBackground
+        view.layer.cornerRadius = 10
+        view.layer.masksToBounds = true
+        return view
+    }()
+
+    private let reminderIconLabel: UILabel = {
+        let label = UILabel()
+        label.text = "\u{1F514}" // bell emoji
+        label.font = UIFont.systemFont(ofSize: 18)
+        return label
+    }()
+
+    private let reminderTitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "알림"
+        label.textColor = AppColors.textPrimary
+        label.font = UIFont.systemFont(ofSize: 16, weight: .medium)
+        return label
+    }()
+
+    let reminderValueButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("없음", for: .normal)
+        button.setTitleColor(AppColors.textHighlighted, for: .normal)
+        button.titleLabel?.font = UIFont.systemFont(ofSize: 15, weight: .medium)
+        return button
+    }()
+
     // MARK: - 기존 컴포넌트들
-    
+
     private(set) var colorOptions: [UIButton] = []
     var selectedColorName: String = "skyblue-4" { // 기본값을 중간 톤으로 설정
         didSet {
@@ -170,25 +234,70 @@ final class NewEventView: UIView {
     /// 외부에서 주입받은 선택된 날짜 (기간 모드 기본값용)
     var initialSelectedDate: Date?
 
+    /// 날짜 선택 컨테이너 높이/여백 제약 (접었다 펼치기용)
+    private var dateContainerHeightConstraint: NSLayoutConstraint?
+    private var dateContainerTopConstraint: NSLayoutConstraint?
+
+    // MARK: - 시간/알림 프로퍼티
+
+    var selectedScheduledTime: String? {
+        didSet { updateTimeDisplay() }
+    }
+
+    var selectedReminderMinutesBefore: Int? {
+        didSet { updateReminderDisplay() }
+    }
+
     // MARK: - Init
 
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupUI()
+        setupKeyboardObservers()
+        setupDismissKeyboardGesture()
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    // MARK: - Scroll View
+
+    private let scrollView: UIScrollView = {
+        let sv = UIScrollView()
+        sv.showsVerticalScrollIndicator = false
+        sv.alwaysBounceVertical = true
+        sv.keyboardDismissMode = .interactive
+        return sv
+    }()
+
+    private let contentView = UIView()
+
     // MARK: - UI Setup
 
     private func setupUI() {
         backgroundColor = AppColors.popupBackground
 
+        // 스크롤뷰 설정
+        addSubview(scrollView)
+        scrollView.addSubview(contentView)
+
+        scrollView.snp.makeConstraints {
+            $0.edges.equalToSuperview()
+        }
+
+        contentView.snp.makeConstraints {
+            $0.edges.equalToSuperview()
+            $0.width.equalToSuperview()
+        }
+
         // 텍스트 필드
-        addSubview(textFieldBackgroundView)
-        addSubview(textField)
+        contentView.addSubview(textFieldBackgroundView)
+        contentView.addSubview(textField)
 
         // design-skills: 8pt 그리드 시스템
         textFieldBackgroundView.snp.makeConstraints {
@@ -203,7 +312,7 @@ final class NewEventView: UIView {
         }
 
         // 기간 모드 스위치
-        addSubview(periodModeContainer)
+        contentView.addSubview(periodModeContainer)
         periodModeContainer.addSubview(periodModeLabel)
         periodModeContainer.addSubview(periodModeSwitch)
 
@@ -224,21 +333,84 @@ final class NewEventView: UIView {
         }
 
         // 날짜 선택 컨테이너
-        addSubview(dateSelectionContainer)
+        contentView.addSubview(dateSelectionContainer)
         setupDateSelectionContainer()
 
+        // 높이/여백을 NSLayoutConstraint로 직접 관리 (접기/펼치기용)
+        dateSelectionContainer.translatesAutoresizingMaskIntoConstraints = false
+        let topC = dateSelectionContainer.topAnchor.constraint(equalTo: periodModeContainer.bottomAnchor, constant: 0)
+        let heightC = dateSelectionContainer.heightAnchor.constraint(equalToConstant: 0)
+        topC.isActive = true
+        heightC.isActive = true
+        dateContainerTopConstraint = topC
+        dateContainerHeightConstraint = heightC
         dateSelectionContainer.snp.makeConstraints {
-            $0.top.equalTo(periodModeContainer.snp.bottom).offset(12) // 8pt 그리드 근사값
             $0.leading.trailing.equalToSuperview().inset(20)
-            $0.height.equalTo(100)
         }
 
+        // 시간 설정 행
+        contentView.addSubview(timeSettingContainer)
+        timeSettingContainer.addSubview(timeIconLabel)
+        timeSettingContainer.addSubview(timeTitleLabel)
+        timeSettingContainer.addSubview(timeValueButton)
+
+        timeSettingContainer.snp.makeConstraints {
+            $0.top.equalTo(dateSelectionContainer.snp.bottom).offset(16)
+            $0.leading.trailing.equalToSuperview().inset(20)
+            $0.height.equalTo(52)
+        }
+
+        timeIconLabel.snp.makeConstraints {
+            $0.leading.equalToSuperview().offset(16)
+            $0.centerY.equalToSuperview()
+        }
+
+        timeTitleLabel.snp.makeConstraints {
+            $0.leading.equalTo(timeIconLabel.snp.trailing).offset(8)
+            $0.centerY.equalToSuperview()
+        }
+
+        timeValueButton.snp.makeConstraints {
+            $0.trailing.equalToSuperview().offset(-16)
+            $0.centerY.equalToSuperview()
+        }
+
+        // 알림 설정 행
+        contentView.addSubview(reminderSettingContainer)
+        reminderSettingContainer.addSubview(reminderIconLabel)
+        reminderSettingContainer.addSubview(reminderTitleLabel)
+        reminderSettingContainer.addSubview(reminderValueButton)
+
+        reminderSettingContainer.snp.makeConstraints {
+            $0.top.equalTo(timeSettingContainer.snp.bottom).offset(8)
+            $0.leading.trailing.equalToSuperview().inset(20)
+            $0.height.equalTo(52)
+        }
+
+        reminderIconLabel.snp.makeConstraints {
+            $0.leading.equalToSuperview().offset(16)
+            $0.centerY.equalToSuperview()
+        }
+
+        reminderTitleLabel.snp.makeConstraints {
+            $0.leading.equalTo(reminderIconLabel.snp.trailing).offset(8)
+            $0.centerY.equalToSuperview()
+        }
+
+        reminderValueButton.snp.makeConstraints {
+            $0.trailing.equalToSuperview().offset(-16)
+            $0.centerY.equalToSuperview()
+        }
+
+        // 시간 미설정 시 알림 행 비활성화
+        updateReminderEnabled()
+
         // 색상 선택
-        addSubview(colorStackView)
-        addSubview(colorHintLabel)
+        contentView.addSubview(colorStackView)
+        contentView.addSubview(colorHintLabel)
 
         colorStackView.snp.makeConstraints {
-            $0.top.equalTo(dateSelectionContainer.snp.bottom).offset(24) // 8pt 그리드 (24 = 3 * 8)
+            $0.top.equalTo(reminderSettingContainer.snp.bottom).offset(24) // 8pt 그리드 (24 = 3 * 8)
             $0.leading.trailing.equalToSuperview().inset(32)
             $0.height.equalTo(40)
         }
@@ -257,8 +429,18 @@ final class NewEventView: UIView {
             colorOptions.append(button)
             colorStackView.addArrangedSubview(button)
 
-            // 탭: 색상 톤 선택 팝업 표시 (Discoverability 개선)
-            button.addTarget(self, action: #selector(colorButtonTapped(_:)), for: .touchUpInside)
+            // 한 번 탭: 기본 톤(4)으로 선택만 (팝업 없이)
+            button.addTarget(self, action: #selector(colorButtonSingleTapped(_:)), for: .touchUpInside)
+
+            // 꾹 누르기(0.3초): 톤 선택 팝업 표시
+            let longPress = UILongPressGestureRecognizer(target: self, action: #selector(colorButtonLongPressed(_:)))
+            longPress.minimumPressDuration = 0.3
+            button.addGestureRecognizer(longPress)
+
+            // 더블 탭: 톤 선택 팝업 표시
+            let doubleTap = UITapGestureRecognizer(target: self, action: #selector(colorButtonDoubleTapped(_:)))
+            doubleTap.numberOfTapsRequired = 2
+            button.addGestureRecognizer(doubleTap)
 
             // 색상 버튼 눌림 효과
             button.addPressAnimation()
@@ -277,7 +459,7 @@ final class NewEventView: UIView {
             return stack
         }()
 
-        addSubview(buttonStackView)
+        contentView.addSubview(buttonStackView)
         buttonStackView.addArrangedSubview(saveButton)
         buttonStackView.addArrangedSubview(deleteButton)
 
@@ -285,6 +467,7 @@ final class NewEventView: UIView {
             $0.top.equalTo(colorHintLabel.snp.bottom).offset(24) // 8pt 그리드 (24 = 3 * 8)
             $0.leading.trailing.equalToSuperview().inset(20)
             $0.height.equalTo(52) // 최소 터치 타겟 44pt + 패딩
+            $0.bottom.equalToSuperview().offset(-24) // 스크롤 콘텐츠 하단 여백
         }
 
         // 수정 버튼이 삭제 버튼보다 2배 넓게
@@ -304,11 +487,17 @@ final class NewEventView: UIView {
         startDateButton.addTarget(self, action: #selector(startDateButtonTapped), for: .touchUpInside)
         endDateButton.addTarget(self, action: #selector(endDateButtonTapped), for: .touchUpInside)
 
+        // 시간/알림 버튼 액션
+        timeValueButton.addTarget(self, action: #selector(timeValueButtonTapped), for: .touchUpInside)
+        reminderValueButton.addTarget(self, action: #selector(reminderValueButtonTapped), for: .touchUpInside)
+
         // 버튼 눌림 효과 적용
         saveButton.addPressAnimation()
         deleteButton.addPressAnimation()
         startDateButton.addPressAnimation()
         endDateButton.addPressAnimation()
+        timeValueButton.addPressAnimation()
+        reminderValueButton.addPressAnimation()
 
         // 접근성 설정
         setupAccessibility()
@@ -335,8 +524,14 @@ final class NewEventView: UIView {
         let colorLabels = ["하늘색", "피치", "라벤더", "민트그린", "코랄레드"]
         for (index, button) in colorOptions.enumerated() {
             button.accessibilityLabel = "\(colorLabels[index]) 색상"
-            button.accessibilityHint = "탭하여 색상 톤을 선택하세요"
+            button.accessibilityHint = "탭하여 선택, 꾹 눌러 색상 톤을 선택하세요"
         }
+
+        // 시간/알림 버튼
+        timeValueButton.accessibilityLabel = "시간 설정"
+        timeValueButton.accessibilityHint = "탭하여 일정 시간을 설정하세요"
+        reminderValueButton.accessibilityLabel = "알림 설정"
+        reminderValueButton.accessibilityHint = "탭하여 알림을 설정하세요"
 
         // 저장/삭제 버튼
         saveButton.accessibilityLabel = "저장"
@@ -345,6 +540,69 @@ final class NewEventView: UIView {
         deleteButton.accessibilityHint = "일정을 삭제합니다"
     }
     
+    // MARK: - Keyboard Handling
+
+    private func setupKeyboardObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillShow(_:)),
+            name: UIResponder.keyboardWillShowNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillHide(_:)),
+            name: UIResponder.keyboardWillHideNotification,
+            object: nil
+        )
+    }
+
+    private func setupDismissKeyboardGesture() {
+        let tap = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
+        tap.cancelsTouchesInView = false
+        scrollView.addGestureRecognizer(tap)
+    }
+
+    @objc private func dismissKeyboard() {
+        endEditing(true)
+    }
+
+    @objc private func keyboardWillShow(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let keyboardFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
+              let duration = userInfo[UIResponder.keyboardAnimationDurationUserInfoKey] as? TimeInterval,
+              let curveValue = userInfo[UIResponder.keyboardAnimationCurveUserInfoKey] as? UInt else { return }
+
+        let keyboardHeight = keyboardFrame.height
+        let options = UIView.AnimationOptions(rawValue: curveValue << 16)
+
+        UIView.animate(withDuration: duration, delay: 0, options: options) {
+            self.scrollView.contentInset.bottom = keyboardHeight
+            self.scrollView.verticalScrollIndicatorInsets.bottom = keyboardHeight
+        }
+
+        // 텍스트 필드가 가려지지 않도록 스크롤
+        let textFieldBottom = textFieldBackgroundView.convert(textFieldBackgroundView.bounds, to: scrollView).maxY + 16
+        let visibleHeight = scrollView.bounds.height - keyboardHeight
+        if textFieldBottom > scrollView.contentOffset.y + visibleHeight {
+            let offset = CGPoint(x: 0, y: textFieldBottom - visibleHeight)
+            scrollView.setContentOffset(offset, animated: true)
+        }
+    }
+
+    @objc private func keyboardWillHide(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let duration = userInfo[UIResponder.keyboardAnimationDurationUserInfoKey] as? TimeInterval,
+              let curveValue = userInfo[UIResponder.keyboardAnimationCurveUserInfoKey] as? UInt else { return }
+
+        let options = UIView.AnimationOptions(rawValue: curveValue << 16)
+
+        UIView.animate(withDuration: duration, delay: 0, options: options) {
+            self.scrollView.contentInset.bottom = 0
+            self.scrollView.verticalScrollIndicatorInsets.bottom = 0
+        }
+    }
+
     private func setupDateSelectionContainer() {
         // 화살표 아이콘 추가
         let arrowLabel = UILabel()
@@ -412,34 +670,37 @@ final class NewEventView: UIView {
     
     private func updateDateSelectionVisibility() {
         if isPeriodMode {
-            // 표시 애니메이션
+            // 펼치기
             dateSelectionContainer.isHidden = false
             dateSelectionContainer.alpha = 0
-            dateSelectionContainer.transform = CGAffineTransform(translationX: 0, y: -10)
+            dateContainerHeightConstraint?.constant = 100
+            dateContainerTopConstraint?.constant = 12
 
             UIView.animate(
-                withDuration: 0.3,
+                withDuration: 0.35,
                 delay: 0,
-                usingSpringWithDamping: 0.8,
+                usingSpringWithDamping: 0.85,
                 initialSpringVelocity: 0.5,
                 options: [.curveEaseOut]
             ) {
                 self.dateSelectionContainer.alpha = 1
-                self.dateSelectionContainer.transform = .identity
                 self.layoutIfNeeded()
             }
         } else {
-            // 숨김 애니메이션
+            // 접기 — 높이와 여백을 0으로 축소
             UIView.animate(
-                withDuration: 0.25,
+                withDuration: 0.3,
                 delay: 0,
+                usingSpringWithDamping: 0.9,
+                initialSpringVelocity: 0,
                 options: [.curveEaseIn]
             ) {
                 self.dateSelectionContainer.alpha = 0
-                self.dateSelectionContainer.transform = CGAffineTransform(translationX: 0, y: -10)
+                self.dateContainerHeightConstraint?.constant = 0
+                self.dateContainerTopConstraint?.constant = 0
+                self.layoutIfNeeded()
             } completion: { _ in
                 self.dateSelectionContainer.isHidden = true
-                self.dateSelectionContainer.transform = .identity
             }
         }
     }
@@ -530,16 +791,105 @@ final class NewEventView: UIView {
         }
     }
     
+    // MARK: - 시간/알림 Actions
+
+    @objc private func timeValueButtonTapped() {
+        guard let parentView = findViewController()?.view else { return }
+        let picker = TimePickerView(currentTime: selectedScheduledTime)
+        picker.onTimeSelected = { [weak self] time in
+            self?.selectedScheduledTime = time
+            self?.updateReminderEnabled()
+            // 시간을 해제하면 알림도 해제
+            if time == nil {
+                self?.selectedReminderMinutesBefore = nil
+            }
+        }
+        parentView.addSubview(picker)
+        picker.snp.makeConstraints { $0.edges.equalToSuperview() }
+    }
+
+    @objc private func reminderValueButtonTapped() {
+        guard selectedScheduledTime != nil else { return }
+        guard let parentView = findViewController()?.view else { return }
+        let picker = ReminderPickerView(currentMinutes: selectedReminderMinutesBefore)
+        picker.onReminderSelected = { [weak self] minutes in
+            self?.selectedReminderMinutesBefore = minutes
+        }
+        parentView.addSubview(picker)
+        picker.snp.makeConstraints { $0.edges.equalToSuperview() }
+    }
+
+    // MARK: - 시간/알림 Display Helpers
+
+    private func updateTimeDisplay() {
+        if let time = selectedScheduledTime {
+            // "HH:mm" → 오전/오후 표시
+            let parts = time.split(separator: ":")
+            if parts.count == 2, let hour = Int(parts[0]), let minute = Int(parts[1]) {
+                let period = hour < 12 ? "오전" : "오후"
+                let displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour)
+                timeValueButton.setTitle(String(format: "%@ %d:%02d", period, displayHour, minute), for: .normal)
+            } else {
+                timeValueButton.setTitle(time, for: .normal)
+            }
+        } else {
+            timeValueButton.setTitle("하루 종일", for: .normal)
+        }
+    }
+
+    private func updateReminderDisplay() {
+        guard let minutes = selectedReminderMinutesBefore else {
+            reminderValueButton.setTitle("없음", for: .normal)
+            return
+        }
+        switch minutes {
+        case 0: reminderValueButton.setTitle("정시", for: .normal)
+        case 5: reminderValueButton.setTitle("5분 전", for: .normal)
+        case 10: reminderValueButton.setTitle("10분 전", for: .normal)
+        case 30: reminderValueButton.setTitle("30분 전", for: .normal)
+        case 60: reminderValueButton.setTitle("1시간 전", for: .normal)
+        case 1440: reminderValueButton.setTitle("1일 전", for: .normal)
+        default: reminderValueButton.setTitle("\(minutes)분 전", for: .normal)
+        }
+    }
+
+    private func updateReminderEnabled() {
+        let enabled = selectedScheduledTime != nil
+        reminderSettingContainer.alpha = enabled ? 1.0 : 0.4
+        reminderValueButton.isEnabled = enabled
+    }
+
     // MARK: - Color Selection
 
-    @objc private func colorButtonTapped(_ sender: UIButton) {
-        // 햅틱 피드백
+    /// 한 번 탭: 기본 톤(4)으로 색상 선택 (팝업 없이)
+    @objc private func colorButtonSingleTapped(_ sender: UIButton) {
         let feedback = UIImpactFeedbackGenerator(style: .light)
         feedback.impactOccurred()
 
-        // 탭 시 바로 톤 선택 팝업 표시 (Discoverability 개선)
         let baseColorName = colorNames[sender.tag]
-        showColorVariationPicker(for: baseColorName, sourceButton: sender)
+        selectedColorName = "\(baseColorName)-4"
+    }
+
+    /// 꾹 누르기: 톤 선택 팝업 표시
+    @objc private func colorButtonLongPressed(_ gesture: UILongPressGestureRecognizer) {
+        guard gesture.state == .began, let button = gesture.view as? UIButton else { return }
+
+        let feedback = UIImpactFeedbackGenerator(style: .medium)
+        feedback.impactOccurred()
+
+        let baseColorName = colorNames[button.tag]
+        showColorVariationPicker(for: baseColorName, sourceButton: button)
+    }
+
+    /// 더블 탭: 톤 선택 팝업 표시
+    @objc private func colorButtonDoubleTapped(_ gesture: UITapGestureRecognizer) {
+        guard let button = gesture.view as? UIButton else { return }
+
+        let feedback = UIImpactFeedbackGenerator(style: .medium)
+        feedback.impactOccurred()
+
+        let baseColorName = colorNames[button.tag]
+        showColorVariationPicker(for: baseColorName, sourceButton: button)
     }
     
     private func showColorVariationPicker(for baseColorName: String, sourceButton: UIButton) {
@@ -636,9 +986,24 @@ final class NewEventView: UIView {
             selectedEndDate = endDate
         }
 
-        isPeriodMode = enabled
+        // 애니메이션 없이 즉시 제약 반영 (초기 설정용)
+        if enabled {
+            dateSelectionContainer.isHidden = false
+            dateSelectionContainer.alpha = 1
+            dateContainerHeightConstraint?.constant = 100
+            dateContainerTopConstraint?.constant = 12
+        } else {
+            dateSelectionContainer.isHidden = true
+            dateSelectionContainer.alpha = 0
+            dateContainerHeightConstraint?.constant = 0
+            dateContainerTopConstraint?.constant = 0
+        }
+        // didSet의 updateDateSelectionVisibility가 중복 실행되지 않도록 내부 값 직접 설정
         periodModeSwitch.isOn = enabled
+        // isPeriodMode setter → didSet 호출 (이미 제약 반영됨, layoutIfNeeded만 수행)
+        isPeriodMode = enabled
         updateDateButtonTitles()
+        layoutIfNeeded()
     }
 
     /// 선택된 날짜 설정 (새 일정 추가 시 외부에서 호출)
