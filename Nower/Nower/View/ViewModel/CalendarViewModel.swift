@@ -31,6 +31,10 @@ class CalendarViewModel: ObservableObject {
     @Published var selectedStartDate: Date?
     @Published var selectedEndDate: Date?
     
+    // 시간/알림 프로퍼티 (iOS 버전과 호환)
+    @Published var selectedScheduledTime: String?      // "HH:mm" or nil
+    @Published var selectedReminderMinutesBefore: Int?  // minutes or nil
+    
     // MARK: - UseCase Dependencies
     private let addTodoUseCase: AddTodoUseCase
     private let deleteTodoUseCase: DeleteTodoUseCase
@@ -195,7 +199,14 @@ class CalendarViewModel: ObservableObject {
     /// iOS 버전과의 호환성을 위한 Todo 추가 메서드
     func addTodo() {
         guard let date = selectedDate, !todoText.isEmpty else { return }
-        let newTodo = TodoItem(text: todoText, isRepeating: isRepeating, date: date.toDateString(), colorName: selectedColorName)
+        let newTodo = TodoItem(
+            text: todoText, 
+            isRepeating: isRepeating, 
+            date: date.toDateString(), 
+            colorName: selectedColorName,
+            scheduledTime: selectedScheduledTime,
+            reminderMinutesBefore: selectedReminderMinutesBefore
+        )
         addTodoUseCase.execute(todo: newTodo)
         loadAllTodos()
         generateCalendarDays(for: currentMonth)
@@ -207,11 +218,15 @@ class CalendarViewModel: ObservableObject {
               let endDate = selectedEndDate,
               !todoText.isEmpty else { return }
         
-        let newTodo = TodoItem(text: todoText, 
-                              isRepeating: isRepeating, 
-                              startDate: startDate, 
-                              endDate: endDate, 
-                              colorName: selectedColorName)
+        let newTodo = TodoItem(
+            text: todoText, 
+            isRepeating: isRepeating, 
+            startDate: startDate, 
+            endDate: endDate, 
+            colorName: selectedColorName,
+            scheduledTime: selectedScheduledTime,
+            reminderMinutesBefore: selectedReminderMinutesBefore
+        )
         addTodoUseCase.execute(todo: newTodo)
         loadAllTodos()
         generateCalendarDays(for: currentMonth)

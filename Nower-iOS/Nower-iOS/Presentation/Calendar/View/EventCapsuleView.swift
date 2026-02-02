@@ -65,7 +65,8 @@ class EventCapsuleView: UIView {
     ///   - title: 일정 제목 (시작일이 아닌 경우 빈 문자열)
     ///   - color: 배경색
     ///   - position: 기간 내에서의 위치 (시작/중간/종료/단일)
-    func configurePeriodEvent(title: String, color: UIColor, position: PeriodEventPosition) {
+    ///   - time: 일정 시간 (선택적)
+    func configurePeriodEvent(title: String, color: UIColor, position: PeriodEventPosition, time: String? = nil) {
         backgroundColor = color
         // 배경색에 맞춰 텍스트 색상 자동 조정 (WCAG 4.5:1 대비 보장)
         titleLabel.textColor = AppColors.contrastingTextColor(for: color)
@@ -73,7 +74,12 @@ class EventCapsuleView: UIView {
         // 제목은 시작일에만 표시, 나머지는 빈 공간으로 표시
         switch position {
         case .start:
-            titleLabel.text = title
+            // 시간이 있으면 시간과 함께 표시
+            if let time = time {
+                titleLabel.text = "\(time) \(title)"
+            } else {
+                titleLabel.text = title
+            }
             // 시작일: 텍스트가 셀을 넘어가도 표시되도록 설정
             // clipsToBounds를 false로 설정하여 텍스트가 다음 셀까지 넘어갈 수 있도록 함
             clipsToBounds = false

@@ -29,6 +29,7 @@ final class CalendarViewModel: ObservableObject {
 
     // 시간/알림 프로퍼티
     @Published var selectedScheduledTime: String?      // "HH:mm" or nil
+    @Published var selectedEndScheduledTime: String?   // "HH:mm" or nil (기간별 일정 종료 시간)
     @Published var selectedReminderMinutesBefore: Int?  // minutes or nil
 
     init(
@@ -67,6 +68,24 @@ final class CalendarViewModel: ObservableObject {
         // 해당 날짜의 단일 날짜 일정들만 필터링 (기간별 일정 제외)
         let singleDayTodos = todosForDate.filter { !$0.isPeriodEvent }
         
+        // 단일 날짜 일정을 시간순으로 정렬: 시간이 있는 일정은 시간 순서대로, 하루 종일 일정은 맨 아래에 배치
+        let sortedSingleDayTodos = singleDayTodos.sorted { todo1, todo2 in
+            // 둘 다 시간이 있는 경우: 시간 순서대로 정렬
+            if let time1 = todo1.scheduledTime, let time2 = todo2.scheduledTime {
+                return time1 < time2
+            }
+            // todo1만 시간이 있는 경우: todo1을 위로
+            if todo1.scheduledTime != nil && todo2.scheduledTime == nil {
+                return true
+            }
+            // todo2만 시간이 있는 경우: todo2를 위로
+            if todo1.scheduledTime == nil && todo2.scheduledTime != nil {
+                return false
+            }
+            // 둘 다 시간이 없는 경우: 원래 순서 유지 (제목순)
+            return todo1.text < todo2.text
+        }
+        
         // 모든 일정에서 기간별 일정을 찾되 중복 제거
         let allTodos = todosByDate.values.flatMap { $0 }
         let uniquePeriodTodos = Array(Set(allTodos.filter { todo in
@@ -80,8 +99,8 @@ final class CalendarViewModel: ObservableObject {
             return firstStart < secondStart
         }
         
-        // 기간별 일정을 우선으로 반환
-        return sortedPeriodTodos + singleDayTodos
+        // 기간별 일정을 우선으로 반환하고, 그 다음 시간순으로 정렬된 단일 날짜 일정 반환
+        return sortedPeriodTodos + sortedSingleDayTodos
     }
 
     func holidayName(for date: Date) -> String? {
@@ -111,6 +130,7 @@ final class CalendarViewModel: ObservableObject {
                               endDate: endDate,
                               colorName: selectedColorName,
                               scheduledTime: selectedScheduledTime,
+                              endScheduledTime: selectedEndScheduledTime,
                               reminderMinutesBefore: selectedReminderMinutesBefore)
         addTodoUseCase.execute(todo: newTodo)
         LocalNotificationManager.shared.scheduleNotification(for: newTodo)
@@ -131,13 +151,14 @@ final class CalendarViewModel: ObservableObject {
     }
     
     /// 기간별 일정을 수정합니다.
-    func updatePeriodTodo(original: TodoItem, updatedText: String, updatedColor: String, startDate: Date, endDate: Date, scheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
+    func updatePeriodTodo(original: TodoItem, updatedText: String, updatedColor: String, startDate: Date, endDate: Date, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
         let updatedTodo = TodoItem(text: updatedText,
                                   isRepeating: isRepeating,
                                   startDate: startDate,
                                   endDate: endDate,
                                   colorName: updatedColor,
                                   scheduledTime: scheduledTime,
+                                  endScheduledTime: endScheduledTime,
                                   reminderMinutesBefore: reminderMinutesBefore)
         LocalNotificationManager.shared.cancelNotification(for: original.id)
         updateTodoUseCase.execute(original: original, updated: updatedTodo)

@@ -84,9 +84,6 @@ struct DayView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
-                .onTapGesture {
-                    onDaySelected()
-                }
                 
                 // 일정 영역 공간 확보 (실제 일정은 WeekView에서 렌더링)
                 Spacer()
@@ -106,6 +103,11 @@ struct DayView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(dayBackgroundColor)
+        .contentShape(Rectangle()) // 전체 영역을 클릭 가능하게 설정
+        .onTapGesture {
+            // 전체 영역 클릭 시 날짜 선택
+            onDaySelected()
+        }
     }
     
     /// 날짜 라벨 색상 (iOS 스타일)

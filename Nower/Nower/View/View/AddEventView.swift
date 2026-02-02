@@ -20,8 +20,22 @@ struct AddEventView: View {
     @Binding var isPopupVisible: Bool
     @State private var showColorVariationPicker: Bool = false
     @State private var selectedBaseColor: String = "skyblue"
+    
+    // 시간 및 알림 관련 상태
+    @State private var hasTime: Bool = false
+    @State private var selectedTime: Date = Date()
+    @State private var hasReminder: Bool = false
+    @State private var reminderMinutes: Int = 0
 
     let colorOptions: [String] = ["skyblue", "peach", "lavender", "mintgreen", "coralred"]
+    let reminderOptions: [(label: String, minutes: Int)] = [
+        ("정시", 0),
+        ("5분 전", 5),
+        ("10분 전", 10),
+        ("30분 전", 30),
+        ("1시간 전", 60),
+        ("하루 전", 1440)
+    ]
     
     // 초기 날짜를 설정할 수 있는 초기화자
     init(initialDate: Date? = nil, selectedColor: Binding<String>, isPopupVisible: Binding<Bool>) {
@@ -155,6 +169,44 @@ struct AddEventView: View {
                                     .buttonStyle(.borderless)
                                 }
                             }
+                        }
+                    }
+                    
+                    // 시간 설정
+                    VStack(alignment: .leading, spacing: 8) {
+                        Toggle(isOn: $hasTime) {
+                            Text("시간")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(AppColors.textPrimary)
+                        }
+                        .toggleStyle(.switch)
+                        
+                        if hasTime {
+                            DatePicker("", selection: $selectedTime, displayedComponents: .hourAndMinute)
+                                .datePickerStyle(.compact)
+                                .labelsHidden()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    
+                    // 알림 설정
+                    VStack(alignment: .leading, spacing: 8) {
+                        Toggle(isOn: $hasReminder) {
+                            Text("알림")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(AppColors.textPrimary)
+                        }
+                        .toggleStyle(.switch)
+                        
+                        if hasReminder {
+                            Picker("", selection: $reminderMinutes) {
+                                ForEach(reminderOptions, id: \.minutes) { option in
+                                    Text(option.label).tag(option.minutes)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .labelsHidden()
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
                 }
@@ -299,12 +351,18 @@ struct AddEventView: View {
     private func saveEvent() {
         guard !eventText.isEmpty else { return }
         
+        // 시간 정보 변환 (HH:mm 형식)
+        let scheduledTime: String? = hasTime ? formatTime(selectedTime) : nil
+        let reminderMinutesBefore: Int? = hasReminder ? reminderMinutes : nil
+        
         switch viewModel.selectedEventType {
         case .normal:
             viewModel.selectedDate = selectedDate
             viewModel.todoText = eventText
             viewModel.selectedColorName = selectedColor
             viewModel.isRepeating = false
+            viewModel.selectedScheduledTime = scheduledTime
+            viewModel.selectedReminderMinutesBefore = reminderMinutesBefore
             viewModel.addTodo()
             
         case .repeatable:
@@ -312,6 +370,8 @@ struct AddEventView: View {
             viewModel.todoText = eventText
             viewModel.selectedColorName = selectedColor
             viewModel.isRepeating = true
+            viewModel.selectedScheduledTime = scheduledTime
+            viewModel.selectedReminderMinutesBefore = reminderMinutesBefore
             viewModel.addTodo()
             
         case .multiple:
@@ -320,6 +380,8 @@ struct AddEventView: View {
                 viewModel.todoText = eventText
                 viewModel.selectedColorName = selectedColor
                 viewModel.isRepeating = false
+                viewModel.selectedScheduledTime = scheduledTime
+                viewModel.selectedReminderMinutesBefore = reminderMinutesBefore
                 viewModel.addTodo()
             }
             
@@ -330,8 +392,17 @@ struct AddEventView: View {
             viewModel.todoText = eventText
             viewModel.selectedColorName = selectedColor
             viewModel.isRepeating = false
+            viewModel.selectedScheduledTime = scheduledTime
+            viewModel.selectedReminderMinutesBefore = reminderMinutesBefore
             viewModel.addPeriodTodo()
         }
+    }
+    
+    /// Date 객체를 HH:mm 형식 문자열로 변환
+    private func formatTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: date)
     }
 }
 

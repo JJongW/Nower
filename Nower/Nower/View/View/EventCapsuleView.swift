@@ -53,16 +53,28 @@ struct EventCapsuleView: View {
     /// 단일 날짜 일정 뷰
     @ViewBuilder
     private var singleDayEventView: some View {
-        Text(todo.text)
-            .font(.system(size: 10))
-            .foregroundColor(textColor)
-            .lineLimit(1)
-            .truncationMode(.tail)
+        VStack(alignment: .leading, spacing: 0) {
+            // 일정 제목
+            HStack(spacing: 4) {
+                // 시간이 있으면 시간 표시
+                if let time = todo.scheduledTime {
+                    Text(time)
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(textColor.opacity(0.9))
+                }
+                
+                Text(todo.text)
+                    .font(.system(size: 10))
+                    .foregroundColor(textColor)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(backgroundColor)
-            .cornerRadius(6)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(backgroundColor)
+        .cornerRadius(6)
     }
     
     /// 기간별 일정 뷰
@@ -74,13 +86,22 @@ struct EventCapsuleView: View {
                 // 시작일: 텍스트 표시, 왼쪽만 둥글게
                 // 오른쪽은 다음 셀과 연결되도록 확장
                 HStack(spacing: 0) {
-                    Text(todo.text)
-                        .font(.system(size: 10))
-                        .foregroundColor(textColor)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .padding(.leading, 6)
-                        .padding(.vertical, 3)
+                    HStack(spacing: 4) {
+                        // 시간이 있으면 시간 표시
+                        if let time = todo.scheduledTime {
+                            Text(time)
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundColor(textColor.opacity(0.9))
+                        }
+                        
+                        Text(todo.text)
+                            .font(.system(size: 10))
+                            .foregroundColor(textColor)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                    .padding(.leading, 6)
+                    .padding(.vertical, 3)
                     Spacer(minLength: 0)
                 }
                 .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)

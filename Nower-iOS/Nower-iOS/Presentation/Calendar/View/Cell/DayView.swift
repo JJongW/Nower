@@ -201,16 +201,35 @@ final class DayView: UIView {
 
         // 단일 날짜 일정만 필터링 (기간별 일정은 WeekView에서 렌더링됨)
         let singleDayTodos = dayInfo.todos.filter { !$0.isPeriodEvent }
-        allSingleDayTodos = singleDayTodos
+        
+        // 시간대별로 정렬: 시간이 있는 일정은 시간 순서대로, 하루 종일 일정은 맨 아래에 배치
+        let sortedTodos = singleDayTodos.sorted { todo1, todo2 in
+            // 둘 다 시간이 있는 경우: 시간 순서대로 정렬
+            if let time1 = todo1.scheduledTime, let time2 = todo2.scheduledTime {
+                return time1 < time2
+            }
+            // todo1만 시간이 있는 경우: todo1을 위로
+            if todo1.scheduledTime != nil && todo2.scheduledTime == nil {
+                return true
+            }
+            // todo2만 시간이 있는 경우: todo2를 위로
+            if todo1.scheduledTime == nil && todo2.scheduledTime != nil {
+                return false
+            }
+            // 둘 다 시간이 없는 경우: 원래 순서 유지 (제목순)
+            return todo1.text < todo2.text
+        }
+        
+        allSingleDayTodos = sortedTodos
 
-        guard !singleDayTodos.isEmpty else { return }
+        guard !sortedTodos.isEmpty else { return }
 
         // 최대 표시 일정 개수: 3개 (2개 표시 + "+N개" 라벨)
         let maxVisibleEvents = 2
-        let shouldShowMore = singleDayTodos.count > maxVisibleEvents
+        let shouldShowMore = sortedTodos.count > maxVisibleEvents
 
-        // 단일 일정 표시 (최대 2개)
-        for todo in singleDayTodos.prefix(maxVisibleEvents) {
+        // 단일 일정 표시 (최대 2개, 시간순 정렬됨)
+        for todo in sortedTodos.prefix(maxVisibleEvents) {
             let capsule = EventCapsuleView()
             capsule.configure(
                 title: todo.text,
