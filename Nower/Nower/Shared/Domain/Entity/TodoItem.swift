@@ -21,6 +21,11 @@ struct TodoItem: Identifiable, Codable {
     // 기간별 일정을 위한 새로운 필드들
     let startDate: String? // yyyy-MM-dd 형식, nil이면 단일 날짜 일정
     let endDate: String?   // yyyy-MM-dd 형식, nil이면 단일 날짜 일정
+
+    // 시간대별 일정 및 알림을 위한 필드들 (iOS와 Codable 호환)
+    let scheduledTime: String?       // "HH:mm" 형식, nil = 하루 종일
+    let endScheduledTime: String?    // "HH:mm" 형식, 기간별 일정의 종료 시간
+    let reminderMinutesBefore: Int?  // nil = 알림 없음
     
     /// 단일 날짜 TodoItem을 생성합니다. (기존 호환성 유지)
     /// - Parameters:
@@ -28,13 +33,16 @@ struct TodoItem: Identifiable, Codable {
     ///   - isRepeating: 반복 여부
     ///   - date: 날짜 (yyyy-MM-dd 형식)
     ///   - colorName: 색상 이름
-    init(text: String, isRepeating: Bool, date: String, colorName: String) {
+    init(text: String, isRepeating: Bool, date: String, colorName: String, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
         self.text = text
         self.isRepeating = isRepeating
         self.date = date
         self.colorName = colorName
         self.startDate = nil
         self.endDate = nil
+        self.scheduledTime = scheduledTime
+        self.endScheduledTime = endScheduledTime
+        self.reminderMinutesBefore = reminderMinutesBefore
     }
     
     /// Date 객체로부터 단일 날짜 TodoItem을 생성하는 편의 생성자 (기존 호환성 유지)
@@ -43,16 +51,19 @@ struct TodoItem: Identifiable, Codable {
     ///   - isRepeating: 반복 여부
     ///   - date: Date 객체
     ///   - colorName: 색상 이름
-    init(text: String, isRepeating: Bool, date: Date, colorName: String) {
+    init(text: String, isRepeating: Bool, date: Date, colorName: String, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        
+
         self.text = text
         self.isRepeating = isRepeating
         self.date = formatter.string(from: date)
         self.colorName = colorName
         self.startDate = nil
         self.endDate = nil
+        self.scheduledTime = scheduledTime
+        self.endScheduledTime = endScheduledTime
+        self.reminderMinutesBefore = reminderMinutesBefore
     }
     
     /// 기간별 TodoItem을 생성합니다.
@@ -62,7 +73,7 @@ struct TodoItem: Identifiable, Codable {
     ///   - startDate: 시작 날짜
     ///   - endDate: 종료 날짜
     ///   - colorName: 색상 이름
-    init(text: String, isRepeating: Bool, startDate: Date, endDate: Date, colorName: String) {
+    init(text: String, isRepeating: Bool, startDate: Date, endDate: Date, colorName: String, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
 
@@ -72,6 +83,9 @@ struct TodoItem: Identifiable, Codable {
         self.colorName = colorName
         self.startDate = formatter.string(from: startDate)
         self.endDate = formatter.string(from: endDate)
+        self.scheduledTime = scheduledTime
+        self.endScheduledTime = endScheduledTime
+        self.reminderMinutesBefore = reminderMinutesBefore
     }
 
     /// 모든 필드를 직접 지정하는 이니셜라이저 (NowerCore 변환용)
@@ -83,7 +97,7 @@ struct TodoItem: Identifiable, Codable {
     ///   - colorName: 색상 이름
     ///   - startDate: 시작 날짜 문자열 (기간별 일정용)
     ///   - endDate: 종료 날짜 문자열 (기간별 일정용)
-    init(id: UUID, text: String, isRepeating: Bool, date: String, colorName: String, startDate: String? = nil, endDate: String? = nil) {
+    init(id: UUID, text: String, isRepeating: Bool, date: String, colorName: String, startDate: String? = nil, endDate: String? = nil, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
         self.id = id
         self.text = text
         self.isRepeating = isRepeating
@@ -91,6 +105,9 @@ struct TodoItem: Identifiable, Codable {
         self.colorName = colorName
         self.startDate = startDate
         self.endDate = endDate
+        self.scheduledTime = scheduledTime
+        self.endScheduledTime = endScheduledTime
+        self.reminderMinutesBefore = reminderMinutesBefore
     }
 }
 

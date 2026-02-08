@@ -53,6 +53,8 @@ final class NewEventView: UIView {
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.backgroundColor = AppColors.textHighlighted
         button.layer.cornerRadius = 12
+        button.isEnabled = false
+        button.alpha = 0.4
         return button
     }()
     
@@ -148,14 +150,15 @@ final class NewEventView: UIView {
         return view
     }()
 
-    private let timeIconLabel: UILabel = {
-        let label = UILabel()
-        label.text = "\u{1F552}" // clock emoji
-        label.font = UIFont.systemFont(ofSize: 18)
-        return label
+    private let timeIconView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.image = UIImage(named: "ic_time")?.withRenderingMode(.alwaysTemplate)
+        imageView.tintColor = AppColors.coralred
+        imageView.contentMode = .scaleAspectFit
+        return imageView
     }()
 
-    private let timeTitleLabel: UILabel = {
+    private(set) var timeTitleLabel: UILabel = {
         let label = UILabel()
         label.text = "시간"
         label.textColor = AppColors.textPrimary
@@ -171,6 +174,41 @@ final class NewEventView: UIView {
         return button
     }()
 
+    // MARK: - 종료 시간 설정 컴포넌트 (기간별 일정용)
+
+    let endTimeSettingContainer: UIView = {
+        let view = UIView()
+        view.backgroundColor = AppColors.textFieldBackground
+        view.layer.cornerRadius = 10
+        view.layer.masksToBounds = true
+        view.clipsToBounds = true
+        return view
+    }()
+
+    private let endTimeIconView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.image = UIImage(named: "ic_time")?.withRenderingMode(.alwaysTemplate)
+        imageView.tintColor = AppColors.coralred
+        imageView.contentMode = .scaleAspectFit
+        return imageView
+    }()
+
+    private let endTimeTitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "종료 시간"
+        label.textColor = AppColors.textPrimary
+        label.font = UIFont.systemFont(ofSize: 16, weight: .medium)
+        return label
+    }()
+
+    let endTimeValueButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("하루 종일", for: .normal)
+        button.setTitleColor(AppColors.textHighlighted, for: .normal)
+        button.titleLabel?.font = UIFont.systemFont(ofSize: 15, weight: .medium)
+        return button
+    }()
+
     let reminderSettingContainer: UIView = {
         let view = UIView()
         view.backgroundColor = AppColors.textFieldBackground
@@ -179,11 +217,12 @@ final class NewEventView: UIView {
         return view
     }()
 
-    private let reminderIconLabel: UILabel = {
-        let label = UILabel()
-        label.text = "\u{1F514}" // bell emoji
-        label.font = UIFont.systemFont(ofSize: 18)
-        return label
+    private let reminderIconView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.image = UIImage(named: "ic_alarm")?.withRenderingMode(.alwaysTemplate)
+        imageView.tintColor = AppColors.coralred
+        imageView.contentMode = .scaleAspectFit
+        return imageView
     }()
 
     private let reminderTitleLabel: UILabel = {
@@ -238,6 +277,9 @@ final class NewEventView: UIView {
     /// 날짜 선택 컨테이너 높이/여백 제약 (접었다 펼치기용)
     private var dateContainerHeightConstraint: NSLayoutConstraint?
     private var dateContainerTopConstraint: NSLayoutConstraint?
+    /// 종료 시간 컨테이너 높이/여백 제약 (접었다 펼치기용)
+    private var endTimeContainerHeightConstraint: NSLayoutConstraint?
+    private var endTimeContainerTopConstraint: NSLayoutConstraint?
     /// setPeriodMode에서 애니메이션 없이 설정 중일 때 didSet 중복 실행 방지
     private var isSettingPeriodMode = false
 
@@ -245,6 +287,10 @@ final class NewEventView: UIView {
 
     var selectedScheduledTime: String? {
         didSet { updateTimeDisplay() }
+    }
+
+    var selectedEndScheduledTime: String? {
+        didSet { updateEndTimeDisplay() }
     }
 
     var selectedReminderMinutesBefore: Int? {
@@ -353,7 +399,7 @@ final class NewEventView: UIView {
 
         // 시간 설정 행
         contentView.addSubview(timeSettingContainer)
-        timeSettingContainer.addSubview(timeIconLabel)
+        timeSettingContainer.addSubview(timeIconView)
         timeSettingContainer.addSubview(timeTitleLabel)
         timeSettingContainer.addSubview(timeValueButton)
 
@@ -363,13 +409,14 @@ final class NewEventView: UIView {
             $0.height.equalTo(52)
         }
 
-        timeIconLabel.snp.makeConstraints {
+        timeIconView.snp.makeConstraints {
             $0.leading.equalToSuperview().offset(16)
             $0.centerY.equalToSuperview()
+            $0.size.equalTo(20)
         }
 
         timeTitleLabel.snp.makeConstraints {
-            $0.leading.equalTo(timeIconLabel.snp.trailing).offset(8)
+            $0.leading.equalTo(timeIconView.snp.trailing).offset(8)
             $0.centerY.equalToSuperview()
         }
 
@@ -378,25 +425,59 @@ final class NewEventView: UIView {
             $0.centerY.equalToSuperview()
         }
 
+        // 종료 시간 설정 행 (기간별 일정용) — 높이/여백을 NSLayoutConstraint로 관리 (접기/펼치기용)
+        contentView.addSubview(endTimeSettingContainer)
+        endTimeSettingContainer.addSubview(endTimeIconView)
+        endTimeSettingContainer.addSubview(endTimeTitleLabel)
+        endTimeSettingContainer.addSubview(endTimeValueButton)
+
+        endTimeSettingContainer.translatesAutoresizingMaskIntoConstraints = false
+        let endTimeTopC = endTimeSettingContainer.topAnchor.constraint(equalTo: timeSettingContainer.bottomAnchor, constant: 0)
+        let endTimeHeightC = endTimeSettingContainer.heightAnchor.constraint(equalToConstant: 0)
+        endTimeTopC.isActive = true
+        endTimeHeightC.isActive = true
+        endTimeContainerTopConstraint = endTimeTopC
+        endTimeContainerHeightConstraint = endTimeHeightC
+        endTimeSettingContainer.snp.makeConstraints {
+            $0.leading.trailing.equalToSuperview().inset(20)
+        }
+
+        endTimeIconView.snp.makeConstraints {
+            $0.leading.equalToSuperview().offset(16)
+            $0.centerY.equalToSuperview()
+            $0.size.equalTo(20)
+        }
+
+        endTimeTitleLabel.snp.makeConstraints {
+            $0.leading.equalTo(endTimeIconView.snp.trailing).offset(8)
+            $0.centerY.equalToSuperview()
+        }
+
+        endTimeValueButton.snp.makeConstraints {
+            $0.trailing.equalToSuperview().offset(-16)
+            $0.centerY.equalToSuperview()
+        }
+
         // 알림 설정 행
         contentView.addSubview(reminderSettingContainer)
-        reminderSettingContainer.addSubview(reminderIconLabel)
+        reminderSettingContainer.addSubview(reminderIconView)
         reminderSettingContainer.addSubview(reminderTitleLabel)
         reminderSettingContainer.addSubview(reminderValueButton)
 
         reminderSettingContainer.snp.makeConstraints {
-            $0.top.equalTo(timeSettingContainer.snp.bottom).offset(8)
+            $0.top.equalTo(endTimeSettingContainer.snp.bottom).offset(8)
             $0.leading.trailing.equalToSuperview().inset(20)
             $0.height.equalTo(52)
         }
 
-        reminderIconLabel.snp.makeConstraints {
+        reminderIconView.snp.makeConstraints {
             $0.leading.equalToSuperview().offset(16)
             $0.centerY.equalToSuperview()
+            $0.size.equalTo(20)
         }
 
         reminderTitleLabel.snp.makeConstraints {
-            $0.leading.equalTo(reminderIconLabel.snp.trailing).offset(8)
+            $0.leading.equalTo(reminderIconView.snp.trailing).offset(8)
             $0.centerY.equalToSuperview()
         }
 
@@ -492,6 +573,7 @@ final class NewEventView: UIView {
 
         // 시간/알림 버튼 액션
         timeValueButton.addTarget(self, action: #selector(timeValueButtonTapped), for: .touchUpInside)
+        endTimeValueButton.addTarget(self, action: #selector(endTimeValueButtonTapped), for: .touchUpInside)
         reminderValueButton.addTarget(self, action: #selector(reminderValueButtonTapped), for: .touchUpInside)
 
         // 버튼 눌림 효과 적용
@@ -500,7 +582,11 @@ final class NewEventView: UIView {
         startDateButton.addPressAnimation()
         endDateButton.addPressAnimation()
         timeValueButton.addPressAnimation()
+        endTimeValueButton.addPressAnimation()
         reminderValueButton.addPressAnimation()
+
+        // 텍스트 필드 변경 감지 → 저장 버튼 활성화/비활성화
+        textField.addTarget(self, action: #selector(textFieldDidChange), for: .editingChanged)
 
         // 접근성 설정
         setupAccessibility()
@@ -533,6 +619,8 @@ final class NewEventView: UIView {
         // 시간/알림 버튼
         timeValueButton.accessibilityLabel = "시간 설정"
         timeValueButton.accessibilityHint = "탭하여 일정 시간을 설정하세요"
+        endTimeValueButton.accessibilityLabel = "종료 시간 설정"
+        endTimeValueButton.accessibilityHint = "탭하여 종료 시간을 설정하세요"
         reminderValueButton.accessibilityLabel = "알림 설정"
         reminderValueButton.accessibilityHint = "탭하여 알림을 설정하세요"
 
@@ -679,6 +767,11 @@ final class NewEventView: UIView {
             dateContainerHeightConstraint?.constant = 100
             dateContainerTopConstraint?.constant = 12
 
+            endTimeSettingContainer.isHidden = false
+            endTimeSettingContainer.alpha = 0
+            endTimeContainerHeightConstraint?.constant = 52
+            endTimeContainerTopConstraint?.constant = 8
+
             UIView.animate(
                 withDuration: 0.35,
                 delay: 0,
@@ -687,6 +780,8 @@ final class NewEventView: UIView {
                 options: [.curveEaseOut]
             ) {
                 self.dateSelectionContainer.alpha = 1
+                self.endTimeSettingContainer.alpha = 1
+                self.timeTitleLabel.text = "시작 시간"
                 self.layoutIfNeeded()
             }
         } else {
@@ -701,9 +796,14 @@ final class NewEventView: UIView {
                 self.dateSelectionContainer.alpha = 0
                 self.dateContainerHeightConstraint?.constant = 0
                 self.dateContainerTopConstraint?.constant = 0
+                self.endTimeSettingContainer.alpha = 0
+                self.endTimeContainerHeightConstraint?.constant = 0
+                self.endTimeContainerTopConstraint?.constant = 0
+                self.timeTitleLabel.text = "시간"
                 self.layoutIfNeeded()
             } completion: { _ in
                 self.dateSelectionContainer.isHidden = true
+                self.endTimeSettingContainer.isHidden = true
             }
         }
     }
@@ -811,6 +911,16 @@ final class NewEventView: UIView {
         picker.snp.makeConstraints { $0.edges.equalToSuperview() }
     }
 
+    @objc private func endTimeValueButtonTapped() {
+        guard let parentView = findViewController()?.view else { return }
+        let picker = TimePickerView(currentTime: selectedEndScheduledTime)
+        picker.onTimeSelected = { [weak self] time in
+            self?.selectedEndScheduledTime = time
+        }
+        parentView.addSubview(picker)
+        picker.snp.makeConstraints { $0.edges.equalToSuperview() }
+    }
+
     @objc private func reminderValueButtonTapped() {
         guard selectedScheduledTime != nil else { return }
         guard let parentView = findViewController()?.view else { return }
@@ -837,6 +947,21 @@ final class NewEventView: UIView {
             }
         } else {
             timeValueButton.setTitle("하루 종일", for: .normal)
+        }
+    }
+
+    private func updateEndTimeDisplay() {
+        if let time = selectedEndScheduledTime {
+            let parts = time.split(separator: ":")
+            if parts.count == 2, let hour = Int(parts[0]), let minute = Int(parts[1]) {
+                let period = hour < 12 ? "오전" : "오후"
+                let displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour)
+                endTimeValueButton.setTitle(String(format: "%@ %d:%02d", period, displayHour, minute), for: .normal)
+            } else {
+                endTimeValueButton.setTitle(time, for: .normal)
+            }
+        } else {
+            endTimeValueButton.setTitle("하루 종일", for: .normal)
         }
     }
 
@@ -996,11 +1121,21 @@ final class NewEventView: UIView {
             dateSelectionContainer.alpha = 1
             dateContainerHeightConstraint?.constant = 100
             dateContainerTopConstraint?.constant = 12
+            endTimeSettingContainer.isHidden = false
+            endTimeSettingContainer.alpha = 1
+            endTimeContainerHeightConstraint?.constant = 52
+            endTimeContainerTopConstraint?.constant = 8
+            timeTitleLabel.text = "시작 시간"
         } else {
             dateSelectionContainer.isHidden = true
             dateSelectionContainer.alpha = 0
             dateContainerHeightConstraint?.constant = 0
             dateContainerTopConstraint?.constant = 0
+            endTimeSettingContainer.isHidden = true
+            endTimeSettingContainer.alpha = 0
+            endTimeContainerHeightConstraint?.constant = 0
+            endTimeContainerTopConstraint?.constant = 0
+            timeTitleLabel.text = "시간"
         }
         periodModeSwitch.isOn = enabled
         isPeriodMode = enabled
@@ -1012,6 +1147,20 @@ final class NewEventView: UIView {
     /// 선택된 날짜 설정 (새 일정 추가 시 외부에서 호출)
     func setInitialSelectedDate(_ date: Date) {
         initialSelectedDate = date
+    }
+
+    // MARK: - Save Button State
+
+    @objc private func textFieldDidChange() {
+        updateSaveButtonState()
+    }
+
+    func updateSaveButtonState() {
+        let hasText = !(textField.text ?? "").trimmingCharacters(in: .whitespaces).isEmpty
+        saveButton.isEnabled = hasText
+        UIView.animate(withDuration: 0.2) {
+            self.saveButton.alpha = hasText ? 1.0 : 0.4
+        }
     }
 
     // MARK: - Error Feedback

@@ -140,7 +140,8 @@ enum WidgetAppColors {
         scheme == .dark ? Color(red: 0.95, green: 0.50, blue: 0.45) : Color(red: 0.95, green: 0.55, blue: 0.50)
     }
     
-    static func color(for name: String, scheme: ColorScheme) -> Color {
+    /// 기본 색상 이름으로 기본 색상 가져오기 (톤 없음)
+    static func baseColor(for name: String, scheme: ColorScheme) -> Color {
         switch name {
         case "skyblue": return skyblue(scheme)
         case "peach": return peach(scheme)
@@ -149,6 +150,56 @@ enum WidgetAppColors {
         case "coralred": return coralred(scheme)
         default: return scheme == .dark ? Color.gray.opacity(0.8) : Color.gray
         }
+    }
+
+    /// 색상 톤 생성 (1: 가장 밝음, 8: 가장 어두움)
+    /// macOS 앱의 AppColors.colorTone과 동일한 로직
+    private static func colorTone(r: CGFloat, g: CGFloat, b: CGFloat, tone: Int, isDark: Bool) -> Color {
+        let toneFactor: CGFloat
+        if isDark {
+            toneFactor = 0.95 - (CGFloat(tone - 1) / 7.0) * 0.65
+        } else {
+            toneFactor = 0.95 - (CGFloat(tone - 1) / 7.0) * 0.55
+        }
+
+        let luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        guard luminance > 0 else { return Color(red: r, green: g, blue: b) }
+
+        let ratio = toneFactor / luminance
+        let nr = min(1.0, max(0.0, r * ratio))
+        let ng = min(1.0, max(0.0, g * ratio))
+        let nb = min(1.0, max(0.0, b * ratio))
+        return Color(red: nr, green: ng, blue: nb)
+    }
+
+    /// 기본 색상의 RGB 값 반환
+    private static func baseColorRGB(for name: String, scheme: ColorScheme) -> (r: CGFloat, g: CGFloat, b: CGFloat) {
+        let isDark = scheme == .dark
+        switch name {
+        case "skyblue":   return isDark ? (0.35, 0.60, 0.80) : (0.45, 0.70, 0.85)
+        case "peach":     return isDark ? (0.95, 0.65, 0.45) : (0.95, 0.75, 0.55)
+        case "lavender":  return isDark ? (0.65, 0.55, 0.80) : (0.70, 0.60, 0.85)
+        case "mintgreen": return isDark ? (0.30, 0.65, 0.55) : (0.40, 0.70, 0.60)
+        case "coralred":  return isDark ? (0.95, 0.50, 0.45) : (0.95, 0.55, 0.50)
+        default:          return isDark ? (0.50, 0.50, 0.50) : (0.50, 0.50, 0.50)
+        }
+    }
+
+    /// 테마 색상 이름으로 색상 가져오기 (톤 지원)
+    /// 지원 형식: "skyblue", "skyblue-1" ~ "skyblue-8"
+    static func color(for name: String, scheme: ColorScheme) -> Color {
+        // 톤이 포함된 경우 (예: "skyblue-3")
+        if let dashIndex = name.lastIndex(of: "-"),
+           let tone = Int(String(name[name.index(after: dashIndex)...])),
+           tone >= 1 && tone <= 8 {
+            let baseName = String(name[..<dashIndex])
+            let rgb = baseColorRGB(for: baseName, scheme: scheme)
+            return colorTone(r: rgb.r, g: rgb.g, b: rgb.b, tone: tone, isDark: scheme == .dark)
+        }
+
+        // 톤 없는 기본 색상 → 중간 톤(4) 적용
+        let rgb = baseColorRGB(for: name, scheme: scheme)
+        return colorTone(r: rgb.r, g: rgb.g, b: rgb.b, tone: 4, isDark: scheme == .dark)
     }
 }
 

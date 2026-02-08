@@ -8,8 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		C3CE4DE02DB6168E00357F86 /* Moya in Frameworks */ = {isa = PBXBuildFile; productRef = C3CE4DDF2DB6168E00357F86 /* Moya */; };
-		C3D7737C2F2C4A8400398804 /* NowerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C3D7737B2F2C4A8400398804 /* NowerCore */; };
-		C3D7737E2F2C4A9100398804 /* NowerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C3D7737D2F2C4A9100398804 /* NowerCore */; };
+		C3D7751F2F2F606E00398804 /* NowerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C3D7751E2F2F606E00398804 /* NowerCore */; };
 		C3E007B42F1F8EBA004CBAD6 /* Debug.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = C3E007B32F1F8EB1004CBAD6 /* Debug.xcconfig */; };
 		C3E007B62F1F8FDC004CBAD6 /* Release.xcconfig in Sources */ = {isa = PBXBuildFile; fileRef = C3E007B52F1F8FD2004CBAD6 /* Release.xcconfig */; };
 		C3E008D52F20E16A004CBAD6 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3E008D42F20E16A004CBAD6 /* WidgetKit.framework */; };
@@ -43,6 +42,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		C3D7751C2F2F5FFB00398804 /* NowerCore */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = NowerCore; path = ../NowerCore; sourceTree = "<group>"; };
 		C3E007B32F1F8EB1004CBAD6 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		C3E007B52F1F8FD2004CBAD6 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		C3E008D22F20E16A004CBAD6 /* NowerTodayWidgetExtensionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NowerTodayWidgetExtensionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -94,7 +94,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				C3E008D72F20E16A004CBAD6 /* SwiftUI.framework in Frameworks */,
-				C3D7737E2F2C4A9100398804 /* NowerCore in Frameworks */,
 				C3E008D52F20E16A004CBAD6 /* WidgetKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -104,7 +103,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C3CE4DE02DB6168E00357F86 /* Moya in Frameworks */,
-				C3D7737C2F2C4A8400398804 /* NowerCore in Frameworks */,
+				C3D7751F2F2F606E00398804 /* NowerCore in Frameworks */,
 				C3E07EF92DA8E5D200BB0D0A /* SnapKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -124,6 +123,7 @@
 		C3E008D32F20E16A004CBAD6 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				C3D7751C2F2F5FFB00398804 /* NowerCore */,
 				C3E008D42F20E16A004CBAD6 /* WidgetKit.framework */,
 				C3E008D62F20E16A004CBAD6 /* SwiftUI.framework */,
 			);
@@ -171,7 +171,6 @@
 			);
 			name = NowerTodayWidgetExtensionExtension;
 			packageProductDependencies = (
-				C3D7737D2F2C4A9100398804 /* NowerCore */,
 			);
 			productName = NowerTodayWidgetExtensionExtension;
 			productReference = C3E008D22F20E16A004CBAD6 /* NowerTodayWidgetExtensionExtension.appex */;
@@ -198,7 +197,7 @@
 			packageProductDependencies = (
 				C3E07EF82DA8E5D200BB0D0A /* SnapKit */,
 				C3CE4DDF2DB6168E00357F86 /* Moya */,
-				C3D7737B2F2C4A8400398804 /* NowerCore */,
+				C3D7751E2F2F606E00398804 /* NowerCore */,
 			);
 			productName = "Nower-iOS";
 			productReference = C3E07ED12DA8E2CA00BB0D0A /* Nower.app */;
@@ -234,7 +233,7 @@
 			packageReferences = (
 				C3E07EF72DA8E5D200BB0D0A /* XCRemoteSwiftPackageReference "SnapKit" */,
 				C3CE4DDE2DB6168E00357F86 /* XCRemoteSwiftPackageReference "Moya" */,
-				C3D7737A2F2C49F300398804 /* XCLocalSwiftPackageReference "../NowerCore" */,
+				C3D7751D2F2F604600398804 /* XCLocalSwiftPackageReference "../NowerCore" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C3E07ED22DA8E2CA00BB0D0A /* Products */;
@@ -372,6 +371,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Nower-iOS/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Nower;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UIMainStoryboardFile = Main;
@@ -405,6 +405,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Nower-iOS/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Nower;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UIMainStoryboardFile = Main;
@@ -576,7 +577,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		C3D7737A2F2C49F300398804 /* XCLocalSwiftPackageReference "../NowerCore" */ = {
+		C3D7751D2F2F604600398804 /* XCLocalSwiftPackageReference "../NowerCore" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../NowerCore;
 		};
@@ -607,14 +608,9 @@
 			package = C3CE4DDE2DB6168E00357F86 /* XCRemoteSwiftPackageReference "Moya" */;
 			productName = Moya;
 		};
-		C3D7737B2F2C4A8400398804 /* NowerCore */ = {
+		C3D7751E2F2F606E00398804 /* NowerCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = C3D7737A2F2C49F300398804 /* XCLocalSwiftPackageReference "../NowerCore" */;
-			productName = NowerCore;
-		};
-		C3D7737D2F2C4A9100398804 /* NowerCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = C3D7737A2F2C49F300398804 /* XCLocalSwiftPackageReference "../NowerCore" */;
+			package = C3D7751D2F2F604600398804 /* XCLocalSwiftPackageReference "../NowerCore" */;
 			productName = NowerCore;
 		};
 		C3E07EF82DA8E5D200BB0D0A /* SnapKit */ = {

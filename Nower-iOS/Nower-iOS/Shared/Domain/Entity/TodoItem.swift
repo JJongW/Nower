@@ -24,6 +24,7 @@ struct TodoItem: Identifiable, Codable {
 
     // 시간대별 일정 및 알림을 위한 필드들
     let scheduledTime: String?       // "HH:mm" 형식, nil = 하루 종일
+    let endScheduledTime: String?    // "HH:mm" 형식, 기간별 일정의 종료 시간 (nil = 하루 종일)
     let reminderMinutesBefore: Int?  // nil = 알림 없음, 0 = 정시, 5/10/30/60/1440
     
     /// 단일 날짜 TodoItem을 생성합니다. (기존 호환성 유지)
@@ -32,7 +33,7 @@ struct TodoItem: Identifiable, Codable {
     ///   - isRepeating: 반복 여부
     ///   - date: 날짜 (yyyy-MM-dd 형식)
     ///   - colorName: 색상 이름
-    init(text: String, isRepeating: Bool, date: String, colorName: String, scheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
+    init(text: String, isRepeating: Bool, date: String, colorName: String, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
         self.text = text
         self.isRepeating = isRepeating
         self.date = date
@@ -40,6 +41,7 @@ struct TodoItem: Identifiable, Codable {
         self.startDate = nil
         self.endDate = nil
         self.scheduledTime = scheduledTime
+        self.endScheduledTime = endScheduledTime
         self.reminderMinutesBefore = reminderMinutesBefore
     }
     
@@ -49,7 +51,7 @@ struct TodoItem: Identifiable, Codable {
     ///   - isRepeating: 반복 여부
     ///   - date: Date 객체
     ///   - colorName: 색상 이름
-    init(text: String, isRepeating: Bool, date: Date, colorName: String, scheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
+    init(text: String, isRepeating: Bool, date: Date, colorName: String, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
 
@@ -60,6 +62,7 @@ struct TodoItem: Identifiable, Codable {
         self.startDate = nil
         self.endDate = nil
         self.scheduledTime = scheduledTime
+        self.endScheduledTime = endScheduledTime
         self.reminderMinutesBefore = reminderMinutesBefore
     }
     
@@ -70,7 +73,7 @@ struct TodoItem: Identifiable, Codable {
     ///   - startDate: 시작 날짜
     ///   - endDate: 종료 날짜
     ///   - colorName: 색상 이름
-    init(text: String, isRepeating: Bool, startDate: Date, endDate: Date, colorName: String, scheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
+    init(text: String, isRepeating: Bool, startDate: Date, endDate: Date, colorName: String, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
 
@@ -81,6 +84,7 @@ struct TodoItem: Identifiable, Codable {
         self.startDate = formatter.string(from: startDate)
         self.endDate = formatter.string(from: endDate)
         self.scheduledTime = scheduledTime
+        self.endScheduledTime = endScheduledTime
         self.reminderMinutesBefore = reminderMinutesBefore
     }
 
@@ -93,7 +97,7 @@ struct TodoItem: Identifiable, Codable {
     ///   - colorName: 색상 이름
     ///   - startDate: 시작 날짜 문자열 (기간별 일정용)
     ///   - endDate: 종료 날짜 문자열 (기간별 일정용)
-    init(id: UUID, text: String, isRepeating: Bool, date: String, colorName: String, startDate: String? = nil, endDate: String? = nil, scheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
+    init(id: UUID, text: String, isRepeating: Bool, date: String, colorName: String, startDate: String? = nil, endDate: String? = nil, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
         self.id = id
         self.text = text
         self.isRepeating = isRepeating
@@ -102,6 +106,7 @@ struct TodoItem: Identifiable, Codable {
         self.startDate = startDate
         self.endDate = endDate
         self.scheduledTime = scheduledTime
+        self.endScheduledTime = endScheduledTime
         self.reminderMinutesBefore = reminderMinutesBefore
     }
 }

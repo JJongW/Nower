@@ -65,35 +65,52 @@ class EventTableViewCell: UITableViewCell {
     func configure(with todo: TodoItem) {
         let backgroundColor = AppColors.color(for: todo.colorName)
         containerView.backgroundColor = backgroundColor
-        
+
         // 배경색에 맞춰 텍스트 색상 자동 조정 (WCAG 4.5:1 대비 보장)
         let textColor = AppColors.contrastingTextColor(for: backgroundColor)
         eventTitleLabel.textColor = textColor
         eventSubtitleLabel.textColor = textColor
-        
-        // 시간이 있으면 제목 앞에 표시
-        if let time = todo.scheduledTime {
-            eventTitleLabel.text = "\(time) \(todo.text)"
-        } else {
-            eventTitleLabel.text = todo.text
-        }
 
-        // 기간별 일정인 경우 기간 정보 표시
+        eventTitleLabel.text = todo.text
+
+        // 서브타이틀: 시간 정보 표시
         if todo.isPeriodEvent, let startDate = todo.startDateObject, let endDate = todo.endDateObject {
             let formatter = DateFormatter()
             formatter.dateFormat = "MM/dd"
             formatter.locale = Locale(identifier: "ko_KR")
-            
-            let startString = formatter.string(from: startDate)
-            let endString = formatter.string(from: endDate)
-            
+
+            var startString = formatter.string(from: startDate)
+            var endString = formatter.string(from: endDate)
+
+            // 시작 시간이 있으면 날짜 뒤에 추가
+            if let startTime = todo.scheduledTime {
+                startString += " \(startTime)"
+            }
+            // 종료 시간이 있으면 날짜 뒤에 추가
+            if let endTime = todo.endScheduledTime {
+                endString += " \(endTime)"
+            }
+
             if Calendar.current.isDate(startDate, inSameDayAs: endDate) {
                 eventSubtitleLabel.text = startString
             } else {
-                eventSubtitleLabel.text = "\(startString) - \(endString)"
+                eventSubtitleLabel.text = "\(startString) ~ \(endString)"
             }
         } else {
-            eventSubtitleLabel.text = "일상"
+            // 단일 일정
+            if let time = todo.scheduledTime {
+                // "HH:mm" → 오전/오후 형식
+                let parts = time.split(separator: ":")
+                if parts.count == 2, let hour = Int(parts[0]), let minute = Int(parts[1]) {
+                    let period = hour < 12 ? "오전" : "오후"
+                    let displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour)
+                    eventSubtitleLabel.text = String(format: "%@ %d:%02d", period, displayHour, minute)
+                } else {
+                    eventSubtitleLabel.text = time
+                }
+            } else {
+                eventSubtitleLabel.text = "종일"
+            }
         }
     }
 }

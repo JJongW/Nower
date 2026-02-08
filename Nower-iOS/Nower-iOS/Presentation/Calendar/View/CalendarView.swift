@@ -29,17 +29,17 @@ final class CalendarView: UIView {
 
     let previousButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("<", for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 20, weight: .medium)
-        button.tintColor = AppColors.textHighlighted
+        let image = UIImage(named: "ic_left_arrow")?.withRenderingMode(.alwaysTemplate)
+        button.setImage(image, for: .normal)
+        button.tintColor = AppColors.coralred
         return button
     }()
 
     let nextButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle(">", for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 20, weight: .medium)
-        button.tintColor = AppColors.textHighlighted
+        let image = UIImage(named: "ic_right_arrow")?.withRenderingMode(.alwaysTemplate)
+        button.setImage(image, for: .normal)
+        button.tintColor = AppColors.coralred
         return button
     }()
 
@@ -114,19 +114,39 @@ final class CalendarView: UIView {
             $0.centerX.equalToSuperview()
         }
 
+        // 화면 끝과 monthLabel 중간 지점에 배치하기 위한 가이드 뷰
+        let leftGuide = UILayoutGuide()
+        let rightGuide = UILayoutGuide()
+        addLayoutGuide(leftGuide)
+        addLayoutGuide(rightGuide)
+
+        // leftGuide: leading ~ monthLabel.leading 사이 전체
+        leftGuide.snp.makeConstraints {
+            $0.leading.equalToSuperview()
+            $0.trailing.equalTo(monthLabel.snp.leading)
+        }
+
+        // rightGuide: monthLabel.trailing ~ trailing 사이 전체
+        rightGuide.snp.makeConstraints {
+            $0.leading.equalTo(monthLabel.snp.trailing)
+            $0.trailing.equalToSuperview()
+        }
+
         previousButton.snp.makeConstraints {
             $0.centerY.equalTo(monthLabel)
-            $0.leading.equalToSuperview().offset(20)
+            $0.centerX.equalTo(leftGuide)
+            $0.size.equalTo(24)
+        }
+
+        nextButton.snp.makeConstraints {
+            $0.centerY.equalTo(monthLabel)
+            $0.centerX.equalTo(rightGuide)
+            $0.size.equalTo(24)
         }
 
         syncStatusView.snp.makeConstraints {
             $0.centerY.equalTo(monthLabel)
             $0.trailing.equalToSuperview().inset(16)
-        }
-
-        nextButton.snp.makeConstraints {
-            $0.centerY.equalTo(monthLabel)
-            $0.trailing.equalTo(syncStatusView.snp.leading).offset(-4)
         }
 
         textLabel.snp.makeConstraints {

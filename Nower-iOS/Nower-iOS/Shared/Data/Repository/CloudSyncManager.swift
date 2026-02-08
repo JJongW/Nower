@@ -7,6 +7,9 @@
 //
 
 import Foundation
+#if canImport(WidgetKit)
+import WidgetKit
+#endif
 #if canImport(NowerCore)
 import NowerCore
 #endif
@@ -262,6 +265,11 @@ final class CloudSyncManager {
 
             DispatchQueue.main.async {
                 NotificationCenter.default.post(name: Self.syncDidCompleteName, object: nil)
+
+                // 위젯 타임라인 즉시 갱신
+                #if canImport(WidgetKit)
+                WidgetCenter.shared.reloadAllTimelines()
+                #endif
             }
         } catch {
             print("❌ [CloudSyncManager] 데이터 인코딩 실패: \(error)")

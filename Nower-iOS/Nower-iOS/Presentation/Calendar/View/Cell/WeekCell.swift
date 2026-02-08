@@ -38,6 +38,11 @@ final class WeekCell: UICollectionViewCell {
         fatalError("init(coder:) has not been implemented")
     }
 
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        weekView.clearPeriodEvents()
+    }
+
     private func setupUI() {
         contentView.addSubview(weekView)
         weekView.snp.makeConstraints {

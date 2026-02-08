@@ -64,13 +64,9 @@ final class PeriodEventOverlayView: UIView {
         // 배경색에 맞춰 텍스트 색상 자동 조정 (WCAG 4.5:1 대비 보장)
         titleLabel.textColor = AppColors.contrastingTextColor(for: eventColor)
 
-        // 제목은 시작 세그먼트에만 표시 (시간이 있으면 시간과 함께)
+        // 제목은 시작 세그먼트에만 표시
         if isFirstSegment {
-            if let time = todo.scheduledTime {
-                titleLabel.text = "\(time) \(todo.text)"
-            } else {
-                titleLabel.text = todo.text
-            }
+            titleLabel.text = todo.text
         } else {
             titleLabel.text = ""
         }

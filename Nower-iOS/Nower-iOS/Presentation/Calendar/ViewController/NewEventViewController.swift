@@ -57,6 +57,7 @@ final class NewEventViewController: UIViewController {
         viewModel.todoText = text
         viewModel.selectedColorName = popupView.selectedColorName
         viewModel.selectedScheduledTime = popupView.selectedScheduledTime
+        viewModel.selectedEndScheduledTime = popupView.selectedEndScheduledTime
         viewModel.selectedReminderMinutesBefore = popupView.selectedReminderMinutesBefore
 
         // 알림 설정 시 권한 요청

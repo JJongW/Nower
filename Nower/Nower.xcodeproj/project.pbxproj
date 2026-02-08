@@ -10,6 +10,9 @@
 		C3D771472F26490B00398804 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C36B65902F262D2F00DEB2AF /* WidgetKit.framework */; };
 		C3D771482F26490B00398804 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C36B65922F262D2F00DEB2AF /* SwiftUI.framework */; };
 		C3D771572F26490C00398804 /* NowerWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C3D771462F26490B00398804 /* NowerWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C3D775172F2F5E5F00398804 /* Debug.xcconfig in Sources */ = {isa = PBXBuildFile; fileRef = C3D775162F2F5E5300398804 /* Debug.xcconfig */; };
+		C3D775192F2F5E9600398804 /* Release.xcconfig in Sources */ = {isa = PBXBuildFile; fileRef = C3D775182F2F5E8E00398804 /* Release.xcconfig */; };
+		C3D7751B2F2F5EFA00398804 /* Debug.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = C3D7751A2F2F5EFA00398804 /* Debug.xcconfig */; };
 		C3E00DEC2F25A18E004CBAD6 /* NowerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C3E00DEB2F25A18E004CBAD6 /* NowerCore */; };
 /* End PBXBuildFile section */
 
@@ -42,6 +45,9 @@
 		C36B65922F262D2F00DEB2AF /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		C3B113652D6C6A1C00D142B5 /* Nower.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Nower.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C3D771462F26490B00398804 /* NowerWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NowerWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		C3D775162F2F5E5300398804 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Debug.xcconfig; sourceTree = "<group>"; };
+		C3D775182F2F5E8E00398804 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		C3D7751A2F2F5EFA00398804 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -94,10 +100,13 @@
 		C3B1135C2D6C6A1C00D142B5 = {
 			isa = PBXGroup;
 			children = (
+				C3D775182F2F5E8E00398804 /* Release.xcconfig */,
+				C3D775162F2F5E5300398804 /* Debug.xcconfig */,
 				C3B113672D6C6A1C00D142B5 /* Nower */,
 				C3D771492F26490B00398804 /* NowerWidget */,
 				C3E00DEA2F25A18E004CBAD6 /* Frameworks */,
 				C3B113662D6C6A1C00D142B5 /* Products */,
+				C3D7751A2F2F5EFA00398804 /* Debug.xcconfig */,
 			);
 			sourceTree = "<group>";
 		};
@@ -215,6 +224,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C3D7751B2F2F5EFA00398804 /* Debug.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -232,6 +242,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C3D775192F2F5E9600398804 /* Release.xcconfig in Sources */,
+				C3D775172F2F5E5F00398804 /* Debug.xcconfig in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -255,6 +267,7 @@
 /* Begin XCBuildConfiguration section */
 		C3B113722D6C6A1D00D142B5 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C3D7751A2F2F5EFA00398804 /* Debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -318,6 +331,7 @@
 		};
 		C3B113732D6C6A1D00D142B5 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C3D775182F2F5E8E00398804 /* Release.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -373,6 +387,7 @@
 		};
 		C3B113752D6C6A1D00D142B5 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C3D7751A2F2F5EFA00398804 /* Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -385,6 +400,7 @@
 				DEVELOPMENT_TEAM = 39MK2JX9R4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Nower/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -401,6 +417,7 @@
 		};
 		C3B113762D6C6A1D00D142B5 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C3D775182F2F5E8E00398804 /* Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -413,6 +430,7 @@
 				DEVELOPMENT_TEAM = 39MK2JX9R4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Nower/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -429,6 +447,7 @@
 		};
 		C3D7715A2F26490C00398804 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C3D7751A2F2F5EFA00398804 /* Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
@@ -462,6 +481,7 @@
 		};
 		C3D7715B2F26490C00398804 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C3D775182F2F5E8E00398804 /* Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;

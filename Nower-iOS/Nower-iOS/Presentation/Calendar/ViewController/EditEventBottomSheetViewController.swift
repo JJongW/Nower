@@ -22,6 +22,7 @@ final class EditEventBottomSheetViewController: UIViewController {
         super.viewDidLoad()
 
         popupView.textField.text = todo.text
+        popupView.updateSaveButtonState()
         popupView.saveButton.setTitle("수정", for: .normal)
         popupView.deleteButton.isHidden = false
 
@@ -36,20 +37,18 @@ final class EditEventBottomSheetViewController: UIViewController {
             }
         }
         
-        // 시간/알림 설정 복원
-        popupView.selectedScheduledTime = todo.scheduledTime
-        popupView.selectedReminderMinutesBefore = todo.reminderMinutesBefore
-
-        // 기간별 일정인 경우 설정
+        // 기간별 일정인 경우 설정 (시간/알림 복원보다 먼저 호출)
         if todo.isPeriodEvent {
             popupView.isPeriodMode = true
             if let startDate = todo.startDateObject, let endDate = todo.endDateObject {
-                // 기간별 일정인 경우: 시작일은 원래 일정의 시작일, 종료일은 원래 일정의 종료일
-                // 단, selectedDate가 있다면 시작일은 selectedDate로 설정
-                let initialStartDate = selectedDate != nil ? selectedDate! : startDate
-                popupView.setPeriodMode(true, startDate: initialStartDate, endDate: endDate)
+                popupView.setPeriodMode(true, startDate: startDate, endDate: endDate)
             }
         }
+
+        // 시간/알림 설정 복원 (기간 모드 설정 이후에 호출해야 UI가 올바르게 반영됨)
+        popupView.selectedScheduledTime = todo.scheduledTime
+        popupView.selectedEndScheduledTime = todo.endScheduledTime
+        popupView.selectedReminderMinutesBefore = todo.reminderMinutesBefore
 
         popupView.saveButton.addTarget(self, action: #selector(saveTapped), for: .touchUpInside)
         popupView.deleteButton.addTarget(self, action: #selector(deleteTapped), for: .touchUpInside)
@@ -90,6 +89,7 @@ final class EditEventBottomSheetViewController: UIViewController {
 
         let updatedColor = popupView.selectedColorName
         let updatedTime = popupView.selectedScheduledTime
+        let updatedEndTime = popupView.selectedEndScheduledTime
         let updatedReminder = popupView.selectedReminderMinutesBefore
 
         // 알림 설정 시 권한 요청
@@ -117,7 +117,7 @@ final class EditEventBottomSheetViewController: UIViewController {
                 return
             }
 
-            viewModel.updatePeriodTodo(original: todo, updatedText: updatedText, updatedColor: updatedColor, startDate: startDate, endDate: endDate, scheduledTime: updatedTime, reminderMinutesBefore: updatedReminder)
+            viewModel.updatePeriodTodo(original: todo, updatedText: updatedText, updatedColor: updatedColor, startDate: startDate, endDate: endDate, scheduledTime: updatedTime, endScheduledTime: updatedEndTime, reminderMinutesBefore: updatedReminder)
         } else {
             // 단일 날짜 일정으로 변경
             viewModel.updateTodo(original: todo, updatedText: updatedText, updatedColor: updatedColor, date: selectedDate, scheduledTime: updatedTime, reminderMinutesBefore: updatedReminder)

@@ -99,11 +99,26 @@ final class WeekView: UIView {
         }
     }
 
+    /// 셀 재사용 시 기간별 일정 뷰를 초기화합니다.
+    func clearPeriodEvents() {
+        periodEventViews.forEach { $0.removeFromSuperview() }
+        periodEventViews.removeAll()
+        moreEventLabel?.removeFromSuperview()
+        moreEventLabel = nil
+        periodEventRows = []
+    }
+
     // MARK: - Configuration
     /// 주 뷰를 설정합니다.
     /// - Parameter weekDays: 7개의 날짜 정보 (빈 날짜 포함 가능)
     func configure(weekDays: [WeekDayInfo]) {
         self.weekDays = weekDays
+
+        // 기존 기간별 일정 뷰 즉시 제거 (셀 재사용 시 잔존 방지)
+        periodEventViews.forEach { $0.removeFromSuperview() }
+        periodEventViews.removeAll()
+        moreEventLabel?.removeFromSuperview()
+        moreEventLabel = nil
 
         // 기간별 일정 행 계산
         periodEventRows = calculatePeriodEventRows()
@@ -130,6 +145,9 @@ final class WeekView: UIView {
 
         // 숨겨진 일정 개수 저장 (렌더링 시 사용)
         self.hiddenPeriodEventCount = hiddenEventCount
+
+        // 레이아웃 갱신을 강제하여 renderPeriodEvents()가 반드시 호출되도록 보장
+        setNeedsLayout()
     }
 
     /// 각 날짜별로 기간일정이 차지하는 행 수를 계산합니다.
