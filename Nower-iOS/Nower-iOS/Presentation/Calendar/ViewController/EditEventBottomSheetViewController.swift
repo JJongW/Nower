@@ -12,6 +12,9 @@ final class EditEventBottomSheetViewController: UIViewController {
     var selectedDate: Date!
     var viewModel: CalendarViewModel!
 
+    /// 반복 일정 인스턴스의 발생 날짜 (가상 인스턴스의 date)
+    var occurrenceDate: Date?
+
     private let popupView = NewEventView()
 
     override func loadView() {
@@ -21,9 +24,10 @@ final class EditEventBottomSheetViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        popupView.setInitialSelectedDate(selectedDate)
         popupView.textField.text = todo.text
+        popupView.saveButtonActiveTitle = "수정"
         popupView.updateSaveButtonState()
-        popupView.saveButton.setTitle("수정", for: .normal)
         popupView.deleteButton.isHidden = false
 
         // 색상 선택 (기존 색상 이름이 톤이 없는 경우 기본 톤으로 변환)
@@ -49,6 +53,13 @@ final class EditEventBottomSheetViewController: UIViewController {
         popupView.selectedScheduledTime = todo.scheduledTime
         popupView.selectedEndScheduledTime = todo.endScheduledTime
         popupView.selectedReminderMinutesBefore = todo.reminderMinutesBefore
+
+        // 반복 설정 복원
+        popupView.selectedRecurrenceInfo = todo.recurrenceInfo
+        if todo.isRecurringEvent {
+            // 반복 일정 편집 시 기간 모드 비활성화
+            popupView.updateRecurrenceEnabled()
+        }
 
         popupView.saveButton.addTarget(self, action: #selector(saveTapped), for: .touchUpInside)
         popupView.deleteButton.addTarget(self, action: #selector(deleteTapped), for: .touchUpInside)
@@ -91,6 +102,7 @@ final class EditEventBottomSheetViewController: UIViewController {
         let updatedTime = popupView.selectedScheduledTime
         let updatedEndTime = popupView.selectedEndScheduledTime
         let updatedReminder = popupView.selectedReminderMinutesBefore
+        let updatedRecurrence = popupView.selectedRecurrenceInfo
 
         // 알림 설정 시 권한 요청
         if updatedReminder != nil {
@@ -102,6 +114,31 @@ final class EditEventBottomSheetViewController: UIViewController {
                     }
                 }
             }
+        }
+
+        // 반복 일정인 경우 scope 액션 시트 표시
+        if todo.isRecurringEvent {
+            showRecurrenceScopeSheet { [weak self] scope in
+                guard let self = self else { return }
+                let updated = TodoItem(
+                    text: updatedText,
+                    isRepeating: updatedRecurrence != nil,
+                    date: self.todo.date,
+                    colorName: updatedColor,
+                    scheduledTime: updatedTime,
+                    reminderMinutesBefore: updatedReminder,
+                    recurrenceInfo: updatedRecurrence
+                )
+                self.viewModel.updateRecurringTodo(
+                    original: self.todo,
+                    updated: updated,
+                    occurrenceDate: self.occurrenceDate ?? self.selectedDate,
+                    scope: scope
+                )
+                self.popupView.triggerSuccessFeedback()
+                self.dismissAndRefresh(message: "반복 일정이 수정되었습니다")
+            }
+            return
         }
 
         // 기간별 일정 처리
@@ -125,15 +162,17 @@ final class EditEventBottomSheetViewController: UIViewController {
 
         // 성공 햅틱 피드백
         popupView.triggerSuccessFeedback()
+        dismissAndRefresh(message: "일정이 수정되었습니다")
+    }
 
+    private func dismissAndRefresh(message: String) {
         dismiss(animated: true) {
-            // 일정 수정 후 즉시 UI 새로고침을 위한 수동 알림 발송
             DispatchQueue.main.async {
                 NotificationCenter.default.post(name: Notification.Name("CloudSyncManager.todosDidUpdate"), object: nil)
             }
 
             if let vc = self.coordinator?.navigationController.topViewController {
-                vc.showToast(message: "일정이 수정되었습니다")
+                vc.showToast(message: message)
             }
             self.coordinator?.returnToBack()
         }
@@ -146,7 +185,21 @@ final class EditEventBottomSheetViewController: UIViewController {
     }
 
     @objc private func deleteTapped() {
-        // 삭제 확인 다이얼로그 표시
+        // 반복 일정인 경우 scope 액션 시트 표시
+        if todo.isRecurringEvent {
+            showRecurrenceScopeSheet { [weak self] scope in
+                guard let self = self else { return }
+                self.viewModel.deleteRecurringTodo(
+                    self.todo,
+                    occurrenceDate: self.occurrenceDate ?? self.selectedDate,
+                    scope: scope
+                )
+                self.dismissAndRefresh(message: "반복 일정이 삭제되었습니다")
+            }
+            return
+        }
+
+        // 일반 일정 삭제 확인 다이얼로그
         let alert = UIAlertController(
             title: "일정 삭제",
             message: "'\(todo.text)'을(를) 삭제하시겠습니까?",
@@ -164,19 +217,45 @@ final class EditEventBottomSheetViewController: UIViewController {
     private func performDelete() {
         viewModel.deleteTodo(todo)
         dismiss(animated: true) {
-            // 일정 삭제 후 즉시 UI 새로고침을 위한 수동 알림 발송
             DispatchQueue.main.async {
                 NotificationCenter.default.post(name: Notification.Name("CloudSyncManager.todosDidUpdate"), object: nil)
 
                 if let vc = self.coordinator?.navigationController.topViewController {
-                    #if DEBUG
-                    print("일정 삭제됨.")
-                    #endif
                     vc.showToast(message: "일정이 삭제되었습니다")
                 }
                 self.coordinator?.returnToBack()
             }
         }
+    }
+
+    // MARK: - Recurrence Scope Sheet
+
+    private func showRecurrenceScopeSheet(completion: @escaping (RecurrenceEditScope) -> Void) {
+        let alert = UIAlertController(
+            title: "반복 일정",
+            message: "어떤 일정에 적용하시겠습니까?",
+            preferredStyle: .actionSheet
+        )
+
+        alert.addAction(UIAlertAction(title: "이 일정만", style: .default) { _ in
+            completion(.thisOnly)
+        })
+        alert.addAction(UIAlertAction(title: "이 일정 및 향후 일정", style: .default) { _ in
+            completion(.thisAndFuture)
+        })
+        alert.addAction(UIAlertAction(title: "모든 일정", style: .destructive) { _ in
+            completion(.all)
+        })
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+
+        // iPad 팝오버 지원
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = view
+            popover.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+
+        present(alert, animated: true)
     }
 
     @objc private func cancelTapped() {

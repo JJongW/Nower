@@ -12,6 +12,7 @@ import Combine
 import NowerCore
 #endif
 
+@MainActor
 final class SyncStatusViewModel: ObservableObject {
 
     // MARK: - Published

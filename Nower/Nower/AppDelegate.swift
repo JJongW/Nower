@@ -30,6 +30,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 윈도우 설정 관련 알림 설정
         NotificationCenter.default.addObserver(self, selector: #selector(pinToTopLeftChanged), name: .init("PinToTopLeftChanged"), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(alwaysOnTopChanged), name: .init("AlwaysOnTopChanged"), object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(desktopModeChanged), name: .init("DesktopModeChanged"), object: nil)
     }
 
     func setupMainWindow() {
@@ -143,9 +144,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         let alwaysOnTopItem = NSMenuItem(title: "항상 위에 표시", action: #selector(toggleAlwaysOnTop), keyEquivalent: "")
         alwaysOnTopItem.state = settingsManager.isAlwaysOnTop ? .on : .off
-        
+
+        let desktopModeItem = NSMenuItem(title: "배경화면 고정", action: #selector(toggleDesktopMode), keyEquivalent: "")
+        desktopModeItem.state = settingsManager.isDesktopMode ? .on : .off
+
         quickSettingsMenu.addItem(pinTopLeftItem)
         quickSettingsMenu.addItem(alwaysOnTopItem)
+        quickSettingsMenu.addItem(NSMenuItem.separator())
+        quickSettingsMenu.addItem(desktopModeItem)
         quickSettingsItem.submenu = quickSettingsMenu
         
         settingsMenu.addItem(quickSettingsItem)
@@ -228,6 +234,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
+    /// 배경화면 고정 모드 변경 처리
+    @objc func desktopModeChanged() {
+        guard let window = window else { return }
+
+        DispatchQueue.main.async {
+            let isDesktop = self.settingsManager.isDesktopMode
+            window.setDesktopMode(isDesktop)
+
+            // 배경화면 모드와 항상 위에 표시는 상호 배타
+            if isDesktop && self.settingsManager.isAlwaysOnTop {
+                self.settingsManager.isAlwaysOnTop = false
+            }
+
+            #if DEBUG
+            print("🖥️ [AppDelegate] 배경화면 고정: \(isDesktop ? "활성화" : "비활성화")")
+            #endif
+        }
+    }
+
+    /// 배경화면 고정 토글
+    @objc func toggleDesktopMode() {
+        settingsManager.isDesktopMode.toggle()
+        updateMenuBar()
+    }
+
     /// 좌측 상단 고정 토글
     @objc func togglePinToTopLeft() {
         settingsManager.isPinToTopLeft.toggle()
@@ -248,21 +279,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     /// 앱 시작 시 저장된 설정들을 적용
     private func applyInitialSettings() {
         guard let window = window else { return }
-        
+
         // 좌측 상단 고정 적용
         if settingsManager.isPinToTopLeft {
             window.setPinToTopLeft(true)
         }
-        
-        // 항상 위에 표시 적용
-        if settingsManager.isAlwaysOnTop {
+
+        // 항상 위에 표시 적용 (배경화면 고정과 상호 배타)
+        if settingsManager.isAlwaysOnTop && !settingsManager.isDesktopMode {
             window.setAlwaysOnTop(true)
         }
-        
+
+        // 배경화면 고정 모드 적용
+        if settingsManager.isDesktopMode {
+            window.setDesktopMode(true)
+        }
+
         #if DEBUG
         print("🚀 [AppDelegate] 초기 설정 적용 완료")
         print("   - 좌측 상단 고정: \(settingsManager.isPinToTopLeft)")
         print("   - 항상 위에 표시: \(settingsManager.isAlwaysOnTop)")
+        print("   - 배경화면 고정: \(settingsManager.isDesktopMode)")
         #endif
     }
 }

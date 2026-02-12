@@ -15,30 +15,30 @@ struct EventListView: View {
     @Binding var isPresented: Bool
     @Binding var showToast: Bool
     @Binding var toastMessage: String
-    
+
     @EnvironmentObject var viewModel: CalendarViewModel
-    
+
     @State private var isShowingAddEvent = false
     @State private var selectedTodoForEdit: TodoItem? = nil
     @State private var isShowingEditPopup = false
-    
+
     private var todos: [TodoItem] {
         viewModel.todos(for: selectedDate)
     }
-    
+
     private var dateString: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd"
         return formatter.string(from: selectedDate)
     }
-    
+
     private var weekDayString: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEE."
         formatter.locale = Locale(identifier: "en_US")
         return formatter.string(from: selectedDate).uppercased()
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // 헤더 영역
@@ -48,21 +48,21 @@ struct EventListView: View {
                     Text(dateString)
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(AppColors.textPrimary)
-                    
+
                     Text(weekDayString)
                         .font(.system(size: 12, weight: .light))
                         .foregroundColor(AppColors.textPrimary)
                 }
-                
+
                 Spacer()
-                
+
                 // "Today" 또는 날짜 라벨
                 Text(isToday ? "Today" : selectedDate.formatted(date: .abbreviated, time: .omitted))
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(AppColors.textPrimary)
-                
+
                 Spacer()
-                
+
                 // 닫기 버튼
                 Button(action: {
                     isPresented = false
@@ -76,7 +76,7 @@ struct EventListView: View {
             .padding(.horizontal, 20)
             .padding(.top, 20)
             .padding(.bottom, 12)
-            
+
             // 일정 리스트
             if todos.isEmpty {
                 // 일정이 없는 경우
@@ -113,7 +113,7 @@ struct EventListView: View {
                     .padding(.vertical, 12)
                 }
             }
-            
+
             // 추가 버튼
             Button(action: {
                 isShowingAddEvent = true
@@ -144,7 +144,8 @@ struct EventListView: View {
                         date: selectedDate.toDateString(),
                         isPresented: $isShowingEditPopup,
                         showToast: $showToast,
-                        toastMessage: $toastMessage
+                        toastMessage: $toastMessage,
+                        occurrenceDate: todo.isRecurringEvent ? selectedDate : nil
                     )
                     .environmentObject(viewModel)
                 }
@@ -172,7 +173,7 @@ struct EventListView: View {
             }
         }
     }
-    
+
     private var isToday: Bool {
         Calendar.current.isDateInToday(selectedDate)
     }
@@ -181,48 +182,75 @@ struct EventListView: View {
 /// 일정 리스트의 개별 행 뷰
 struct EventListRowView: View {
     let todo: TodoItem
-    
+
     private var backgroundColor: Color {
         AppColors.color(for: todo.colorName)
     }
-    
+
     private var textColor: Color {
         AppColors.contrastingTextColor(for: backgroundColor)
     }
-    
+
     private var subtitleText: String {
+        var parts: [String] = []
+
+        // 반복 정보 표시
+        if let info = todo.recurrenceInfo {
+            parts.append(info.displayString)
+        }
+
+        // 기간 또는 시간 정보
         if todo.isPeriodEvent, let startDate = todo.startDateObject, let endDate = todo.endDateObject {
             let formatter = DateFormatter()
             formatter.dateFormat = "MM/dd"
             formatter.locale = Locale(identifier: "ko_KR")
-            
+
             let startString = formatter.string(from: startDate)
             let endString = formatter.string(from: endDate)
-            
+
             if Calendar.current.isDate(startDate, inSameDayAs: endDate) {
-                return startString
+                parts.append(startString)
             } else {
-                return "\(startString) - \(endString)"
+                parts.append("\(startString) - \(endString)")
+            }
+        } else if let time = todo.scheduledTime {
+            let timeParts = time.split(separator: ":")
+            if timeParts.count == 2, let hour = Int(timeParts[0]), let minute = Int(timeParts[1]) {
+                let period = hour < 12 ? "오전" : "오후"
+                let displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour)
+                parts.append(String(format: "%@ %d:%02d", period, displayHour, minute))
+            } else {
+                parts.append(time)
             }
         } else {
-            return "일상"
+            parts.append("종일")
         }
+
+        return parts.joined(separator: " · ")
     }
-    
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(todo.text)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(textColor)
-                
+                HStack(spacing: 4) {
+                    Text(todo.text)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(textColor)
+
+                    if todo.isRecurringEvent {
+                        Image(systemName: "arrow.2.squarepath")
+                            .font(.system(size: 11))
+                            .foregroundColor(textColor.opacity(0.8))
+                    }
+                }
+
                 Text(subtitleText)
                     .font(.system(size: 12))
                     .foregroundColor(textColor.opacity(0.8))
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            
+
             Spacer()
         }
         .background(backgroundColor)

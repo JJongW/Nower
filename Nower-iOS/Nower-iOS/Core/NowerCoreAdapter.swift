@@ -24,6 +24,53 @@ public typealias NSyncStatus = NowerCore.SyncStatus
 public typealias NCalendarDay = NowerCore.CalendarDay
 public typealias NWeekDayInfo = NowerCore.WeekDayInfo
 
+// MARK: - RecurrenceInfo ↔ RecurrenceRule Conversion
+
+extension RecurrenceInfo {
+    /// RecurrenceInfo를 NowerCore RecurrenceRule로 변환
+    func toRecurrenceRule() -> NowerCore.RecurrenceRule {
+        let freq: NowerCore.RecurrenceRule.Frequency
+        switch frequency {
+        case "daily": freq = .daily
+        case "weekly": freq = .weekly
+        case "monthly": freq = .monthly
+        case "yearly": freq = .yearly
+        default: freq = .daily
+        }
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let parsedEndDate: Date? = endDate.flatMap { formatter.date(from: $0) }
+        let weekDays: Set<Int>? = daysOfWeek.map { Set($0) }
+
+        return NowerCore.RecurrenceRule(
+            frequency: freq,
+            interval: interval,
+            endDate: parsedEndDate,
+            daysOfWeek: weekDays,
+            dayOfMonth: dayOfMonth,
+            endAfterCount: endAfterCount
+        )
+    }
+
+    /// NowerCore RecurrenceRule에서 RecurrenceInfo를 생성
+    static func from(_ rule: NowerCore.RecurrenceRule) -> RecurrenceInfo {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let endDateStr: String? = rule.endDate.map { formatter.string(from: $0) }
+        let days: [Int]? = rule.daysOfWeek.map { Array($0).sorted() }
+
+        return RecurrenceInfo(
+            frequency: rule.frequency.rawValue,
+            interval: rule.interval,
+            endDate: endDateStr,
+            endAfterCount: rule.endAfterCount,
+            daysOfWeek: days,
+            dayOfMonth: rule.dayOfMonth
+        )
+    }
+}
+
 // MARK: - TodoItem ↔ Event Conversion
 
 extension TodoItem {
@@ -55,7 +102,7 @@ extension TodoItem {
             endDate = startDate
         }
 
-        let recurrenceRule: NowerCore.RecurrenceRule? = isRepeating ? .daily : nil
+        let recurrenceRule: NowerCore.RecurrenceRule? = recurrenceInfo?.toRecurrenceRule() ?? (isRepeating ? .daily : nil)
 
         return NowerCore.Event(
             id: id,

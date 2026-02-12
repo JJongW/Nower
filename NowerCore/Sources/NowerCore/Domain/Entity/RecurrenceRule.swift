@@ -42,18 +42,23 @@ public struct RecurrenceRule: Codable, Hashable, Sendable {
     /// 월간 반복 시 특정 일자 지정 (1-31)
     public let dayOfMonth: Int?
 
+    /// N회 후 종료 (endDate 대안)
+    public let endAfterCount: Int?
+
     public init(
         frequency: Frequency,
         interval: Int = 1,
         endDate: Date? = nil,
         daysOfWeek: Set<Int>? = nil,
-        dayOfMonth: Int? = nil
+        dayOfMonth: Int? = nil,
+        endAfterCount: Int? = nil
     ) {
         self.frequency = frequency
         self.interval = max(1, interval)
         self.endDate = endDate
         self.daysOfWeek = daysOfWeek
         self.dayOfMonth = dayOfMonth
+        self.endAfterCount = endAfterCount
     }
 
     /// 다음 발생 날짜 계산

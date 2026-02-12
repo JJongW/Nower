@@ -26,6 +26,15 @@ class EventTableViewCell: UITableViewCell {
         return label
     }()
 
+    private let recurrenceIconView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.image = UIImage(systemName: "arrow.2.squarepath")
+        imageView.contentMode = .scaleAspectFit
+        imageView.tintColor = .white
+        imageView.isHidden = true
+        return imageView
+    }()
+
     private let containerView = UIView()
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
@@ -41,6 +50,7 @@ class EventTableViewCell: UITableViewCell {
         backgroundColor = AppColors.background
         contentView.addSubview(containerView)
         containerView.addSubview(eventTitleLabel)
+        containerView.addSubview(recurrenceIconView)
         containerView.addSubview(eventSubtitleLabel)
 
         containerView.layer.cornerRadius = 12
@@ -53,7 +63,14 @@ class EventTableViewCell: UITableViewCell {
 
         eventTitleLabel.snp.makeConstraints {
             $0.top.equalToSuperview().offset(10)
-            $0.leading.trailing.equalToSuperview().inset(12)
+            $0.leading.equalToSuperview().offset(12)
+        }
+
+        recurrenceIconView.snp.makeConstraints {
+            $0.centerY.equalTo(eventTitleLabel)
+            $0.leading.equalTo(eventTitleLabel.snp.trailing).offset(4)
+            $0.trailing.lessThanOrEqualToSuperview().offset(-12)
+            $0.size.equalTo(14)
         }
 
         eventSubtitleLabel.snp.makeConstraints {
@@ -70,10 +87,22 @@ class EventTableViewCell: UITableViewCell {
         let textColor = AppColors.contrastingTextColor(for: backgroundColor)
         eventTitleLabel.textColor = textColor
         eventSubtitleLabel.textColor = textColor
+        recurrenceIconView.tintColor = textColor
 
         eventTitleLabel.text = todo.text
 
-        // 서브타이틀: 시간 정보 표시
+        // 반복 아이콘 표시
+        recurrenceIconView.isHidden = !todo.isRecurringEvent
+
+        // 서브타이틀 구성
+        var subtitleParts: [String] = []
+
+        // 반복 정보 표시
+        if let info = todo.recurrenceInfo {
+            subtitleParts.append(info.displayString)
+        }
+
+        // 시간 정보 표시
         if todo.isPeriodEvent, let startDate = todo.startDateObject, let endDate = todo.endDateObject {
             let formatter = DateFormatter()
             formatter.dateFormat = "MM/dd"
@@ -82,35 +111,33 @@ class EventTableViewCell: UITableViewCell {
             var startString = formatter.string(from: startDate)
             var endString = formatter.string(from: endDate)
 
-            // 시작 시간이 있으면 날짜 뒤에 추가
             if let startTime = todo.scheduledTime {
                 startString += " \(startTime)"
             }
-            // 종료 시간이 있으면 날짜 뒤에 추가
             if let endTime = todo.endScheduledTime {
                 endString += " \(endTime)"
             }
 
             if Calendar.current.isDate(startDate, inSameDayAs: endDate) {
-                eventSubtitleLabel.text = startString
+                subtitleParts.append(startString)
             } else {
-                eventSubtitleLabel.text = "\(startString) ~ \(endString)"
+                subtitleParts.append("\(startString) ~ \(endString)")
             }
         } else {
-            // 단일 일정
             if let time = todo.scheduledTime {
-                // "HH:mm" → 오전/오후 형식
                 let parts = time.split(separator: ":")
                 if parts.count == 2, let hour = Int(parts[0]), let minute = Int(parts[1]) {
                     let period = hour < 12 ? "오전" : "오후"
                     let displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour)
-                    eventSubtitleLabel.text = String(format: "%@ %d:%02d", period, displayHour, minute)
+                    subtitleParts.append(String(format: "%@ %d:%02d", period, displayHour, minute))
                 } else {
-                    eventSubtitleLabel.text = time
+                    subtitleParts.append(time)
                 }
             } else {
-                eventSubtitleLabel.text = "종일"
+                subtitleParts.append("종일")
             }
         }
+
+        eventSubtitleLabel.text = subtitleParts.joined(separator: " · ")
     }
 }

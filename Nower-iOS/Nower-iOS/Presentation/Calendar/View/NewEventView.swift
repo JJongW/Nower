@@ -6,10 +6,18 @@
 //
 
 import UIKit
+import SnapKit
 
 final class NewEventView: UIView {
 
     // MARK: - Components
+
+    let dateContextLabel: UILabel = {
+        let label = UILabel()
+        label.font = UIFont.systemFont(ofSize: 14, weight: .medium)
+        label.textColor = AppColors.textFieldPlaceholder
+        return label
+    }()
 
     let textFieldBackgroundView: UIView = {
         let view = UIView()
@@ -21,11 +29,13 @@ final class NewEventView: UIView {
 
     let textField: UITextField = {
         let textField = UITextField()
-        textField.placeholder = "일정을 입력하세요"
+        let examples = ["점심 약속", "팀 미팅", "치과 예약", "운동", "생일 파티"]
+        textField.placeholder = examples.randomElement()
         textField.textColor = AppColors.textPrimary
         textField.setPlaceholder(color: AppColors.textFieldPlaceholder)
         textField.borderStyle = .none
         textField.backgroundColor = .clear
+        textField.returnKeyType = .done
         return textField
     }()
 
@@ -35,15 +45,6 @@ final class NewEventView: UIView {
         stackView.spacing = 30
         stackView.distribution = .fillEqually
         return stackView
-    }()
-
-    private let colorHintLabel: UILabel = {
-        let label = UILabel()
-        label.text = "꾹 눌러 색상 톤 선택"
-        label.font = UIFont.systemFont(ofSize: 12, weight: .regular)
-        label.textColor = AppColors.textFieldPlaceholder
-        label.textAlignment = .center
-        return label
     }()
 
     let saveButton: UIButton = {
@@ -169,9 +170,16 @@ final class NewEventView: UIView {
     let timeValueButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("하루 종일", for: .normal)
-        button.setTitleColor(AppColors.textHighlighted, for: .normal)
+        button.setTitleColor(AppColors.textFieldPlaceholder, for: .normal)
         button.titleLabel?.font = UIFont.systemFont(ofSize: 15, weight: .medium)
         return button
+    }()
+
+    private let timeChevron: UIImageView = {
+        let iv = UIImageView(image: UIImage(systemName: "chevron.right"))
+        iv.tintColor = AppColors.textFieldPlaceholder
+        iv.contentMode = .scaleAspectFit
+        return iv
     }()
 
     // MARK: - 종료 시간 설정 컴포넌트 (기간별 일정용)
@@ -217,10 +225,17 @@ final class NewEventView: UIView {
         return view
     }()
 
+    private let reminderChevron: UIImageView = {
+        let iv = UIImageView(image: UIImage(systemName: "chevron.right"))
+        iv.tintColor = AppColors.textFieldPlaceholder
+        iv.contentMode = .scaleAspectFit
+        return iv
+    }()
+
     private let reminderIconView: UIImageView = {
         let imageView = UIImageView()
         imageView.image = UIImage(named: "ic_alarm")?.withRenderingMode(.alwaysTemplate)
-        imageView.tintColor = AppColors.coralred
+        imageView.tintColor = AppColors.textFieldPlaceholder
         imageView.contentMode = .scaleAspectFit
         return imageView
     }()
@@ -236,10 +251,57 @@ final class NewEventView: UIView {
     let reminderValueButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("없음", for: .normal)
-        button.setTitleColor(AppColors.textHighlighted, for: .normal)
+        button.setTitleColor(AppColors.textFieldPlaceholder, for: .normal)
         button.titleLabel?.font = UIFont.systemFont(ofSize: 15, weight: .medium)
         return button
     }()
+
+    // MARK: - 반복 설정 컴포넌트
+
+    let recurrenceSettingContainer: UIView = {
+        let view = UIView()
+        view.backgroundColor = AppColors.textFieldBackground
+        view.layer.cornerRadius = 10
+        view.layer.masksToBounds = true
+        return view
+    }()
+
+    private let recurrenceChevron: UIImageView = {
+        let iv = UIImageView(image: UIImage(systemName: "chevron.right"))
+        iv.tintColor = AppColors.textFieldPlaceholder
+        iv.contentMode = .scaleAspectFit
+        return iv
+    }()
+
+    private let recurrenceIconView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.image = UIImage(systemName: "arrow.2.squarepath")
+        imageView.tintColor = AppColors.textFieldPlaceholder
+        imageView.contentMode = .scaleAspectFit
+        return imageView
+    }()
+
+    private let recurrenceTitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "반복"
+        label.textColor = AppColors.textPrimary
+        label.font = UIFont.systemFont(ofSize: 16, weight: .medium)
+        return label
+    }()
+
+    let recurrenceValueButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("안 함", for: .normal)
+        button.setTitleColor(AppColors.textFieldPlaceholder, for: .normal)
+        button.titleLabel?.font = UIFont.systemFont(ofSize: 15, weight: .medium)
+        return button
+    }()
+
+    // MARK: - 반복 프로퍼티
+
+    var selectedRecurrenceInfo: RecurrenceInfo? {
+        didSet { updateRecurrenceDisplay() }
+    }
 
     // MARK: - 기존 컴포넌트들
 
@@ -251,6 +313,9 @@ final class NewEventView: UIView {
     }
     let colorNames: [String] = ["skyblue", "peach", "lavender", "mintgreen", "coralred"]
     private var colorVariationPicker: ColorVariationPickerView?
+
+    /// 저장 버튼 활성 시 표시할 텍스트 (기본: "추가", 편집 시 "수정"으로 변경)
+    var saveButtonActiveTitle: String = "추가"
     
     // MARK: - 기간 선택 관련 프로퍼티
 
@@ -304,6 +369,7 @@ final class NewEventView: UIView {
         setupUI()
         setupKeyboardObservers()
         setupDismissKeyboardGesture()
+        textField.delegate = self
     }
 
     required init?(coder: NSCoder) {
@@ -319,29 +385,70 @@ final class NewEventView: UIView {
     private let scrollView: UIScrollView = {
         let sv = UIScrollView()
         sv.showsVerticalScrollIndicator = false
-        sv.alwaysBounceVertical = true
+        sv.alwaysBounceVertical = false
         sv.keyboardDismissMode = .interactive
         return sv
     }()
 
     private let contentView = UIView()
 
+    private let buttonStackView: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .horizontal
+        stack.distribution = .fill
+        stack.spacing = 12
+        stack.alignment = .fill
+        return stack
+    }()
+
+    private var buttonBottomConstraint: Constraint?
+
     // MARK: - UI Setup
 
     private func setupUI() {
         backgroundColor = AppColors.popupBackground
+
+        // 저장/삭제 버튼 컨테이너 (스크롤뷰 밖, 하단 고정)
+        addSubview(buttonStackView)
+        buttonStackView.addArrangedSubview(saveButton)
+        buttonStackView.addArrangedSubview(deleteButton)
+
+        buttonStackView.snp.makeConstraints {
+            $0.leading.trailing.equalToSuperview().inset(20)
+            buttonBottomConstraint = $0.bottom.equalTo(safeAreaLayoutGuide.snp.bottom).offset(-16).constraint
+            $0.height.equalTo(52)
+        }
+
+        saveButton.snp.makeConstraints {
+            $0.height.equalTo(52)
+            $0.width.equalTo(deleteButton).multipliedBy(2)
+        }
+
+        deleteButton.snp.makeConstraints {
+            $0.height.equalTo(52)
+        }
+
+        deleteButton.isHidden = true
 
         // 스크롤뷰 설정
         addSubview(scrollView)
         scrollView.addSubview(contentView)
 
         scrollView.snp.makeConstraints {
-            $0.edges.equalToSuperview()
+            $0.top.leading.trailing.equalToSuperview()
+            $0.bottom.equalTo(buttonStackView.snp.top).offset(-8)
         }
 
         contentView.snp.makeConstraints {
             $0.edges.equalToSuperview()
             $0.width.equalToSuperview()
+        }
+
+        // 날짜 컨텍스트 라벨
+        contentView.addSubview(dateContextLabel)
+        dateContextLabel.snp.makeConstraints {
+            $0.top.equalToSuperview().offset(48) // 8pt 그리드 (48 = 6 * 8), grabber 아래 충분한 여백
+            $0.leading.equalToSuperview().offset(24)
         }
 
         // 텍스트 필드
@@ -350,7 +457,7 @@ final class NewEventView: UIView {
 
         // design-skills: 8pt 그리드 시스템
         textFieldBackgroundView.snp.makeConstraints {
-            $0.top.equalToSuperview().offset(24) // 8pt 그리드 (24 = 3 * 8)
+            $0.top.equalTo(dateContextLabel.snp.bottom).offset(12)
             $0.height.equalTo(56) // 최소 터치 타겟 44pt + 패딩
             $0.leading.trailing.equalToSuperview().inset(20)
         }
@@ -402,6 +509,7 @@ final class NewEventView: UIView {
         timeSettingContainer.addSubview(timeIconView)
         timeSettingContainer.addSubview(timeTitleLabel)
         timeSettingContainer.addSubview(timeValueButton)
+        timeSettingContainer.addSubview(timeChevron)
 
         timeSettingContainer.snp.makeConstraints {
             $0.top.equalTo(dateSelectionContainer.snp.bottom).offset(16)
@@ -420,8 +528,15 @@ final class NewEventView: UIView {
             $0.centerY.equalToSuperview()
         }
 
-        timeValueButton.snp.makeConstraints {
+        timeChevron.snp.makeConstraints {
             $0.trailing.equalToSuperview().offset(-16)
+            $0.centerY.equalToSuperview()
+            $0.width.equalTo(8)
+            $0.height.equalTo(13)
+        }
+
+        timeValueButton.snp.makeConstraints {
+            $0.trailing.equalTo(timeChevron.snp.leading).offset(-8)
             $0.centerY.equalToSuperview()
         }
 
@@ -462,10 +577,11 @@ final class NewEventView: UIView {
         contentView.addSubview(reminderSettingContainer)
         reminderSettingContainer.addSubview(reminderIconView)
         reminderSettingContainer.addSubview(reminderTitleLabel)
+        reminderSettingContainer.addSubview(reminderChevron)
         reminderSettingContainer.addSubview(reminderValueButton)
 
         reminderSettingContainer.snp.makeConstraints {
-            $0.top.equalTo(endTimeSettingContainer.snp.bottom).offset(8)
+            $0.top.equalTo(endTimeSettingContainer.snp.bottom).offset(16)
             $0.leading.trailing.equalToSuperview().inset(20)
             $0.height.equalTo(52)
         }
@@ -481,27 +597,64 @@ final class NewEventView: UIView {
             $0.centerY.equalToSuperview()
         }
 
-        reminderValueButton.snp.makeConstraints {
+        reminderChevron.snp.makeConstraints {
             $0.trailing.equalToSuperview().offset(-16)
+            $0.centerY.equalToSuperview()
+            $0.width.equalTo(8)
+            $0.height.equalTo(13)
+        }
+
+        reminderValueButton.snp.makeConstraints {
+            $0.trailing.equalTo(reminderChevron.snp.leading).offset(-8)
             $0.centerY.equalToSuperview()
         }
 
         // 시간 미설정 시 알림 행 비활성화
         updateReminderEnabled()
 
-        // 색상 선택
-        contentView.addSubview(colorStackView)
-        contentView.addSubview(colorHintLabel)
+        // 반복 설정 행
+        contentView.addSubview(recurrenceSettingContainer)
+        recurrenceSettingContainer.addSubview(recurrenceIconView)
+        recurrenceSettingContainer.addSubview(recurrenceTitleLabel)
+        recurrenceSettingContainer.addSubview(recurrenceChevron)
+        recurrenceSettingContainer.addSubview(recurrenceValueButton)
 
-        colorStackView.snp.makeConstraints {
-            $0.top.equalTo(reminderSettingContainer.snp.bottom).offset(24) // 8pt 그리드 (24 = 3 * 8)
-            $0.leading.trailing.equalToSuperview().inset(32)
-            $0.height.equalTo(40)
+        recurrenceSettingContainer.snp.makeConstraints {
+            $0.top.equalTo(reminderSettingContainer.snp.bottom).offset(8)
+            $0.leading.trailing.equalToSuperview().inset(20)
+            $0.height.equalTo(52)
         }
 
-        colorHintLabel.snp.makeConstraints {
-            $0.top.equalTo(colorStackView.snp.bottom).offset(8)
-            $0.centerX.equalToSuperview()
+        recurrenceIconView.snp.makeConstraints {
+            $0.leading.equalToSuperview().offset(16)
+            $0.centerY.equalToSuperview()
+            $0.size.equalTo(20)
+        }
+
+        recurrenceTitleLabel.snp.makeConstraints {
+            $0.leading.equalTo(recurrenceIconView.snp.trailing).offset(8)
+            $0.centerY.equalToSuperview()
+        }
+
+        recurrenceChevron.snp.makeConstraints {
+            $0.trailing.equalToSuperview().offset(-16)
+            $0.centerY.equalToSuperview()
+            $0.width.equalTo(8)
+            $0.height.equalTo(13)
+        }
+
+        recurrenceValueButton.snp.makeConstraints {
+            $0.trailing.equalTo(recurrenceChevron.snp.leading).offset(-8)
+            $0.centerY.equalToSuperview()
+        }
+
+        // 색상 선택
+        contentView.addSubview(colorStackView)
+
+        colorStackView.snp.makeConstraints {
+            $0.top.equalTo(recurrenceSettingContainer.snp.bottom).offset(24) // 8pt 그리드 (24 = 3 * 8)
+            $0.leading.trailing.equalToSuperview().inset(32)
+            $0.height.equalTo(40)
         }
 
         for color in colorNames {
@@ -533,48 +686,30 @@ final class NewEventView: UIView {
         // 초기 선택 상태 업데이트
         updateColorSelection()
 
-        // 저장/삭제 버튼 컨테이너 (가로로 나란히 배치)
-        let buttonStackView: UIStackView = {
-            let stack = UIStackView()
-            stack.axis = .horizontal
-            stack.distribution = .fill // 수정 버튼이 더 넓게
-            stack.spacing = 12 // 8pt 그리드 근사값 (12 = 1.5 * 8)
-            stack.alignment = .fill
-            return stack
-        }()
-
-        contentView.addSubview(buttonStackView)
-        buttonStackView.addArrangedSubview(saveButton)
-        buttonStackView.addArrangedSubview(deleteButton)
-
-        buttonStackView.snp.makeConstraints {
-            $0.top.equalTo(colorHintLabel.snp.bottom).offset(24) // 8pt 그리드 (24 = 3 * 8)
-            $0.leading.trailing.equalToSuperview().inset(20)
-            $0.height.equalTo(52) // 최소 터치 타겟 44pt + 패딩
-            $0.bottom.equalToSuperview().offset(-24) // 스크롤 콘텐츠 하단 여백
+        // 스크롤 콘텐츠 하단 여백
+        colorStackView.snp.makeConstraints {
+            $0.bottom.equalToSuperview().offset(-24)
         }
-
-        // 수정 버튼이 삭제 버튼보다 2배 넓게
-        saveButton.snp.makeConstraints {
-            $0.height.equalTo(52)
-            $0.width.equalTo(deleteButton).multipliedBy(2)
-        }
-
-        deleteButton.snp.makeConstraints {
-            $0.height.equalTo(52)
-        }
-
-        deleteButton.isHidden = true
 
         // 스위치 액션 설정
         periodModeSwitch.addTarget(self, action: #selector(periodModeSwitchChanged(_:)), for: .valueChanged)
         startDateButton.addTarget(self, action: #selector(startDateButtonTapped), for: .touchUpInside)
         endDateButton.addTarget(self, action: #selector(endDateButtonTapped), for: .touchUpInside)
 
-        // 시간/알림 버튼 액션
+        // 하루 종일 스위치 액션
+        // 시간/알림/반복 버튼 액션
         timeValueButton.addTarget(self, action: #selector(timeValueButtonTapped), for: .touchUpInside)
         endTimeValueButton.addTarget(self, action: #selector(endTimeValueButtonTapped), for: .touchUpInside)
         reminderValueButton.addTarget(self, action: #selector(reminderValueButtonTapped), for: .touchUpInside)
+        recurrenceValueButton.addTarget(self, action: #selector(recurrenceValueButtonTapped), for: .touchUpInside)
+
+        // 행 전체 탭 제스처
+        let timeTap = UITapGestureRecognizer(target: self, action: #selector(timeRowTapped))
+        timeSettingContainer.addGestureRecognizer(timeTap)
+        let reminderTap = UITapGestureRecognizer(target: self, action: #selector(reminderRowTapped))
+        reminderSettingContainer.addGestureRecognizer(reminderTap)
+        let recurrenceTap = UITapGestureRecognizer(target: self, action: #selector(recurrenceRowTapped))
+        recurrenceSettingContainer.addGestureRecognizer(recurrenceTap)
 
         // 버튼 눌림 효과 적용
         saveButton.addPressAnimation()
@@ -584,6 +719,7 @@ final class NewEventView: UIView {
         timeValueButton.addPressAnimation()
         endTimeValueButton.addPressAnimation()
         reminderValueButton.addPressAnimation()
+        recurrenceValueButton.addPressAnimation()
 
         // 텍스트 필드 변경 감지 → 저장 버튼 활성화/비활성화
         textField.addTarget(self, action: #selector(textFieldDidChange), for: .editingChanged)
@@ -613,7 +749,7 @@ final class NewEventView: UIView {
         let colorLabels = ["하늘색", "피치", "라벤더", "민트그린", "코랄레드"]
         for (index, button) in colorOptions.enumerated() {
             button.accessibilityLabel = "\(colorLabels[index]) 색상"
-            button.accessibilityHint = "탭하여 선택, 꾹 눌러 색상 톤을 선택하세요"
+            button.accessibilityHint = "탭하여 선택"
         }
 
         // 시간/알림 버튼
@@ -623,6 +759,10 @@ final class NewEventView: UIView {
         endTimeValueButton.accessibilityHint = "탭하여 종료 시간을 설정하세요"
         reminderValueButton.accessibilityLabel = "알림 설정"
         reminderValueButton.accessibilityHint = "탭하여 알림을 설정하세요"
+
+        // 반복 버튼
+        recurrenceValueButton.accessibilityLabel = "반복 설정"
+        recurrenceValueButton.accessibilityHint = "탭하여 반복 일정을 설정하세요"
 
         // 저장/삭제 버튼
         saveButton.accessibilityLabel = "저장"
@@ -665,19 +805,14 @@ final class NewEventView: UIView {
               let curveValue = userInfo[UIResponder.keyboardAnimationCurveUserInfoKey] as? UInt else { return }
 
         let keyboardHeight = keyboardFrame.height
+        let bottomInset = safeAreaInsets.bottom
         let options = UIView.AnimationOptions(rawValue: curveValue << 16)
 
-        UIView.animate(withDuration: duration, delay: 0, options: options) {
-            self.scrollView.contentInset.bottom = keyboardHeight
-            self.scrollView.verticalScrollIndicatorInsets.bottom = keyboardHeight
-        }
+        // 버튼을 키보드 위로 이동 (scrollView는 버튼에 연결되어 자동 축소)
+        buttonBottomConstraint?.update(offset: -(keyboardHeight - bottomInset + 8))
 
-        // 텍스트 필드가 가려지지 않도록 스크롤
-        let textFieldBottom = textFieldBackgroundView.convert(textFieldBackgroundView.bounds, to: scrollView).maxY + 16
-        let visibleHeight = scrollView.bounds.height - keyboardHeight
-        if textFieldBottom > scrollView.contentOffset.y + visibleHeight {
-            let offset = CGPoint(x: 0, y: textFieldBottom - visibleHeight)
-            scrollView.setContentOffset(offset, animated: true)
+        UIView.animate(withDuration: duration, delay: 0, options: options) {
+            self.layoutIfNeeded()
         }
     }
 
@@ -688,9 +823,10 @@ final class NewEventView: UIView {
 
         let options = UIView.AnimationOptions(rawValue: curveValue << 16)
 
+        buttonBottomConstraint?.update(offset: -16)
+
         UIView.animate(withDuration: duration, delay: 0, options: options) {
-            self.scrollView.contentInset.bottom = 0
-            self.scrollView.verticalScrollIndicatorInsets.bottom = 0
+            self.layoutIfNeeded()
         }
     }
 
@@ -747,6 +883,7 @@ final class NewEventView: UIView {
     
     @objc private func periodModeSwitchChanged(_ sender: UISwitch) {
         isPeriodMode = sender.isOn
+        updateRecurrenceEnabled()
     }
     
     @objc private func startDateButtonTapped() {
@@ -894,9 +1031,24 @@ final class NewEventView: UIView {
         }
     }
     
+    // MARK: - Row Tap Actions
+
+    @objc private func timeRowTapped() {
+        timeValueButtonTapped()
+    }
+
+    @objc private func reminderRowTapped() {
+        reminderValueButtonTapped()
+    }
+
+    @objc private func recurrenceRowTapped() {
+        recurrenceValueButtonTapped()
+    }
+
     // MARK: - 시간/알림 Actions
 
     @objc private func timeValueButtonTapped() {
+        endEditing(true)
         guard let parentView = findViewController()?.view else { return }
         let picker = TimePickerView(currentTime: selectedScheduledTime)
         picker.onTimeSelected = { [weak self] time in
@@ -912,6 +1064,7 @@ final class NewEventView: UIView {
     }
 
     @objc private func endTimeValueButtonTapped() {
+        endEditing(true)
         guard let parentView = findViewController()?.view else { return }
         let picker = TimePickerView(currentTime: selectedEndScheduledTime)
         picker.onTimeSelected = { [weak self] time in
@@ -922,6 +1075,7 @@ final class NewEventView: UIView {
     }
 
     @objc private func reminderValueButtonTapped() {
+        endEditing(true)
         guard selectedScheduledTime != nil else { return }
         guard let parentView = findViewController()?.view else { return }
         let picker = ReminderPickerView(currentMinutes: selectedReminderMinutesBefore)
@@ -945,8 +1099,10 @@ final class NewEventView: UIView {
             } else {
                 timeValueButton.setTitle(time, for: .normal)
             }
+            timeValueButton.setTitleColor(AppColors.textHighlighted, for: .normal)
         } else {
             timeValueButton.setTitle("하루 종일", for: .normal)
+            timeValueButton.setTitleColor(AppColors.textFieldPlaceholder, for: .normal)
         }
     }
 
@@ -968,8 +1124,10 @@ final class NewEventView: UIView {
     private func updateReminderDisplay() {
         guard let minutes = selectedReminderMinutesBefore else {
             reminderValueButton.setTitle("없음", for: .normal)
+            reminderValueButton.setTitleColor(AppColors.textFieldPlaceholder, for: .normal)
             return
         }
+        reminderValueButton.setTitleColor(AppColors.textHighlighted, for: .normal)
         switch minutes {
         case 0: reminderValueButton.setTitle("정시", for: .normal)
         case 5: reminderValueButton.setTitle("5분 전", for: .normal)
@@ -985,6 +1143,79 @@ final class NewEventView: UIView {
         let enabled = selectedScheduledTime != nil
         reminderSettingContainer.alpha = enabled ? 1.0 : 0.4
         reminderValueButton.isEnabled = enabled
+    }
+
+    // MARK: - 반복 Actions & Display
+
+    @objc private func recurrenceValueButtonTapped() {
+        endEditing(true)
+        // 기간 모드와 상호 배타
+        if isPeriodMode {
+            // 기간 모드에서는 반복 비활성화 → 안내
+            return
+        }
+
+        guard let parentView = findViewController()?.view,
+              let parentVC = findViewController() else { return }
+
+        let picker = RecurrencePickerView(currentInfo: selectedRecurrenceInfo)
+        picker.onRecurrenceSelected = { [weak self] info in
+            self?.selectedRecurrenceInfo = info
+            self?.updateRecurrencePeriodExclusivity()
+        }
+        picker.onCustomRequested = { [weak self] in
+            guard let self = self else { return }
+            let customVC = CustomRecurrenceViewController()
+            customVC.initialInfo = self.selectedRecurrenceInfo
+            customVC.onRecurrenceSelected = { [weak self] info in
+                self?.selectedRecurrenceInfo = info
+                self?.updateRecurrencePeriodExclusivity()
+            }
+            customVC.modalPresentationStyle = .pageSheet
+            if let sheet = customVC.sheetPresentationController {
+                sheet.detents = [.medium(), .large()]
+            }
+            parentVC.present(customVC, animated: true)
+        }
+        parentView.addSubview(picker)
+        picker.snp.makeConstraints { $0.edges.equalToSuperview() }
+    }
+
+    private func updateRecurrenceDisplay() {
+        if let info = selectedRecurrenceInfo {
+            recurrenceValueButton.setTitle(info.displayString, for: .normal)
+            recurrenceValueButton.setTitleColor(AppColors.textHighlighted, for: .normal)
+        } else {
+            recurrenceValueButton.setTitle("안 함", for: .normal)
+            recurrenceValueButton.setTitleColor(AppColors.textFieldPlaceholder, for: .normal)
+        }
+    }
+
+    /// 반복과 기간 모드의 상호 배타 처리
+    private func updateRecurrencePeriodExclusivity() {
+        if selectedRecurrenceInfo != nil {
+            // 반복이 설정되면 기간 모드 비활성화
+            periodModeSwitch.isEnabled = false
+            periodModeContainer.alpha = 0.4
+        } else {
+            periodModeSwitch.isEnabled = true
+            periodModeContainer.alpha = 1.0
+        }
+    }
+
+    /// 기간 모드에 따른 반복 비활성화 업데이트
+    func updateRecurrenceEnabled() {
+        if isPeriodMode {
+            recurrenceSettingContainer.alpha = 0.4
+            recurrenceValueButton.isEnabled = false
+            // 반복이 설정되어 있었으면 해제
+            if selectedRecurrenceInfo != nil {
+                selectedRecurrenceInfo = nil
+            }
+        } else {
+            recurrenceSettingContainer.alpha = 1.0
+            recurrenceValueButton.isEnabled = true
+        }
     }
 
     // MARK: - Color Selection
@@ -1048,6 +1279,8 @@ final class NewEventView: UIView {
         }
     }
     
+    private let colorCheckmarkTag = 9999
+
     func updateColorSelection(animated: Bool = true) {
         let selectedBaseName = AppColors.baseColorName(from: selectedColorName)
 
@@ -1070,7 +1303,22 @@ final class NewEventView: UIView {
 
                     // 선택된 톤으로 색상 업데이트
                     let tone = AppColors.toneNumber(from: self.selectedColorName) ?? 4
-                    button.backgroundColor = AppColors.color(for: "\(baseName)-\(tone)")
+                    let bgColor = AppColors.color(for: "\(baseName)-\(tone)")
+                    button.backgroundColor = bgColor
+
+                    // 체크마크 추가
+                    if button.viewWithTag(self.colorCheckmarkTag) == nil {
+                        let checkmark = UIImageView(image: UIImage(systemName: "checkmark", withConfiguration: UIImage.SymbolConfiguration(pointSize: 14, weight: .bold)))
+                        checkmark.tag = self.colorCheckmarkTag
+                        checkmark.tintColor = AppColors.contrastingTextColor(for: bgColor)
+                        checkmark.contentMode = .scaleAspectFit
+                        button.addSubview(checkmark)
+                        checkmark.translatesAutoresizingMaskIntoConstraints = false
+                        NSLayoutConstraint.activate([
+                            checkmark.centerXAnchor.constraint(equalTo: button.centerXAnchor),
+                            checkmark.centerYAnchor.constraint(equalTo: button.centerYAnchor)
+                        ])
+                    }
 
                     // 선택 시 살짝 확대
                     button.transform = CGAffineTransform(scaleX: 1.1, y: 1.1)
@@ -1079,6 +1327,9 @@ final class NewEventView: UIView {
                     // 선택되지 않은 색상은 중간 톤(4)으로 표시
                     button.backgroundColor = AppColors.color(for: "\(baseName)-4")
                     button.transform = .identity
+
+                    // 체크마크 제거
+                    button.viewWithTag(self.colorCheckmarkTag)?.removeFromSuperview()
                 }
             }
 
@@ -1147,6 +1398,17 @@ final class NewEventView: UIView {
     /// 선택된 날짜 설정 (새 일정 추가 시 외부에서 호출)
     func setInitialSelectedDate(_ date: Date) {
         initialSelectedDate = date
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "M월 d일 EEEE"
+        let calendarIcon = UIImage(systemName: "calendar")
+        let attachment = NSTextAttachment()
+        attachment.image = calendarIcon?.withTintColor(AppColors.textFieldPlaceholder)
+        let iconSize: CGFloat = 14
+        attachment.bounds = CGRect(x: 0, y: -2, width: iconSize, height: iconSize)
+        let attrStr = NSMutableAttributedString(attachment: attachment)
+        attrStr.append(NSAttributedString(string: " \(formatter.string(from: date))"))
+        dateContextLabel.attributedText = attrStr
     }
 
     // MARK: - Save Button State
@@ -1158,6 +1420,7 @@ final class NewEventView: UIView {
     func updateSaveButtonState() {
         let hasText = !(textField.text ?? "").trimmingCharacters(in: .whitespaces).isEmpty
         saveButton.isEnabled = hasText
+        saveButton.setTitle(hasText ? saveButtonActiveTitle : "제목을 입력하세요", for: .normal)
         UIView.animate(withDuration: 0.2) {
             self.saveButton.alpha = hasText ? 1.0 : 0.4
         }
@@ -1197,6 +1460,14 @@ final class NewEventView: UIView {
     func triggerSuccessFeedback() {
         let feedback = UINotificationFeedbackGenerator()
         feedback.notificationOccurred(.success)
+    }
+}
+
+// MARK: - UITextFieldDelegate
+extension NewEventView: UITextFieldDelegate {
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        textField.resignFirstResponder()
+        return true
     }
 }
 

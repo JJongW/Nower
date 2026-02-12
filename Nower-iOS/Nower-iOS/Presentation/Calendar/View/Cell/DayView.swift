@@ -97,7 +97,7 @@ final class DayView: UIView {
 
     // MARK: - Setup
     private func setupUI() {
-        clipsToBounds = false
+        clipsToBounds = true
 
         addSubview(backgroundHighlightView)
         backgroundHighlightView.snp.makeConstraints {

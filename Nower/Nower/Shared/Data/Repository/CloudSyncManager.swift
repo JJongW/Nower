@@ -186,7 +186,13 @@ final class CloudSyncManager {
                         date: localVersion.date,
                         colorName: localVersion.colorName,
                         startDate: localVersion.startDate,
-                        endDate: localVersion.endDate
+                        endDate: localVersion.endDate,
+                        scheduledTime: localVersion.scheduledTime,
+                        endScheduledTime: localVersion.endScheduledTime,
+                        reminderMinutesBefore: localVersion.reminderMinutesBefore,
+                        recurrenceInfo: localVersion.recurrenceInfo,
+                        recurrenceExceptions: localVersion.recurrenceExceptions,
+                        recurrenceSeriesId: localVersion.recurrenceSeriesId
                     )
                     self.cachedTodos.append(duplicated)
                     self.saveToiCloudInternal()

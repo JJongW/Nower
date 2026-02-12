@@ -25,15 +25,25 @@ class SettingsManager: ObservableObject {
         }
     }
 
+    /// 배경화면 고정 모드 (데스크톱 레벨에 고정)
+    @Published var isDesktopMode: Bool {
+        didSet {
+            UserDefaults.standard.set(isDesktopMode, forKey: "desktopMode")
+            NotificationCenter.default.post(name: .init("DesktopModeChanged"), object: nil)
+        }
+    }
+
     init() {
         // 기본값 설정
         self.isPinToTopLeft = false
         self.isAlwaysOnTop = false
+        self.isDesktopMode = false
 
         DispatchQueue.main.async {
             // 저장된 설정 로드
             self.isPinToTopLeft = UserDefaults.standard.bool(forKey: "pinToTopLeft")
             self.isAlwaysOnTop = UserDefaults.standard.bool(forKey: "alwaysOnTop")
+            self.isDesktopMode = UserDefaults.standard.bool(forKey: "desktopMode")
         }
     }
 }

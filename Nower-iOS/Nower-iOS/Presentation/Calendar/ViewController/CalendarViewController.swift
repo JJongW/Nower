@@ -178,7 +178,7 @@ final class CalendarViewController: UIViewController {
 
     @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
         let collectionView = calendarView.collectionView
-        let containerWidth = collectionView.bounds.width
+        let containerWidth = calendarView.bounds.width
         let translation = gesture.translation(in: collectionView)
 
         switch gesture.state {
@@ -186,8 +186,14 @@ final class CalendarViewController: UIViewController {
             panStartLocation = gesture.location(in: collectionView)
             isTransitioning = true
 
-            // 컬렉션 뷰의 부모 뷰에서의 위치 계산
-            let collectionViewFrame = collectionView.convert(collectionView.bounds, to: calendarView)
+            // 컬렉션 뷰의 부모 뷰에서의 위치 계산 (픽셀 정렬)
+            let rawFrame = collectionView.convert(collectionView.bounds, to: calendarView)
+            let collectionViewFrame = CGRect(
+                x: rawFrame.origin.x.rounded(.down),
+                y: rawFrame.origin.y.rounded(.down),
+                width: rawFrame.width.rounded(.up),
+                height: rawFrame.height.rounded(.up)
+            )
 
             // 현재 달력 스냅샷 생성
             snapshotView = collectionView.snapshotView(afterScreenUpdates: false)
@@ -261,7 +267,7 @@ final class CalendarViewController: UIViewController {
 
     /// 이전/다음 달 스냅샷을 미리 생성
     private func createAdjacentMonthSnapshots(collectionView: UICollectionView, collectionViewFrame: CGRect) {
-        let containerWidth = collectionView.bounds.width
+        let containerWidth = calendarView.bounds.width
         let originalDate = currentDate
         let originalWeeks = weeks
 
@@ -309,7 +315,7 @@ final class CalendarViewController: UIViewController {
 
     /// 인터랙티브 전환 완료
     private func completeInteractiveTransition(currentSnapshot: UIView, collectionView: UICollectionView, newDate: Date, direction: SlideDirection) {
-        let containerWidth = collectionView.bounds.width
+        let containerWidth = calendarView.bounds.width
         let targetSnapshot = direction == .left ? nextMonthSnapshot : prevMonthSnapshot
         let otherSnapshot = direction == .left ? prevMonthSnapshot : nextMonthSnapshot
 
@@ -412,7 +418,7 @@ final class CalendarViewController: UIViewController {
     }
 
     private func cancelTransition(snapshot: UIView, collectionView: UICollectionView) {
-        let containerWidth = collectionView.bounds.width
+        let containerWidth = calendarView.bounds.width
 
         // 원위치로 복귀 애니메이션 (스프링 효과로 자연스럽게)
         UIView.animate(
@@ -583,10 +589,16 @@ final class CalendarViewController: UIViewController {
 
     private func animateMonthTransition(to newDate: Date, direction: SlideDirection) {
         let collectionView = calendarView.collectionView
-        let containerWidth = collectionView.bounds.width
+        let containerWidth = calendarView.bounds.width
 
-        // 컬렉션 뷰의 부모 뷰에서의 위치 계산
-        let collectionViewFrame = collectionView.convert(collectionView.bounds, to: calendarView)
+        // 컬렉션 뷰의 부모 뷰에서의 위치 계산 (픽셀 정렬)
+        let rawFrame = collectionView.convert(collectionView.bounds, to: calendarView)
+        let collectionViewFrame = CGRect(
+            x: rawFrame.origin.x.rounded(.down),
+            y: rawFrame.origin.y.rounded(.down),
+            width: rawFrame.width.rounded(.up),
+            height: rawFrame.height.rounded(.up)
+        )
 
         // 스냅샷 생성 (현재 달력)
         guard let snapshot = collectionView.snapshotView(afterScreenUpdates: false) else {

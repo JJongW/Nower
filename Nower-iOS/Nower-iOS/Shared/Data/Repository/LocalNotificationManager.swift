@@ -67,6 +67,59 @@ final class LocalNotificationManager: NSObject {
         }
     }
 
+    // MARK: - Recurring Event Notifications
+
+    /// 반복 일정의 향후 10개 인스턴스에 대해 알림을 스케줄링합니다.
+    func scheduleRecurringNotifications(for todo: TodoItem, maxInstances: Int = 10) {
+        guard todo.isRecurringEvent,
+              todo.hasReminder,
+              let _ = todo.reminderMinutesBefore else { return }
+
+        let today = Date()
+        let futureLimit = Calendar.current.date(byAdding: .year, value: 1, to: today) ?? today
+        let instances = RecurringEventExpander.occurrences(of: todo, from: today, to: futureLimit)
+
+        for (index, instance) in instances.prefix(maxInstances).enumerated() {
+            guard let reminderDate = instance.reminderDate, reminderDate > today else { continue }
+
+            let content = UNMutableNotificationContent()
+            content.title = "Nower"
+            if let time = instance.scheduledTime {
+                content.body = "\(time) \(instance.text)"
+            } else {
+                content.body = instance.text
+            }
+            content.sound = .default
+
+            let components = Calendar.current.dateComponents(
+                [.year, .month, .day, .hour, .minute],
+                from: reminderDate
+            )
+            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+
+            // 시리즈용 고유 ID: "todoId-occurrence-index"
+            let identifier = "\(todo.id.uuidString)-recurring-\(index)"
+            let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+
+            center.add(request) { error in
+                if let error = error {
+                    print("❌ [LocalNotificationManager] 반복 알림 예약 실패: \(error)")
+                }
+            }
+        }
+    }
+
+    /// 반복 일정 시리즈의 모든 알림을 취소합니다.
+    func cancelSeriesNotifications(for todoId: UUID) {
+        let prefix = todoId.uuidString
+        center.getPendingNotificationRequests { [weak self] requests in
+            let ids = requests
+                .filter { $0.identifier.hasPrefix(prefix) }
+                .map { $0.identifier }
+            self?.center.removePendingNotificationRequests(withIdentifiers: ids)
+        }
+    }
+
     func cancelNotification(for todoId: UUID) {
         center.removePendingNotificationRequests(withIdentifiers: [todoId.uuidString])
     }
@@ -78,7 +131,11 @@ final class LocalNotificationManager: NSObject {
     func rescheduleAll(todos: [TodoItem]) {
         cancelAllNotifications()
         for todo in todos where todo.hasReminder {
-            scheduleNotification(for: todo)
+            if todo.isRecurringEvent {
+                scheduleRecurringNotifications(for: todo)
+            } else {
+                scheduleNotification(for: todo)
+            }
         }
     }
 }

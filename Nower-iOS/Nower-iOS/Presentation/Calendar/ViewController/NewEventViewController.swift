@@ -24,6 +24,9 @@ final class NewEventViewController: UIViewController {
         // 선택한 날짜를 기간 모드 기본값으로 설정
         popupView.setInitialSelectedDate(selectedDate)
 
+        // 초기 저장 버튼 상태 (비활성: "제목을 입력하세요")
+        popupView.updateSaveButtonState()
+
         popupView.saveButton.addTarget(self, action: #selector(saveTapped), for: .touchUpInside)
         popupView.colorOptions.forEach { button in
             button.addTarget(self, action: #selector(colorSelected(_:)), for: .touchUpInside)
@@ -31,6 +34,11 @@ final class NewEventViewController: UIViewController {
 
         // 기간 모드 변경 시 기본 날짜 설정
         popupView.periodModeSwitch.addTarget(self, action: #selector(periodModeChanged), for: .valueChanged)
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        popupView.textField.becomeFirstResponder()
     }
     
     @objc private func periodModeChanged() {
@@ -59,6 +67,7 @@ final class NewEventViewController: UIViewController {
         viewModel.selectedScheduledTime = popupView.selectedScheduledTime
         viewModel.selectedEndScheduledTime = popupView.selectedEndScheduledTime
         viewModel.selectedReminderMinutesBefore = popupView.selectedReminderMinutesBefore
+        viewModel.selectedRecurrenceInfo = popupView.selectedRecurrenceInfo
 
         // 알림 설정 시 권한 요청
         if popupView.selectedReminderMinutesBefore != nil {
@@ -103,7 +112,14 @@ final class NewEventViewController: UIViewController {
             }
             
             if let vc = self.coordinator?.navigationController.topViewController {
-                let message = self.popupView.isPeriodMode ? "✅ 기간별 일정이 추가되었습니다" : "✅ 일정이 추가되었습니다"
+                let message: String
+                if self.popupView.isPeriodMode {
+                    message = "기간별 일정이 추가되었습니다"
+                } else if self.popupView.selectedRecurrenceInfo != nil {
+                    message = "반복 일정이 추가되었습니다"
+                } else {
+                    message = "일정이 추가되었습니다"
+                }
                 vc.showToast(message: message)
             }
             self.coordinator?.returnToBack()

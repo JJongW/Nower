@@ -64,12 +64,8 @@ final class PeriodEventOverlayView: UIView {
         // 배경색에 맞춰 텍스트 색상 자동 조정 (WCAG 4.5:1 대비 보장)
         titleLabel.textColor = AppColors.contrastingTextColor(for: eventColor)
 
-        // 제목은 시작 세그먼트에만 표시
-        if isFirstSegment {
-            titleLabel.text = todo.text
-        } else {
-            titleLabel.text = ""
-        }
+        // 시작 세그먼트와 연속 세그먼트 모두 제목 표시 (Apple Calendar 스타일)
+        titleLabel.text = todo.text
 
         // 코너 라운딩 설정
         layer.cornerRadius = 6

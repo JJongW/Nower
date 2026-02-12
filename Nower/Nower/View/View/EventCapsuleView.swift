@@ -68,6 +68,12 @@ struct EventCapsuleView: View {
                     .foregroundColor(textColor)
                     .lineLimit(1)
                     .truncationMode(.tail)
+
+                if todo.isRecurringEvent {
+                    Image(systemName: "arrow.2.squarepath")
+                        .font(.system(size: 7))
+                        .foregroundColor(textColor.opacity(0.7))
+                }
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 3)

@@ -72,7 +72,7 @@ final class WeekView: UIView {
 
     // MARK: - Setup
     private func setupUI() {
-        clipsToBounds = false
+        clipsToBounds = true
 
         addSubview(dayContainerStackView)
         addSubview(periodEventContainer)

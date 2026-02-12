@@ -67,7 +67,7 @@ final class EventListViewController: UIViewController {
         newVC.viewModel = viewModel
         newVC.coordinator = coordinator
         if let sheet = newVC.sheetPresentationController {
-            sheet.detents = [.medium(), .large()]
+            sheet.detents = [.large()]
             sheet.prefersGrabberVisible = true
         }
         present(newVC, animated: true)
@@ -98,7 +98,7 @@ extension EventListViewController: UITableViewDataSource, UITableViewDelegate {
         editVC.coordinator = self.coordinator
 
         if let sheet = editVC.sheetPresentationController {
-            sheet.detents = [.medium(), .large()]
+            sheet.detents = [.large()]
             sheet.prefersGrabberVisible = true
         }
         present(editVC, animated: true)

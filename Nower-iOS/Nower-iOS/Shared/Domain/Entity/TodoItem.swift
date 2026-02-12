@@ -8,6 +8,84 @@
 
 import Foundation
 
+// MARK: - 반복 일정 규칙 정보
+
+/// 반복 일정의 규칙을 정의하는 구조체
+struct RecurrenceInfo: Codable, Hashable {
+    let frequency: String      // "daily", "weekly", "monthly", "yearly"
+    let interval: Int          // 매 N 단위
+    let endDate: String?       // "yyyy-MM-dd" or nil = 무한
+    let endAfterCount: Int?    // N회 후 종료 (endDate 대안)
+    let daysOfWeek: [Int]?     // 주간: 1=일..7=토
+    let dayOfMonth: Int?       // 월간: 1-31
+
+    init(frequency: String, interval: Int = 1, endDate: String? = nil, endAfterCount: Int? = nil, daysOfWeek: [Int]? = nil, dayOfMonth: Int? = nil) {
+        self.frequency = frequency
+        self.interval = interval
+        self.endDate = endDate
+        self.endAfterCount = endAfterCount
+        self.daysOfWeek = daysOfWeek
+        self.dayOfMonth = dayOfMonth
+    }
+
+    /// 사용자에게 표시할 요약 문자열
+    var displayString: String {
+        let weekdayNames = ["일", "월", "화", "수", "목", "금", "토"]
+
+        if interval == 1 {
+            switch frequency {
+            case "daily": return "매일"
+            case "weekly":
+                if let days = daysOfWeek, !days.isEmpty {
+                    let names = days.sorted().compactMap { d -> String? in
+                        guard d >= 1 && d <= 7 else { return nil }
+                        return weekdayNames[d - 1]
+                    }
+                    return "매주 " + names.joined(separator: ", ")
+                }
+                return "매주"
+            case "monthly":
+                if let day = dayOfMonth { return "매월 \(day)일" }
+                return "매월"
+            case "yearly": return "매년"
+            default: return "반복"
+            }
+        } else {
+            switch frequency {
+            case "daily": return "\(interval)일마다"
+            case "weekly":
+                if let days = daysOfWeek, !days.isEmpty {
+                    let names = days.sorted().compactMap { d -> String? in
+                        guard d >= 1 && d <= 7 else { return nil }
+                        return weekdayNames[d - 1]
+                    }
+                    return "\(interval)주마다 " + names.joined(separator: ", ")
+                }
+                return "\(interval)주마다"
+            case "monthly": return "\(interval)개월마다"
+            case "yearly": return "\(interval)년마다"
+            default: return "반복"
+            }
+        }
+    }
+}
+
+/// 반복 일정의 개별 인스턴스 예외를 정의하는 구조체
+struct RecurrenceException: Codable, Hashable {
+    let originalDate: String           // 해당 발생 날짜 "yyyy-MM-dd"
+    let isDeleted: Bool                // 이 인스턴스 삭제 여부
+    let overriddenTodo: TodoItem?      // 개별 수정된 데이터 (nil = 삭제만)
+}
+
+// MARK: - 반복 일정 수정/삭제 범위
+
+/// 반복 일정 수정/삭제 시 적용 범위
+enum RecurrenceEditScope {
+    case thisOnly       // 이 일정만
+    case thisAndFuture  // 이 일정 및 향후 일정
+    case all            // 모든 일정
+}
+
 /// 공통 Todo 아이템 데이터 모델
 /// MacOS와 iOS에서 동일하게 사용되는 핵심 엔티티입니다.
 /// 단일 날짜 및 기간별 일정을 모두 지원합니다.
@@ -26,6 +104,11 @@ struct TodoItem: Identifiable, Codable {
     let scheduledTime: String?       // "HH:mm" 형식, nil = 하루 종일
     let endScheduledTime: String?    // "HH:mm" 형식, 기간별 일정의 종료 시간 (nil = 하루 종일)
     let reminderMinutesBefore: Int?  // nil = 알림 없음, 0 = 정시, 5/10/30/60/1440
+
+    // 반복 일정을 위한 필드들
+    let recurrenceInfo: RecurrenceInfo?              // 반복 규칙 (nil = 비반복)
+    let recurrenceExceptions: [RecurrenceException]? // 예외 목록
+    let recurrenceSeriesId: UUID?                    // 분리된 시리즈 연결용
     
     /// 단일 날짜 TodoItem을 생성합니다. (기존 호환성 유지)
     /// - Parameters:
@@ -33,7 +116,7 @@ struct TodoItem: Identifiable, Codable {
     ///   - isRepeating: 반복 여부
     ///   - date: 날짜 (yyyy-MM-dd 형식)
     ///   - colorName: 색상 이름
-    init(text: String, isRepeating: Bool, date: String, colorName: String, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
+    init(text: String, isRepeating: Bool, date: String, colorName: String, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil, recurrenceInfo: RecurrenceInfo? = nil, recurrenceExceptions: [RecurrenceException]? = nil, recurrenceSeriesId: UUID? = nil) {
         self.text = text
         self.isRepeating = isRepeating
         self.date = date
@@ -43,6 +126,9 @@ struct TodoItem: Identifiable, Codable {
         self.scheduledTime = scheduledTime
         self.endScheduledTime = endScheduledTime
         self.reminderMinutesBefore = reminderMinutesBefore
+        self.recurrenceInfo = recurrenceInfo
+        self.recurrenceExceptions = recurrenceExceptions
+        self.recurrenceSeriesId = recurrenceSeriesId
     }
     
     /// Date 객체로부터 단일 날짜 TodoItem을 생성하는 편의 생성자 (기존 호환성 유지)
@@ -51,7 +137,7 @@ struct TodoItem: Identifiable, Codable {
     ///   - isRepeating: 반복 여부
     ///   - date: Date 객체
     ///   - colorName: 색상 이름
-    init(text: String, isRepeating: Bool, date: Date, colorName: String, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
+    init(text: String, isRepeating: Bool, date: Date, colorName: String, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil, recurrenceInfo: RecurrenceInfo? = nil, recurrenceExceptions: [RecurrenceException]? = nil, recurrenceSeriesId: UUID? = nil) {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
 
@@ -64,6 +150,9 @@ struct TodoItem: Identifiable, Codable {
         self.scheduledTime = scheduledTime
         self.endScheduledTime = endScheduledTime
         self.reminderMinutesBefore = reminderMinutesBefore
+        self.recurrenceInfo = recurrenceInfo
+        self.recurrenceExceptions = recurrenceExceptions
+        self.recurrenceSeriesId = recurrenceSeriesId
     }
     
     /// 기간별 TodoItem을 생성합니다.
@@ -73,7 +162,7 @@ struct TodoItem: Identifiable, Codable {
     ///   - startDate: 시작 날짜
     ///   - endDate: 종료 날짜
     ///   - colorName: 색상 이름
-    init(text: String, isRepeating: Bool, startDate: Date, endDate: Date, colorName: String, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
+    init(text: String, isRepeating: Bool, startDate: Date, endDate: Date, colorName: String, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil, recurrenceInfo: RecurrenceInfo? = nil, recurrenceExceptions: [RecurrenceException]? = nil, recurrenceSeriesId: UUID? = nil) {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
 
@@ -86,6 +175,9 @@ struct TodoItem: Identifiable, Codable {
         self.scheduledTime = scheduledTime
         self.endScheduledTime = endScheduledTime
         self.reminderMinutesBefore = reminderMinutesBefore
+        self.recurrenceInfo = recurrenceInfo
+        self.recurrenceExceptions = recurrenceExceptions
+        self.recurrenceSeriesId = recurrenceSeriesId
     }
 
     /// 모든 필드를 직접 지정하는 이니셜라이저 (NowerCore 변환용)
@@ -97,7 +189,7 @@ struct TodoItem: Identifiable, Codable {
     ///   - colorName: 색상 이름
     ///   - startDate: 시작 날짜 문자열 (기간별 일정용)
     ///   - endDate: 종료 날짜 문자열 (기간별 일정용)
-    init(id: UUID, text: String, isRepeating: Bool, date: String, colorName: String, startDate: String? = nil, endDate: String? = nil, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
+    init(id: UUID, text: String, isRepeating: Bool, date: String, colorName: String, startDate: String? = nil, endDate: String? = nil, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil, recurrenceInfo: RecurrenceInfo? = nil, recurrenceExceptions: [RecurrenceException]? = nil, recurrenceSeriesId: UUID? = nil) {
         self.id = id
         self.text = text
         self.isRepeating = isRepeating
@@ -108,6 +200,9 @@ struct TodoItem: Identifiable, Codable {
         self.scheduledTime = scheduledTime
         self.endScheduledTime = endScheduledTime
         self.reminderMinutesBefore = reminderMinutesBefore
+        self.recurrenceInfo = recurrenceInfo
+        self.recurrenceExceptions = recurrenceExceptions
+        self.recurrenceSeriesId = recurrenceSeriesId
     }
 }
 
@@ -221,5 +316,74 @@ extension TodoItem {
         guard let scheduled = scheduledDateTime,
               let minutes = reminderMinutesBefore else { return nil }
         return scheduled.addingTimeInterval(-Double(minutes) * 60)
+    }
+
+    // MARK: - 반복 일정 관련 편의 프로퍼티/메서드
+
+    /// 반복 일정인지 확인합니다.
+    var isRecurringEvent: Bool {
+        return recurrenceInfo != nil
+    }
+
+    /// 특정 날짜에 대한 가상 인스턴스를 생성합니다.
+    /// - Parameter date: 가상 인스턴스의 날짜
+    /// - Returns: 해당 날짜의 가상 인스턴스 TodoItem
+    func virtualInstance(for date: Date) -> TodoItem {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let dateString = formatter.string(from: date)
+        return TodoItem(
+            id: id,
+            text: text,
+            isRepeating: isRepeating,
+            date: dateString,
+            colorName: colorName,
+            startDate: nil,
+            endDate: nil,
+            scheduledTime: scheduledTime,
+            endScheduledTime: endScheduledTime,
+            reminderMinutesBefore: reminderMinutesBefore,
+            recurrenceInfo: recurrenceInfo,
+            recurrenceExceptions: recurrenceExceptions,
+            recurrenceSeriesId: recurrenceSeriesId
+        )
+    }
+
+    /// 반복 규칙을 변경한 새 TodoItem을 반환합니다.
+    func withRecurrenceInfo(_ info: RecurrenceInfo?) -> TodoItem {
+        return TodoItem(
+            id: id,
+            text: text,
+            isRepeating: info != nil,
+            date: date,
+            colorName: colorName,
+            startDate: startDate,
+            endDate: endDate,
+            scheduledTime: scheduledTime,
+            endScheduledTime: endScheduledTime,
+            reminderMinutesBefore: reminderMinutesBefore,
+            recurrenceInfo: info,
+            recurrenceExceptions: recurrenceExceptions,
+            recurrenceSeriesId: recurrenceSeriesId
+        )
+    }
+
+    /// 예외 목록을 변경한 새 TodoItem을 반환합니다.
+    func withExceptions(_ exceptions: [RecurrenceException]?) -> TodoItem {
+        return TodoItem(
+            id: id,
+            text: text,
+            isRepeating: isRepeating,
+            date: date,
+            colorName: colorName,
+            startDate: startDate,
+            endDate: endDate,
+            scheduledTime: scheduledTime,
+            endScheduledTime: endScheduledTime,
+            reminderMinutesBefore: reminderMinutesBefore,
+            recurrenceInfo: recurrenceInfo,
+            recurrenceExceptions: exceptions,
+            recurrenceSeriesId: recurrenceSeriesId
+        )
     }
 }

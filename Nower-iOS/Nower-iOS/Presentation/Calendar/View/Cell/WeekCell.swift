@@ -44,6 +44,7 @@ final class WeekCell: UICollectionViewCell {
     }
 
     private func setupUI() {
+        contentView.clipsToBounds = true
         contentView.addSubview(weekView)
         weekView.snp.makeConstraints {
             $0.edges.equalToSuperview()

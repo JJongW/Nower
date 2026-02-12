@@ -157,8 +157,68 @@ class DraggableWindow: NSWindow {
     func setAlwaysOnTop(_ enabled: Bool) {
         if enabled {
             level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.floatingWindow)))
-        } else {
+        } else if !isDesktopModeEnabled {
             level = originalLevel
+        }
+    }
+
+    // MARK: - Desktop Mode (배경화면 고정)
+
+    private var isDesktopModeEnabled: Bool = false
+    private var savedCollectionBehavior: NSWindow.CollectionBehavior = []
+
+    /// 배경화면 고정 모드 설정
+    /// 데스크톱 레벨에 윈도우를 배치하여 배경화면처럼 항상 뒤에 고정
+    func setDesktopMode(_ enabled: Bool) {
+        isDesktopModeEnabled = enabled
+
+        if enabled {
+            // 현재 상태 저장
+            savedCollectionBehavior = collectionBehavior
+
+            // 데스크톱 바로 위 레벨로 설정 (다른 모든 창 아래)
+            level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) + 1)
+
+            // 모든 Space에서 보이고, 고정 위치 유지
+            collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
+
+            // 타이틀바 숨김 (배경화면처럼 보이도록)
+            titlebarAppearsTransparent = true
+            titleVisibility = .hidden
+            styleMask.insert(.fullSizeContentView)
+
+            // 위치 잠금
+            isPositionLocked = true
+            self.isMovable = false
+
+            // Expose/Mission Control에서 숨김
+            hidesOnDeactivate = false
+
+            #if DEBUG
+            print("🖥️ [DraggableWindow] 배경화면 고정 모드 활성화")
+            #endif
+        } else {
+            // 원래 상태 복원
+            level = originalLevel
+            collectionBehavior = savedCollectionBehavior.isEmpty
+                ? [.moveToActiveSpace, .fullScreenAuxiliary]
+                : savedCollectionBehavior
+
+            titlebarAppearsTransparent = false
+            titleVisibility = .visible
+            styleMask.remove(.fullSizeContentView)
+
+            // 위치 잠금 해제 (pinToTopLeft가 아닌 경우만)
+            if !pinToTopLeftEnabled {
+                isPositionLocked = false
+                self.isMovable = true
+            }
+
+            hidesOnDeactivate = false
+
+            #if DEBUG
+            print("🖥️ [DraggableWindow] 배경화면 고정 모드 비활성화")
+            #endif
         }
     }
     
