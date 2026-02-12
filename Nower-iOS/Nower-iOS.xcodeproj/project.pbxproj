@@ -17,37 +17,9 @@
 		C3E07EF92DA8E5D200BB0D0A /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = C3E07EF82DA8E5D200BB0D0A /* SnapKit */; };
 /* End PBXBuildFile section */
 
-/* Begin PBXContainerItemProxy section */
-		C3E008E62F20E16C004CBAD6 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = C3E07EC92DA8E2CA00BB0D0A /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = C3E008D12F20E16A004CBAD6;
-			remoteInfo = NowerTodayWidgetExtensionExtension;
-		};
-/* End PBXContainerItemProxy section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		C3E008E92F20E16C004CBAD6 /* Embed Foundation Extensions */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 13;
-			files = (
-				C3E008E82F20E16C004CBAD6 /* NowerTodayWidgetExtensionExtension.appex in Embed Foundation Extensions */,
-			);
-			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
-
 /* Begin PBXFileReference section */
-		C3E007B32F1F8EB1004CBAD6 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
-		C3E007B52F1F8FD2004CBAD6 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
-		C3E008D22F20E16A004CBAD6 /* NowerTodayWidgetExtensionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NowerTodayWidgetExtensionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		C3E008D42F20E16A004CBAD6 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
-		C3E008D62F20E16A004CBAD6 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
-		C3E008F82F20E33B004CBAD6 /* NowerTodayWidgetExtensionExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NowerTodayWidgetExtensionExtension.entitlements; sourceTree = "<group>"; };
+		C3CE4DE52DB61ABF00357F86 /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = "/Users/sjw/ted.urssu/Nower/Nower-iOS/Nower-iOS/SupportingFiles/debug.xcconfig"; sourceTree = "<absolute>"; };
+		C3CE4DE72DB61B5A00357F86 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = "/Users/sjw/ted.urssu/Nower/Nower-iOS/Nower-iOS/SupportingFiles/Release.xcconfig"; sourceTree = "<absolute>"; };
 		C3E07ED12DA8E2CA00BB0D0A /* Nower.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Nower.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -88,15 +60,6 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		C3E008CF2F20E16A004CBAD6 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				C3E008D72F20E16A004CBAD6 /* SwiftUI.framework in Frameworks */,
-				C3E008D52F20E16A004CBAD6 /* WidgetKit.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		C3E07ECE2DA8E2CA00BB0D0A /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -113,28 +76,16 @@
 		C3C6EADB2DC5D05200302399 /* Recovered References */ = {
 			isa = PBXGroup;
 			children = (
-				C3E007B32F1F8EB1004CBAD6 /* Debug.xcconfig */,
-				C3E007B52F1F8FD2004CBAD6 /* Release.xcconfig */,
+				C3CE4DE52DB61ABF00357F86 /* debug.xcconfig */,
+				C3CE4DE72DB61B5A00357F86 /* Release.xcconfig */,
 			);
 			name = "Recovered References";
-			sourceTree = "<group>";
-		};
-		C3E008D32F20E16A004CBAD6 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				C3E008D42F20E16A004CBAD6 /* WidgetKit.framework */,
-				C3E008D62F20E16A004CBAD6 /* SwiftUI.framework */,
-			);
-			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		C3E07EC82DA8E2CA00BB0D0A = {
 			isa = PBXGroup;
 			children = (
-				C3E008F82F20E33B004CBAD6 /* NowerTodayWidgetExtensionExtension.entitlements */,
 				C3E07ED32DA8E2CA00BB0D0A /* Nower-iOS */,
-				C3E008D82F20E16B004CBAD6 /* NowerTodayWidgetExtension */,
-				C3E008D32F20E16A004CBAD6 /* Frameworks */,
 				C3E07ED22DA8E2CA00BB0D0A /* Products */,
 				C3C6EADB2DC5D05200302399 /* Recovered References */,
 			);
@@ -144,7 +95,6 @@
 			isa = PBXGroup;
 			children = (
 				C3E07ED12DA8E2CA00BB0D0A /* Nower.app */,
-				C3E008D22F20E16A004CBAD6 /* NowerTodayWidgetExtensionExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -152,28 +102,6 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		C3E008D12F20E16A004CBAD6 /* NowerTodayWidgetExtensionExtension */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = C3E008EC2F20E16C004CBAD6 /* Build configuration list for PBXNativeTarget "NowerTodayWidgetExtensionExtension" */;
-			buildPhases = (
-				C3E008CE2F20E16A004CBAD6 /* Sources */,
-				C3E008CF2F20E16A004CBAD6 /* Frameworks */,
-				C3E008D02F20E16A004CBAD6 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				C3E008D82F20E16B004CBAD6 /* NowerTodayWidgetExtension */,
-			);
-			name = NowerTodayWidgetExtensionExtension;
-			packageProductDependencies = (
-			);
-			productName = NowerTodayWidgetExtensionExtension;
-			productReference = C3E008D22F20E16A004CBAD6 /* NowerTodayWidgetExtensionExtension.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
 		C3E07ED02DA8E2CA00BB0D0A /* Nower-iOS */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = C3E07EE42DA8E2CB00BB0D0A /* Build configuration list for PBXNativeTarget "Nower-iOS" */;
@@ -181,12 +109,10 @@
 				C3E07ECD2DA8E2CA00BB0D0A /* Sources */,
 				C3E07ECE2DA8E2CA00BB0D0A /* Frameworks */,
 				C3E07ECF2DA8E2CA00BB0D0A /* Resources */,
-				C3E008E92F20E16C004CBAD6 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				C3E008E72F20E16C004CBAD6 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				C3E07ED32DA8E2CA00BB0D0A /* Nower-iOS */,
@@ -208,12 +134,9 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2620;
+				LastSwiftUpdateCheck = 1620;
 				LastUpgradeCheck = 1620;
 				TargetAttributes = {
-					C3E008D12F20E16A004CBAD6 = {
-						CreatedOnToolsVersion = 26.2;
-					};
 					C3E07ED02DA8E2CA00BB0D0A = {
 						CreatedOnToolsVersion = 16.2;
 					};
@@ -238,54 +161,29 @@
 			projectRoot = "";
 			targets = (
 				C3E07ED02DA8E2CA00BB0D0A /* Nower-iOS */,
-				C3E008D12F20E16A004CBAD6 /* NowerTodayWidgetExtensionExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		C3E008D02F20E16A004CBAD6 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		C3E07ECF2DA8E2CA00BB0D0A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C3E007B42F1F8EBA004CBAD6 /* Debug.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		C3E008CE2F20E16A004CBAD6 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		C3E07ECD2DA8E2CA00BB0D0A /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C3E007B62F1F8FDC004CBAD6 /* Release.xcconfig in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		C3E008E72F20E16C004CBAD6 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = C3E008D12F20E16A004CBAD6 /* NowerTodayWidgetExtensionExtension */;
-			targetProxy = C3E008E62F20E16C004CBAD6 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		C3E008EA2F20E16C004CBAD6 /* Debug */ = {
@@ -356,7 +254,8 @@
 		};
 		C3E07EE52DA8E2CB00BB0D0A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = C3E007B32F1F8EB1004CBAD6 /* Debug.xcconfig */;
+			baseConfigurationReferenceAnchor = C3E07ED32DA8E2CA00BB0D0A /* Nower-iOS */;
+			baseConfigurationReferenceRelativePath = Debug.xcconfig;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -390,7 +289,8 @@
 		};
 		C3E07EE62DA8E2CB00BB0D0A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = C3E007B52F1F8FD2004CBAD6 /* Release.xcconfig */;
+			baseConfigurationReferenceAnchor = C3E07ED32DA8E2CA00BB0D0A /* Nower-iOS */;
+			baseConfigurationReferenceRelativePath = Release.xcconfig;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -544,15 +444,6 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		C3E008EC2F20E16C004CBAD6 /* Build configuration list for PBXNativeTarget "NowerTodayWidgetExtensionExtension" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				C3E008EA2F20E16C004CBAD6 /* Debug */,
-				C3E008EB2F20E16C004CBAD6 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		C3E07ECC2DA8E2CA00BB0D0A /* Build configuration list for PBXProject "Nower-iOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
