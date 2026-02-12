@@ -68,10 +68,8 @@ class CalendarViewModel: ObservableObject {
         self.moveTodoUseCase = moveTodoUseCase
         self.holidayUseCase = holidayUseCase
 
-        // 알림 옵저버는 즉시 설정 (안전함)
         setupNotificationObserver()
 
-        // 데이터 로딩과 UI 업데이트는 메인 스레드에서 비동기로 처리
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             self.loadAllTodos()

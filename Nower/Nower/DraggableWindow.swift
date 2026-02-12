@@ -173,49 +173,37 @@ class DraggableWindow: NSWindow {
         isDesktopModeEnabled = enabled
 
         if enabled {
-            // 현재 상태 저장
             savedCollectionBehavior = collectionBehavior
-
-            // 데스크톱 바로 위 레벨로 설정 (다른 모든 창 아래)
             level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) + 1)
-
-            // 모든 Space에서 보이고, 고정 위치 유지
             collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
-
-            // 타이틀바 숨김 (배경화면처럼 보이도록)
             titlebarAppearsTransparent = true
             titleVisibility = .hidden
             styleMask.insert(.fullSizeContentView)
-
-            // 위치 잠금
             isPositionLocked = true
             self.isMovable = false
-
-            // Expose/Mission Control에서 숨김
             hidesOnDeactivate = false
-
+            // 배경화면 모드에서만 창 투명 (위젯처럼 보이도록)
+            isOpaque = false
+            backgroundColor = NSColor.clear
             #if DEBUG
             print("🖥️ [DraggableWindow] 배경화면 고정 모드 활성화")
             #endif
         } else {
-            // 원래 상태 복원
             level = originalLevel
             collectionBehavior = savedCollectionBehavior.isEmpty
-                ? [.moveToActiveSpace, .fullScreenAuxiliary]
+                ? [.moveToActiveSpace]
                 : savedCollectionBehavior
-
             titlebarAppearsTransparent = false
             titleVisibility = .visible
             styleMask.remove(.fullSizeContentView)
-
-            // 위치 잠금 해제 (pinToTopLeft가 아닌 경우만)
             if !pinToTopLeftEnabled {
                 isPositionLocked = false
                 self.isMovable = true
             }
-
             hidesOnDeactivate = false
-
+            // 일반 모드로 복원: 불투명 + 창 배경 (콘텐츠가 보이도록)
+            isOpaque = true
+            backgroundColor = NSColor.windowBackgroundColor
             #if DEBUG
             print("🖥️ [DraggableWindow] 배경화면 고정 모드 비활성화")
             #endif
@@ -253,17 +241,16 @@ class DraggableWindow: NSWindow {
     // MARK: - Private Methods
     
     /// 윈도우 초기 설정
+    /// 주의: isOpaque = false, backgroundColor = .clear 로 두면 메인 창에서 SwiftUI 콘텐츠가 아예 안 그려지는
+    /// 현상이 발생할 수 있으므로, 기본은 불투명 + 창 배경색으로 두고, 배경화면 모드에서만 투명 처리함.
     private func setupDesktopWidgetCapabilities() {
         originalLevel = level
         
-        // 투명도 조절을 위한 설정
-        isOpaque = false
-        backgroundColor = NSColor.clear
+        // 메인 창은 불투명 + 시스템 창 배경 (콘텐츠가 그려지도록). 배경화면 고정 모드 시 setDesktopMode에서 투명 처리.
+        isOpaque = true
+        backgroundColor = NSColor.windowBackgroundColor
         
-        // 그림자 효과로 자연스러운 느낌 연출
         hasShadow = true
-        
-        // 배경 드래그로 창 이동 비활성화 (타이틀바에서만 이동 가능)
         isMovableByWindowBackground = false
     }
     

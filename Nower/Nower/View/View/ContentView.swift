@@ -27,16 +27,15 @@ struct ContentView: View {
     }
 
     var body: some View {
-            ZStack {
-            // Dismiss popup on background tap
+        ZStack {
             AppColors.background
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .edgesIgnoringSafeArea(.all)
                 .contentShape(Rectangle())
                 .onTapGesture {
                     isPopupVisible = false
                 }
                 .onAppear {
-                    // View가 나타날 때 초기화 보장
                     if viewModel.weeks.isEmpty {
                         viewModel.generateCalendarDays(for: viewModel.currentMonth)
                     }
@@ -149,6 +148,9 @@ struct ContentView: View {
                 }
             }
         }
+        #if os(macOS)
+        .frame(minWidth: 1024, maxWidth: .infinity, minHeight: 720, maxHeight: .infinity)
+        #endif
     }
 
     func getMonthYear(from date: Date) -> String {

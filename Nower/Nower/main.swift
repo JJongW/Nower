@@ -19,7 +19,6 @@ let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate
 
-// 앱 시작 시 에러 핸들링 개선
 do {
     app.run()
 } catch {

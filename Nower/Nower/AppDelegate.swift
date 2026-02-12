@@ -12,6 +12,8 @@ import ServiceManagement
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var window: DraggableWindow?
+    /// NSHostingController를 유지하지 않으면 해제되어 창이 비어 보일 수 있음
+    private var mainHostingController: NSHostingController<AnyView>?
     var settingsManager = SettingsManager()
     let appBundleID = "pr.jongwon.Nower"
 
@@ -34,10 +36,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func setupMainWindow() {
-        let screenSize = NSScreen.main?.frame ?? NSRect(x: 0, y: 0, width: 1920, height: 1080)
-        let savedPosition = loadWindowPosition() ?? NSPoint(x: (screenSize.width - 1024) / 2,
-                                                            y: (screenSize.height - 720) / 2)
-        let windowFrame = NSRect(origin: savedPosition, size: CGSize(width: 1024, height: 720))
+        let windowSize = CGSize(width: 1024, height: 720)
+        let windowFrame: NSRect
+        
+        if let screen = NSScreen.main {
+            // 저장된 위치가 현재 화면 안에 들어오는지 검사 (다른 기기에서 옮겼을 때 화면 밖에 있으면 무시)
+            let visibleFrame = screen.visibleFrame
+            if let saved = loadWindowPosition(),
+               visibleFrame.intersects(NSRect(origin: saved, size: windowSize)) {
+                windowFrame = NSRect(origin: saved, size: windowSize)
+            } else {
+                // 저장 위치 없거나 화면 밖이면 항상 화면 중앙에 생성
+                let x = visibleFrame.midX - windowSize.width / 2
+                let y = visibleFrame.midY - windowSize.height / 2
+                windowFrame = NSRect(x: x, y: y, width: windowSize.width, height: windowSize.height)
+            }
+        } else {
+            // NSScreen.main이 nil인 환경(드물음) 대비
+            windowFrame = NSRect(x: 100, y: 100, width: windowSize.width, height: windowSize.height)
+        }
 
         let window = DraggableWindow(
             contentRect: windowFrame,
@@ -51,26 +68,38 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.hasShadow = true
         window.backgroundColor = NSColor.windowBackgroundColor
         window.level = .normal
-        window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
+        // Mission Control(Control+↑)에서 다른 창을 가리거나 클릭이 안 되지 않도록 일반 창 동작만 사용 (.fullScreenAuxiliary 제거)
+        window.collectionBehavior = [.moveToActiveSpace]
         window.ignoresMouseEvents = false
+        // 윈도우 복원 비활성화 (restoreWindowWithIdentifier className=null 경고 및 복원 시 콘텐츠 안 그려지는 현상 방지)
+        window.isRestorable = false
         
         // 배경 드래그로 창 이동 비활성화 (타이틀바에서만 이동 가능)
         window.isMovableByWindowBackground = false
 
-        let contentView = ContentView().environmentObject(settingsManager)
-        let hostingView = SafeHostingView(rootView: contentView)
-        window.contentView = hostingView
+        // 컨테이너 뷰 위에 호스팅 뷰 배치 (DraggableWindow에서 contentViewController 사용 시 프레임이 0이 되는 문제 회피)
+        let contentSize = CGSize(width: 1024, height: 720)
+        let containerView = NSView(frame: NSRect(origin: .zero, size: contentSize))
+        containerView.wantsLayer = true
+        containerView.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+        containerView.autoresizingMask = [.width, .height]
 
-        // ✅ 창 띄우기
-        window.center()
+        let contentView = ContentView().environmentObject(settingsManager)
+        let hostingController = NSHostingController(rootView: AnyView(contentView))
+        mainHostingController = hostingController
+        hostingController.view.frame = containerView.bounds
+        hostingController.view.autoresizingMask = [.width, .height]
+        containerView.addSubview(hostingController.view)
+
+        window.contentView = containerView
+        self.window = window
+
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        hostingController.view.layoutSubtreeIfNeeded()
 
-        self.window = window
-        
-        // 저장된 설정 적용
-        DispatchQueue.main.async {
-            self.applyInitialSettings()
+        DispatchQueue.main.async { [weak self] in
+            self?.applyInitialSettings()
         }
     }
     
@@ -168,6 +197,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         saveWindowPosition()
     }
+    
+    /// Dock 아이콘 클릭 시 메인 창을 다시 앞으로 가져옴 (창이 안 보일 때 대비)
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag, let window = window {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        }
+        return true
+    }
 
     private func saveWindowPosition() {
         guard let window = window else { return }
@@ -217,8 +255,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.async {
             let isPinned = self.settingsManager.isPinToTopLeft
             window.setPinToTopLeft(isPinned)
-            
-            print("📍 [AppDelegate] 좌측 상단 고정: \(isPinned ? "활성화" : "비활성화")")
         }
     }
     
@@ -229,8 +265,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.async {
             let alwaysOnTop = self.settingsManager.isAlwaysOnTop
             window.setAlwaysOnTop(alwaysOnTop)
-            
-            print("⬆️ [AppDelegate] 항상 위에 표시: \(alwaysOnTop ? "활성화" : "비활성화")")
         }
     }
     
@@ -246,10 +280,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             if isDesktop && self.settingsManager.isAlwaysOnTop {
                 self.settingsManager.isAlwaysOnTop = false
             }
-
-            #if DEBUG
-            print("🖥️ [AppDelegate] 배경화면 고정: \(isDesktop ? "활성화" : "비활성화")")
-            #endif
         }
     }
 
@@ -294,12 +324,5 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if settingsManager.isDesktopMode {
             window.setDesktopMode(true)
         }
-
-        #if DEBUG
-        print("🚀 [AppDelegate] 초기 설정 적용 완료")
-        print("   - 좌측 상단 고정: \(settingsManager.isPinToTopLeft)")
-        print("   - 항상 위에 표시: \(settingsManager.isAlwaysOnTop)")
-        print("   - 배경화면 고정: \(settingsManager.isDesktopMode)")
-        #endif
     }
 }

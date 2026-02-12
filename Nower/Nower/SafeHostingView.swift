@@ -24,23 +24,24 @@ class SafeHostingView<Content: View>: NSHostingView<Content> {
     }
     
     /// 안전한 구성 설정
+    /// 참고: wantsLayer = true는 NSHostingView의 내부 렌더링과 충돌해 Release에서 검은 화면 원인이 될 수 있어 제거함
     private func setupSafeConfiguration() {
-        // 자동 크기 조정 설정
         autoresizingMask = [.width, .height]
-        
-        // 뷰 계층 구조 안정성 향상
-        wantsLayer = true
-        
-        // 메모리 관리 개선
         needsDisplay = true
     }
     
     /// 뷰가 윈도우에 추가될 때 안전성 확보
+    /// TestFlight/Release 빌드에서 즉시 firstResponder를 주면 SwiftUI 레이아웃이 준비되기 전에
+    /// 호스팅 뷰가 그려지지 않아 검은 화면이 나올 수 있으므로, 다음 런루프에서 설정합니다.
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         
-        if let window = self.window {
-            // 윈도우 관련 안전성 설정
+        guard window != nil else { return }
+        
+        // 레이아웃이 끝난 뒤 firstResponder 설정 (검은 화면 방지)
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self, let window = self.window else { return }
+            guard window.firstResponder != self else { return }
             window.makeFirstResponder(self)
         }
     }
