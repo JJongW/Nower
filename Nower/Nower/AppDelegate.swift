@@ -17,6 +17,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var settingsManager = SettingsManager()
     let appBundleID = "pr.jongwon.Nower"
 
+    /// CalendarViewModel을 공유하기 위해 ContentView에서 사용하는 것과 동일한 인스턴스 유지
+    private let sharedCalendarViewModel = CalendarViewModel()
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // NowerCore 마이그레이션 실행
         // TODO: Uncomment when NowerCore package is linked
@@ -84,7 +87,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         containerView.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
         containerView.autoresizingMask = [.width, .height]
 
-        let contentView = ContentView().environmentObject(settingsManager)
+        let contentView = ContentView()
+            .environmentObject(sharedCalendarViewModel)
+            .environmentObject(settingsManager)
         let hostingController = NSHostingController(rootView: AnyView(contentView))
         mainHostingController = hostingController
         hostingController.view.frame = containerView.bounds

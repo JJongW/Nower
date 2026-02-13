@@ -91,10 +91,22 @@ class DraggableWindow: NSWindow {
         }
     }
     
-    /// 타이틀바에서 마우스 드래그 이벤트를 차단
+    /// 타이틀바에서 마우스 드래그 이벤트를 차단 + 배경화면 모드 타이머 리셋
     override func sendEvent(_ event: NSEvent) {
+        // 배경화면 모드에서 마우스/키보드 이벤트 시 타이머 리셋
+        if isDesktopModeEnabled && isTemporarilyActivated {
+            switch event.type {
+            case .leftMouseDown, .rightMouseDown, .leftMouseUp, .rightMouseUp,
+                 .mouseMoved, .leftMouseDragged, .rightMouseDragged,
+                 .keyDown, .keyUp, .scrollWheel:
+                resetInactivityTimer()
+            default:
+                break
+            }
+        }
+
+        // 위치 잠금 상태에서 드래그 차단
         if isPositionLocked && event.type == .leftMouseDragged {
-            // 위치가 잠겨있으면 드래그 이벤트를 무시
             return
         }
         super.sendEvent(event)
@@ -166,15 +178,24 @@ class DraggableWindow: NSWindow {
 
     private var isDesktopModeEnabled: Bool = false
     private var savedCollectionBehavior: NSWindow.CollectionBehavior = []
+    /// 배경화면 모드에서 일시적으로 활성화된 상태인지
+    private var isTemporarilyActivated: Bool = false
+    /// 비활성화 타이머 (일정 시간 반응 없으면 고정 상태로)
+    private var inactivityTimer: Timer?
+    /// 비활성화까지의 시간 (초)
+    private let inactivityTimeout: TimeInterval = 10.0
 
     /// 배경화면 고정 모드 설정
     /// 데스크톱 레벨에 윈도우를 배치하여 배경화면처럼 항상 뒤에 고정
+    /// 클릭 시 일시적으로 활성화되어 일정 추가 등이 가능
     func setDesktopMode(_ enabled: Bool) {
         isDesktopModeEnabled = enabled
 
         if enabled {
             savedCollectionBehavior = collectionBehavior
+            // 데스크톱 레벨로 설정 (배경화면 바로 위)
             level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) + 1)
+            // Mission Control에서 표시되지 않도록 ignoresCycle 사용
             collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             titlebarAppearsTransparent = true
             titleVisibility = .hidden
@@ -182,6 +203,8 @@ class DraggableWindow: NSWindow {
             isPositionLocked = true
             self.isMovable = false
             hidesOnDeactivate = false
+            // 마우스 이벤트는 계속 받음 (클릭으로 활성화 가능)
+            ignoresMouseEvents = false
             // 배경화면 모드에서만 창 투명 (위젯처럼 보이도록)
             isOpaque = false
             backgroundColor = NSColor.clear
@@ -189,6 +212,8 @@ class DraggableWindow: NSWindow {
             print("🖥️ [DraggableWindow] 배경화면 고정 모드 활성화")
             #endif
         } else {
+            cancelInactivityTimer()
+            isTemporarilyActivated = false
             level = originalLevel
             collectionBehavior = savedCollectionBehavior.isEmpty
                 ? [.moveToActiveSpace]
@@ -201,6 +226,7 @@ class DraggableWindow: NSWindow {
                 self.isMovable = true
             }
             hidesOnDeactivate = false
+            ignoresMouseEvents = false
             // 일반 모드로 복원: 불투명 + 창 배경 (콘텐츠가 보이도록)
             isOpaque = true
             backgroundColor = NSColor.windowBackgroundColor
@@ -208,6 +234,106 @@ class DraggableWindow: NSWindow {
             print("🖥️ [DraggableWindow] 배경화면 고정 모드 비활성화")
             #endif
         }
+    }
+
+    // MARK: - 배경화면 모드 활성화/비활성화 (클릭 시 전환)
+
+    /// 창이 활성화될 때 호출 (클릭 등으로 포커스 받음)
+    override func becomeKey() {
+        super.becomeKey()
+
+        if isDesktopModeEnabled {
+            activateFromDesktopMode()
+        }
+    }
+
+    /// 창이 비활성화될 때 호출 (다른 앱으로 포커스 이동)
+    override func resignKey() {
+        super.resignKey()
+
+        if isDesktopModeEnabled && isTemporarilyActivated {
+            // 즉시 고정 상태로 복귀
+            deactivateToDesktopMode()
+        }
+    }
+
+    /// 배경화면 모드에서 일시적으로 활성화 (일정 추가 등 가능)
+    private func activateFromDesktopMode() {
+        isTemporarilyActivated = true
+
+        // 일반 레벨로 올려서 상호작용 가능하게 함
+        level = .normal
+        // Mission Control에서 숨기기 위해 ignoresCycle 유지
+        collectionBehavior = [.canJoinAllSpaces, .ignoresCycle]
+
+        // 시각적으로 활성화 상태 표시
+        isOpaque = true
+        backgroundColor = NSColor.windowBackgroundColor
+        // 타이틀바 표시
+        titlebarAppearsTransparent = false
+        titleVisibility = .visible
+
+        // 비활성화 타이머 시작
+        resetInactivityTimer()
+
+        #if DEBUG
+        print("✨ [DraggableWindow] 배경화면 모드 → 일시 활성화")
+        #endif
+    }
+
+    /// 일시 활성화 상태에서 다시 배경화면 고정 상태로 복귀
+    private func deactivateToDesktopMode() {
+        cancelInactivityTimer()
+        isTemporarilyActivated = false
+
+        // 다시 데스크톱 레벨로
+        level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) + 1)
+        collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
+
+        // 투명하게 변경
+        isOpaque = false
+        backgroundColor = NSColor.clear
+        // 타이틀바 숨김
+        titlebarAppearsTransparent = true
+        titleVisibility = .hidden
+
+        #if DEBUG
+        print("🔙 [DraggableWindow] 일시 활성화 → 배경화면 모드 복귀")
+        #endif
+    }
+
+    /// 비활성화 타이머 시작/리셋
+    private func resetInactivityTimer() {
+        cancelInactivityTimer()
+        inactivityTimer = Timer.scheduledTimer(withTimeInterval: inactivityTimeout, repeats: false) { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.handleInactivityTimeout()
+            }
+        }
+    }
+
+    /// 비활성화 타이머 취소
+    private func cancelInactivityTimer() {
+        inactivityTimer?.invalidate()
+        inactivityTimer = nil
+    }
+
+    /// 비활성화 타임아웃 처리
+    private func handleInactivityTimeout() {
+        guard isDesktopModeEnabled && isTemporarilyActivated else { return }
+
+        #if DEBUG
+        print("⏱️ [DraggableWindow] 비활성화 타임아웃 - 배경화면 모드로 복귀")
+        #endif
+
+        deactivateToDesktopMode()
+        // 포커스 해제
+        resignKey()
+    }
+
+    /// 현재 배경화면 모드에서 일시 활성화 상태인지
+    var isActivatedInDesktopMode: Bool {
+        return isDesktopModeEnabled && isTemporarilyActivated
     }
     
     /// 윈도우를 화면 좌측 상단으로 이동
@@ -274,6 +400,7 @@ class DraggableWindow: NSWindow {
     }
     
     deinit {
+        cancelInactivityTimer()
         NotificationCenter.default.removeObserver(self)
     }
 }

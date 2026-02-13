@@ -11,7 +11,8 @@ import Foundation
 struct ContentView: View {
     let days: [String] = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
 
-    @StateObject private var viewModel = CalendarViewModel()
+    /// CalendarViewModel - EnvironmentObject로 주입받음
+    @EnvironmentObject var viewModel: CalendarViewModel
     @StateObject private var syncViewModel = SyncStatusViewModel()
     @State private var newTodoText: String = ""
     @State private var selectedDate: String? = nil
@@ -187,5 +188,6 @@ struct ContentView: View {
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
+            .environmentObject(CalendarViewModel())
     }
 }
