@@ -14,17 +14,21 @@ struct DayView: View {
     let dayInfo: WeekDayInfo
     let fixedEventAreaHeight: CGFloat? // 주 내 최대 일정 개수에 따른 고정 높이 (nil이면 동적 계산)
     let onDaySelected: () -> Void
+    var onDayDoubleTapped: (() -> Void)? = nil
     let onTodoSelected: (TodoItem) -> Void
-    let onTodoDragStarted: (TodoItem) -> Void // 드래그 시작 콜백
-    let onTodoDropped: () -> Void // 드롭 완료 콜백
-    
+    let onTodoDragStarted: (TodoItem) -> Void
+    let onTodoDropped: () -> Void
+
     @EnvironmentObject var viewModel: CalendarViewModel
-    
-    // fixedEventAreaHeight가 nil인 경우를 위한 기본 초기화
-    init(dayInfo: WeekDayInfo, fixedEventAreaHeight: CGFloat? = nil, onDaySelected: @escaping () -> Void, onTodoSelected: @escaping (TodoItem) -> Void, onTodoDragStarted: @escaping (TodoItem) -> Void, onTodoDropped: @escaping () -> Void) {
+    #if os(macOS)
+    @State private var singleTapWorkItem: DispatchWorkItem?
+    #endif
+
+    init(dayInfo: WeekDayInfo, fixedEventAreaHeight: CGFloat? = nil, onDaySelected: @escaping () -> Void, onDayDoubleTapped: (() -> Void)? = nil, onTodoSelected: @escaping (TodoItem) -> Void, onTodoDragStarted: @escaping (TodoItem) -> Void, onTodoDropped: @escaping () -> Void) {
         self.dayInfo = dayInfo
         self.fixedEventAreaHeight = fixedEventAreaHeight
         self.onDaySelected = onDaySelected
+        self.onDayDoubleTapped = onDayDoubleTapped
         self.onTodoSelected = onTodoSelected
         self.onTodoDragStarted = onTodoDragStarted
         self.onTodoDropped = onTodoDropped
@@ -103,11 +107,22 @@ struct DayView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(dayBackgroundColor)
-        .contentShape(Rectangle()) // 전체 영역을 클릭 가능하게 설정
-        .onTapGesture {
-            // 전체 영역 클릭 시 날짜 선택
-            onDaySelected()
+        .contentShape(Rectangle())
+        #if os(macOS)
+        .onTapGesture(count: 2) {
+            singleTapWorkItem?.cancel()
+            singleTapWorkItem = nil
+            onDayDoubleTapped?()
         }
+        .onTapGesture {
+            singleTapWorkItem?.cancel()
+            let work = DispatchWorkItem { onDaySelected() }
+            singleTapWorkItem = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: work)
+        }
+        #else
+        .onTapGesture { onDaySelected() }
+        #endif
     }
     
     /// 날짜 라벨 색상 (iOS 스타일)
