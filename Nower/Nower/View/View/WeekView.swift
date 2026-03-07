@@ -13,10 +13,11 @@ import SwiftUI
 struct WeekView: View {
     let weekDays: [WeekDayInfo]
     let onDaySelected: (String) -> Void
+    var onDayDoubleTapped: ((String) -> Void)? = nil
     let onTodoSelected: (TodoItem, String) -> Void
-    let onTodoDragStarted: (TodoItem, String) -> Void // 드래그 시작 콜백
-    let onTodoDropped: (String) -> Void // 드롭 완료 콜백
-    
+    let onTodoDragStarted: (TodoItem, String) -> Void
+    let onTodoDropped: (String) -> Void
+
     @EnvironmentObject var viewModel: CalendarViewModel
     
     var body: some View {
@@ -32,12 +33,13 @@ struct WeekView: View {
                     ForEach(Array(weekDays.enumerated()), id: \.offset) { index, dayInfo in
                         DayView(
                             dayInfo: dayInfo,
-                            fixedEventAreaHeight: calculateEventAreaHeight(), // 주 내 최대 일정 개수에 따른 고정 높이 전달
+                            fixedEventAreaHeight: calculateEventAreaHeight(),
                             onDaySelected: {
                                 if !dayInfo.dateString.isEmpty {
                                     onDaySelected(dayInfo.dateString)
                                 }
                             },
+                            onDayDoubleTapped: !dayInfo.dateString.isEmpty ? { onDayDoubleTapped?(dayInfo.dateString) } : nil,
                             onTodoSelected: { todo in
                                 onTodoSelected(todo, dayInfo.dateString)
                             },

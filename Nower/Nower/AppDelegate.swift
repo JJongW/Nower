@@ -10,10 +10,16 @@ import ServiceManagement
 // NOTE: Import NowerCore when package is linked
 // import NowerCore
 
+/// true: 데스크톱 위젯 모드 (Dock/Cmd+Tab 없음, 배경화면 레벨 창, 더블클릭으로 Add Schedule 창).
+/// false: 기존 일반 창 모드 (타이틀바, 이동 가능, 배경화면 고정 토글).
+private let useDesktopWidgetMode = false
+
 class AppDelegate: NSObject, NSApplicationDelegate {
     var window: DraggableWindow?
     /// NSHostingController를 유지하지 않으면 해제되어 창이 비어 보일 수 있음
     private var mainHostingController: NSHostingController<AnyView>?
+    /// 데스크톱 위젯 모드일 때 사용 (Dock/Cmd+Tab 미표시, 배경화면 레벨 창).
+    private var desktopWindowController: DesktopWindowController?
     var settingsManager = SettingsManager()
     let appBundleID = "pr.jongwon.Nower"
 
@@ -28,14 +34,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         //     DependencyContainer.shared.startSyncListening()
         // }
 
-        setupMainWindow()
+        if useDesktopWidgetMode {
+            setupDesktopWidgetMode()
+        } else {
+            setupMainWindow()
+            NotificationCenter.default.addObserver(self, selector: #selector(desktopModeChanged), name: .init("DesktopModeChanged"), object: nil)
+        }
         setupMenuBar()
         enableAutoLaunch()
+    }
 
-        // 윈도우 설정 관련 알림 설정
-        NotificationCenter.default.addObserver(self, selector: #selector(pinToTopLeftChanged), name: .init("PinToTopLeftChanged"), object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(alwaysOnTopChanged), name: .init("AlwaysOnTopChanged"), object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(desktopModeChanged), name: .init("DesktopModeChanged"), object: nil)
+    /// 데스크톱 위젯 모드: .accessory( Dock/Cmd+Tab 미표시 ), 배경화면 레벨 borderless 창, 더블클릭 시 Add Schedule 창.
+    private func setupDesktopWidgetMode() {
+        NSApp.setActivationPolicy(.accessory)
+        let wc = DesktopWindowController()
+        desktopWindowController = wc
+        wc.showWindow(nil)
+        wc.window?.makeKeyAndOrderFront(nil)
     }
 
     func setupMainWindow() {
@@ -72,7 +87,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.backgroundColor = NSColor.windowBackgroundColor
         window.level = .normal
         // Mission Control(Control+↑)에서 다른 창을 가리거나 클릭이 안 되지 않도록 일반 창 동작만 사용 (.fullScreenAuxiliary 제거)
-        window.collectionBehavior = [.moveToActiveSpace]
+        window.collectionBehavior = [.canJoinAllSpaces]
         window.ignoresMouseEvents = false
         // 윈도우 복원 비활성화 (restoreWindowWithIdentifier className=null 경고 및 복원 시 콘텐츠 안 그려지는 현상 방지)
         window.isRestorable = false
@@ -163,33 +178,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         viewMenu.addItem(NSMenuItem.separator())
         viewMenu.addItem(NSMenuItem(title: "오늘로 이동", action: nil, keyEquivalent: ""))
         
-        // 설정 메뉴
+        // 설정 메뉴 (빠른 설정 서브메뉴 제거: 좌측 상단 고정/항상 위 표시는 UI에서 제거)
         let settingsMenuItem = NSMenuItem()
         mainMenu.addItem(settingsMenuItem)
         let settingsMenu = NSMenu(title: "설정")
         settingsMenuItem.submenu = settingsMenu
-        
-        // 빠른 설정 서브메뉴
-        let quickSettingsItem = NSMenuItem(title: "빠른 설정", action: nil, keyEquivalent: "")
-        let quickSettingsMenu = NSMenu()
-        
-        let pinTopLeftItem = NSMenuItem(title: "좌측 상단 고정", action: #selector(togglePinToTopLeft), keyEquivalent: "")
-        pinTopLeftItem.state = settingsManager.isPinToTopLeft ? .on : .off
-        
-        let alwaysOnTopItem = NSMenuItem(title: "항상 위에 표시", action: #selector(toggleAlwaysOnTop), keyEquivalent: "")
-        alwaysOnTopItem.state = settingsManager.isAlwaysOnTop ? .on : .off
 
-        let desktopModeItem = NSMenuItem(title: "배경화면 고정", action: #selector(toggleDesktopMode), keyEquivalent: "")
-        desktopModeItem.state = settingsManager.isDesktopMode ? .on : .off
-
-        quickSettingsMenu.addItem(pinTopLeftItem)
-        quickSettingsMenu.addItem(alwaysOnTopItem)
-        quickSettingsMenu.addItem(NSMenuItem.separator())
-        quickSettingsMenu.addItem(desktopModeItem)
-        quickSettingsItem.submenu = quickSettingsMenu
-        
-        settingsMenu.addItem(quickSettingsItem)
-        settingsMenu.addItem(NSMenuItem.separator())
         settingsMenu.addItem(NSMenuItem(title: "설정...", action: #selector(openSettings), keyEquivalent: ","))
         settingsMenu.addItem(NSMenuItem.separator())
         settingsMenu.addItem(NSMenuItem(title: "자동 실행 활성화", action: #selector(enableAutoLaunch), keyEquivalent: ""))
@@ -200,11 +194,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 
     func applicationWillTerminate(_ notification: Notification) {
-        saveWindowPosition()
+        if !useDesktopWidgetMode {
+            saveWindowPosition()
+        }
     }
-    
-    /// Dock 아이콘 클릭 시 메인 창을 다시 앞으로 가져옴 (창이 안 보일 때 대비)
+
+    /// Dock 아이콘 클릭 시 메인 창을 다시 앞으로 가져옴 (.accessory일 때는 Dock 없음; Spotlight 등으로 재실행 시 창 표시).
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if useDesktopWidgetMode {
+            if !flag, let wc = desktopWindowController {
+                wc.window?.makeKeyAndOrderFront(nil)
+                NSApp.activate(ignoringOtherApps: true)
+            }
+            return true
+        }
         if !flag, let window = window {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
@@ -250,82 +253,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func disableAutoLaunch() {
         SMLoginItemSetEnabled(appBundleID as CFString, false)
     }
-    
-    // MARK: - Window Settings Handlers
-    
-    /// 좌측 상단 고정 기능 변경 처리
-    @objc func pinToTopLeftChanged() {
-        guard let window = window else { return }
-        
-        DispatchQueue.main.async {
-            let isPinned = self.settingsManager.isPinToTopLeft
-            window.setPinToTopLeft(isPinned)
-        }
-    }
-    
-    /// 항상 위에 표시 기능 변경 처리
-    @objc func alwaysOnTopChanged() {
-        guard let window = window else { return }
-        
-        DispatchQueue.main.async {
-            let alwaysOnTop = self.settingsManager.isAlwaysOnTop
-            window.setAlwaysOnTop(alwaysOnTop)
-        }
-    }
-    
+
     /// 배경화면 고정 모드 변경 처리
     @objc func desktopModeChanged() {
         guard let window = window else { return }
-
         DispatchQueue.main.async {
-            let isDesktop = self.settingsManager.isDesktopMode
-            window.setDesktopMode(isDesktop)
-
-            // 배경화면 모드와 항상 위에 표시는 상호 배타
-            if isDesktop && self.settingsManager.isAlwaysOnTop {
-                self.settingsManager.isAlwaysOnTop = false
-            }
+            window.setDesktopMode(self.settingsManager.isDesktopMode)
         }
     }
 
-    /// 배경화면 고정 토글
-    @objc func toggleDesktopMode() {
-        settingsManager.isDesktopMode.toggle()
-        updateMenuBar()
-    }
-
-    /// 좌측 상단 고정 토글
-    @objc func togglePinToTopLeft() {
-        settingsManager.isPinToTopLeft.toggle()
-        updateMenuBar()
-    }
-    
-    /// 항상 위에 표시 토글
-    @objc func toggleAlwaysOnTop() {
-        settingsManager.isAlwaysOnTop.toggle()
-        updateMenuBar()
-    }
-    
-    /// 메뉴바 업데이트 (토글 상태 반영)
-    private func updateMenuBar() {
-        setupMenuBar()
-    }
-    
-    /// 앱 시작 시 저장된 설정들을 적용
+    /// 앱 시작 시 저장된 설정 적용 (배경화면 고정만; 좌측 상단 고정/항상 위 표시 UI 제거로 해당 적용 제거)
     private func applyInitialSettings() {
         guard let window = window else { return }
-
-        // 좌측 상단 고정 적용
-        if settingsManager.isPinToTopLeft {
-            window.setPinToTopLeft(true)
-        }
-
-        // 항상 위에 표시 적용 (배경화면 고정과 상호 배타)
-        if settingsManager.isAlwaysOnTop && !settingsManager.isDesktopMode {
-            window.setAlwaysOnTop(true)
-        }
-
-        // 배경화면 고정 모드 적용
         if settingsManager.isDesktopMode {
             window.setDesktopMode(true)
         }

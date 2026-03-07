@@ -22,6 +22,8 @@ struct CalendarGridView: View {
 
     @Binding var toastMessage: String
     @Binding var showToast: Bool
+    /// 날짜 칸 더블클릭 시 호출 (해당 날짜로 일정 추가 창 열기용). macOS에서만 사용.
+    var onOpenAddEventForDate: ((String) -> Void)? = nil
 
     var body: some View {
         ScrollView {
@@ -37,7 +39,6 @@ struct CalendarGridView: View {
                         WeekView(
                             weekDays: week,
                             onDaySelected: { dateString in
-                                // 날짜 클릭 시 일정 리스트 뷰 표시
                                 let formatter = DateFormatter()
                                 formatter.dateFormat = "yyyy-MM-dd"
                                 if let date = formatter.date(from: dateString) {
@@ -45,6 +46,7 @@ struct CalendarGridView: View {
                                     isShowingEventList = true
                                 }
                             },
+                            onDayDoubleTapped: onOpenAddEventForDate,
                             onTodoSelected: { todo, dateString in
                                 selectedTodo = todo
                                 selectedDate = dateString
@@ -66,6 +68,20 @@ struct CalendarGridView: View {
             .padding(.horizontal, 8)
         }
         .frame(maxHeight: .infinity)
+        #if os(macOS)
+        .onChange(of: isShowingEditPopup) { visible in
+            NotificationCenter.default.post(
+                name: visible ? .nowerPopupOpened : .nowerPopupClosed,
+                object: nil
+            )
+        }
+        .onChange(of: isShowingEventList) { visible in
+            NotificationCenter.default.post(
+                name: visible ? .nowerPopupOpened : .nowerPopupClosed,
+                object: nil
+            )
+        }
+        #endif
         .overlay {
             // 편집 팝업 뷰
             if isShowingEditPopup, let todo = selectedTodo, let date = selectedDate {

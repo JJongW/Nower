@@ -11,13 +11,17 @@ import Foundation
 struct ContentView: View {
     let days: [String] = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
 
-    /// CalendarViewModel - EnvironmentObject로 주입받음
     @EnvironmentObject var viewModel: CalendarViewModel
+    #if os(macOS)
+    @EnvironmentObject var settingsManager: SettingsManager
+    @Environment(\.openAddScheduleWithDate) private var openAddScheduleWithDate
+    #endif
     @StateObject private var syncViewModel = SyncStatusViewModel()
     @State private var newTodoText: String = ""
     @State private var selectedDate: String? = nil
     @State private var selectedColor: String = ""
     @State private var isPopupVisible: Bool = false
+    @State private var addEventInitialDate: Date? = nil
 
     @State private var toastMessage: String = ""
     @State private var showToast: Bool = false
@@ -36,6 +40,16 @@ struct ContentView: View {
                 .onTapGesture {
                     isPopupVisible = false
                 }
+                #if os(macOS)
+                .onTapGesture(count: 2) {
+                    if let open = openAddScheduleWithDate {
+                        open(nil)
+                    } else {
+                        addEventInitialDate = nil
+                        isPopupVisible = true
+                    }
+                }
+                #endif
                 .onAppear {
                     if viewModel.weeks.isEmpty {
                         viewModel.generateCalendarDays(for: viewModel.currentMonth)
@@ -80,9 +94,36 @@ struct ContentView: View {
 
                         Spacer()
 
+                        #if os(macOS)
+                        // 배경화면 고정 토글 (데스크톱 위젯 모드가 아닐 때만 표시)
+                        if openAddScheduleWithDate == nil {
+                            Button(action: {
+                                settingsManager.isDesktopMode.toggle()
+                            }) {
+                                Image(systemName: settingsManager.isDesktopMode ? "pin.fill" : "pin")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(settingsManager.isDesktopMode ? AppColors.textHighlighted : AppColors.textPrimary)
+                            }
+                            .buttonStyle(.borderless)
+                            .help(settingsManager.isDesktopMode ? "배경화면 고정 해제" : "배경화면 고정")
+                        }
+                        #endif
+
                         SyncStatusView(viewModel: syncViewModel)
 
-                        Button(action: { isPopupVisible = true }) {
+                        Button(action: {
+                            #if os(macOS)
+                            if let open = openAddScheduleWithDate {
+                                open(nil)
+                            } else {
+                                addEventInitialDate = nil
+                                isPopupVisible = true
+                            }
+                            #else
+                            addEventInitialDate = nil
+                            isPopupVisible = true
+                            #endif
+                        }) {
                             Text("Add Event")
                                 .foregroundColor(AppColors.buttonTextColor)
                                 .font(.system(size: 14, weight: .semibold))
@@ -120,23 +161,44 @@ struct ContentView: View {
                 .padding(.bottom, 4)
                 .padding(.horizontal, 8)
 
-                // Calendar Grid
-                CalendarGridView(toastMessage: $toastMessage, showToast: $showToast)
-                    .environmentObject(viewModel)
+                // Calendar Grid (날짜 칸 더블클릭 시 일정 추가 창 열기)
+                CalendarGridView(
+                    toastMessage: $toastMessage,
+                    showToast: $showToast,
+                    onOpenAddEventForDate: { dateString in
+                        let formatter = DateFormatter()
+                        formatter.dateFormat = "yyyy-MM-dd"
+                        if let date = formatter.date(from: dateString) {
+                            #if os(macOS)
+                            if let open = openAddScheduleWithDate {
+                                open(date)
+                            } else {
+                                addEventInitialDate = date
+                                isPopupVisible = true
+                            }
+                            #else
+                            addEventInitialDate = date
+                            isPopupVisible = true
+                            #endif
+                        }
+                    }
+                )
+                .environmentObject(viewModel)
             }
             .frame(width: 1024, height: 720)
             .padding(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
 
-            // Popup for adding events
+            // Popup for adding events (날짜 더블클릭 시 해당 날짜로 열림)
             if isPopupVisible {
                 PopupBackgroundView(isPresented: $isPopupVisible) {
                     AddEventView(
-                        initialDate: nil,
+                        initialDate: addEventInitialDate,
                         selectedColor: $selectedColor,
                         isPopupVisible: $isPopupVisible
                     )
                     .environmentObject(viewModel)
                 }
+                .onDisappear { addEventInitialDate = nil }
             }
 
             // Popup for conflict resolution
@@ -151,6 +213,14 @@ struct ContentView: View {
         }
         #if os(macOS)
         .frame(minWidth: 1024, maxWidth: .infinity, minHeight: 720, maxHeight: .infinity)
+        #endif
+        #if os(macOS)
+        .onChange(of: isPopupVisible) { visible in
+            NotificationCenter.default.post(
+                name: visible ? .nowerPopupOpened : .nowerPopupClosed,
+                object: nil
+            )
+        }
         #endif
     }
 
@@ -189,5 +259,8 @@ struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
             .environmentObject(CalendarViewModel())
+            #if os(macOS)
+            .environmentObject(SettingsManager())
+            #endif
     }
 }
