@@ -8,6 +8,10 @@
 import Foundation
 import SwiftUI
 
+#if canImport(NowerCore)
+import NowerCore
+#endif
+
 struct AddEventView: View {
     @EnvironmentObject var viewModel: CalendarViewModel
     @State private var eventText: String = ""
@@ -16,6 +20,10 @@ struct AddEventView: View {
     @Binding var isPopupVisible: Bool
     @State private var showColorVariationPicker: Bool = false
     @State private var selectedBaseColor: String = "skyblue"
+
+    // 템플릿 자동완성
+    @State private var templateSuggestions: [EventTemplate] = []
+    @State private var showTemplateSuggestions: Bool = false
 
     // 기간 모드
     @State private var isPeriodMode: Bool = false
@@ -92,14 +100,26 @@ struct AddEventView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     // 제목
                     formRow(label: "제목") {
-                        TextField(placeholderText, text: $eventText)
-                            .textFieldStyle(.plain)
-                            .font(.system(size: 14))
-                            .foregroundColor(AppColors.textPrimary)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 7)
-                            .background(AppColors.textFieldBackground)
-                            .cornerRadius(6)
+                        VStack(alignment: .leading, spacing: 4) {
+                            TextField(placeholderText, text: $eventText)
+                                .textFieldStyle(.plain)
+                                .font(.system(size: 14))
+                                .foregroundColor(AppColors.textPrimary)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 7)
+                                .background(AppColors.textFieldBackground)
+                                .cornerRadius(6)
+                                .onChange(of: eventText) { newValue in
+                                    updateTemplateSuggestions(for: newValue)
+                                }
+
+                            if showTemplateSuggestions {
+                                TemplateAutocompleteView(suggestions: templateSuggestions) { template in
+                                    applyTemplate(template)
+                                }
+                                .zIndex(1)
+                            }
+                        }
                     }
 
                     // 색상 선택
@@ -256,7 +276,16 @@ struct AddEventView: View {
 
             // 하단 버튼 바 (macOS HIG)
             HStack {
+                Button("템플릿 저장") {
+                    showSaveTemplateAlert()
+                }
+                .buttonStyle(.borderless)
+                .foregroundColor(AppColors.textFieldPlaceholder)
+                .font(.system(size: 12))
+                .disabled(eventText.trimmingCharacters(in: .whitespaces).isEmpty)
+
                 Spacer()
+
                 Button("취소") {
                     viewModel.isAddingEvent = false
                     isPopupVisible = false
@@ -369,6 +398,7 @@ struct AddEventView: View {
         var height: CGFloat = 420
         if isPeriodMode { height += 40 }
         if startDate > endDate && isPeriodMode { height += 24 }
+        if showTemplateSuggestions { height += CGFloat(min(templateSuggestions.count, 5)) * 34 }
         return height
     }
 
@@ -398,6 +428,71 @@ struct AddEventView: View {
             content()
             Spacer()
         }
+    }
+
+    // MARK: - Template Actions
+
+    private func updateTemplateSuggestions(for text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else {
+            showTemplateSuggestions = false
+            templateSuggestions = []
+            return
+        }
+        #if canImport(NowerCore)
+        if case .success(let suggestions) = DependencyContainer.shared.fetchTemplatesUseCase.execute(matchingPrefix: trimmed) {
+            templateSuggestions = Array(suggestions.prefix(5))
+            showTemplateSuggestions = !templateSuggestions.isEmpty
+        }
+        #endif
+    }
+
+    private func applyTemplate(_ template: EventTemplate) {
+        eventText = template.title
+        selectedColor = template.colorName
+        selectedBaseColor = AppColors.baseColorName(from: template.colorName)
+        #if canImport(NowerCore)
+        if let rule = template.recurrenceRule {
+            selectedRecurrence = RecurrenceInfo.from(rule)
+        } else {
+            selectedRecurrence = nil
+        }
+        #endif
+        showTemplateSuggestions = false
+    }
+
+    private func showSaveTemplateAlert() {
+        let alert = NSAlert()
+        alert.messageText = "템플릿 저장"
+        alert.informativeText = "이 일정 양식을 어떤 이름으로 저장할까요?"
+        alert.alertStyle = .informational
+
+        let inputField = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 24))
+        inputField.stringValue = eventText
+        inputField.placeholderString = "템플릿 이름"
+        alert.accessoryView = inputField
+
+        alert.addButton(withTitle: "저장")
+        alert.addButton(withTitle: "취소")
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            let name = inputField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !name.isEmpty else { return }
+            saveTemplate(name: name)
+        }
+    }
+
+    private func saveTemplate(name: String) {
+        #if canImport(NowerCore)
+        let rule: NowerCore.RecurrenceRule? = selectedRecurrence.map { $0.toRecurrenceRule() }
+        let template = EventTemplate(
+            name: name,
+            title: eventText.trimmingCharacters(in: .whitespaces),
+            colorName: selectedColor,
+            recurrenceRule: rule
+        )
+        _ = DependencyContainer.shared.saveTemplateUseCase.execute(template)
+        #endif
     }
 
     // MARK: - Actions

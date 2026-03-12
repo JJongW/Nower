@@ -6,6 +6,9 @@
 //
 import UIKit
 import SnapKit
+#if canImport(NowerCore)
+import NowerCore
+#endif
 
 final class NewEventViewController: UIViewController {
     var coordinator: AppCoordinator?
@@ -34,6 +37,19 @@ final class NewEventViewController: UIViewController {
 
         // 기간 모드 변경 시 기본 날짜 설정
         popupView.periodModeSwitch.addTarget(self, action: #selector(periodModeChanged), for: .valueChanged)
+
+        // 텍스트 변경 감지 → 자동완성
+        popupView.textField.addTarget(self, action: #selector(titleChanged(_:)), for: .editingChanged)
+
+        // 템플릿 저장 버튼
+        popupView.saveTemplateButton.addTarget(self, action: #selector(saveTemplateTapped), for: .touchUpInside)
+
+        // 자동완성 선택 콜백
+        #if canImport(NowerCore)
+        popupView.autocompleteView.onSelect = { [weak self] template in
+            self?.applyTemplate(template)
+        }
+        #endif
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -132,6 +148,60 @@ final class NewEventViewController: UIViewController {
         alert.addAction(UIAlertAction(title: "확인", style: .default))
         present(alert, animated: true)
     }
+
+    @objc private func titleChanged(_ sender: UITextField) {
+        #if canImport(NowerCore)
+        let text = sender.text ?? ""
+        if case .success(let suggestions) = DependencyContainer.shared.fetchTemplatesUseCase.execute(matchingPrefix: text) {
+            popupView.updateAutocomplete(suggestions: suggestions)
+        } else {
+            popupView.updateAutocomplete(suggestions: [])
+        }
+        #endif
+    }
+
+    @objc private func saveTemplateTapped() {
+        let text = (popupView.textField.text ?? "").trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty else { return }
+
+        let alert = UIAlertController(title: "템플릿 저장", message: "이 일정 양식을 어떤 이름으로 저장할까요?", preferredStyle: .alert)
+        alert.addTextField { tf in
+            tf.text = text
+            tf.placeholder = "템플릿 이름"
+        }
+        alert.addAction(UIAlertAction(title: "저장", style: .default) { [weak self, weak alert] _ in
+            let name = (alert?.textFields?.first?.text ?? "").trimmingCharacters(in: .whitespaces)
+            guard !name.isEmpty, let self else { return }
+            self.saveTemplate(name: name, title: text)
+        })
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+        present(alert, animated: true)
+    }
+
+    #if canImport(NowerCore)
+    private func applyTemplate(_ template: EventTemplate) {
+        popupView.textField.text = template.title
+        popupView.selectedColorName = template.colorName
+        popupView.updateSaveButtonState()
+        if let rule = template.recurrenceRule {
+            popupView.selectedRecurrenceInfo = RecurrenceInfo.from(rule)
+        } else {
+            popupView.selectedRecurrenceInfo = nil
+        }
+        popupView.updateAutocomplete(suggestions: [])
+    }
+
+    private func saveTemplate(name: String, title: String) {
+        let rule: NowerCore.RecurrenceRule? = popupView.selectedRecurrenceInfo?.toRecurrenceRule()
+        let template = EventTemplate(
+            name: name,
+            title: title,
+            colorName: popupView.selectedColorName,
+            recurrenceRule: rule
+        )
+        _ = DependencyContainer.shared.saveTemplateUseCase.execute(template)
+    }
+    #endif
 
     @objc private func cancelTapped() {
         dismiss(animated: true)

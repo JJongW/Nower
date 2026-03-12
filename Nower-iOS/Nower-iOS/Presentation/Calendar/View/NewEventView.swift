@@ -7,6 +7,9 @@
 
 import UIKit
 import SnapKit
+#if canImport(NowerCore)
+import NowerCore
+#endif
 
 final class NewEventView: UIView {
 
@@ -70,6 +73,21 @@ final class NewEventView: UIView {
         button.layer.borderColor = UIColor.systemRed.cgColor
         return button
     }()
+
+    let saveTemplateButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("템플릿 저장", for: .normal)
+        button.setTitleColor(AppColors.textFieldPlaceholder, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 13)
+        button.isHidden = true
+        return button
+    }()
+
+    #if canImport(NowerCore)
+    let autocompleteView = TemplateAutocompleteView()
+    #endif
+
+    private var autocompleteHeightConstraint: Constraint?
 
     // MARK: - 기간 선택 관련 컴포넌트
     
@@ -467,13 +485,35 @@ final class NewEventView: UIView {
             $0.leading.trailing.equalToSuperview().inset(32)
         }
 
+        // 템플릿 자동완성 드롭다운 (textFieldBackgroundView 바로 아래, 초기 height=0)
+        #if canImport(NowerCore)
+        contentView.addSubview(autocompleteView)
+        autocompleteView.snp.makeConstraints {
+            $0.top.equalTo(textFieldBackgroundView.snp.bottom)
+            $0.leading.trailing.equalToSuperview().inset(20)
+            autocompleteHeightConstraint = $0.height.equalTo(0).constraint
+        }
+        #endif
+
+        // 템플릿 저장 버튼 (textFieldBackgroundView 우측 하단)
+        contentView.addSubview(saveTemplateButton)
+        saveTemplateButton.snp.makeConstraints {
+            #if canImport(NowerCore)
+            $0.top.equalTo(autocompleteView.snp.bottom).offset(4)
+            #else
+            $0.top.equalTo(textFieldBackgroundView.snp.bottom).offset(4)
+            #endif
+            $0.trailing.equalToSuperview().inset(20)
+            $0.height.equalTo(20)
+        }
+
         // 기간 모드 스위치
         contentView.addSubview(periodModeContainer)
         periodModeContainer.addSubview(periodModeLabel)
         periodModeContainer.addSubview(periodModeSwitch)
 
         periodModeContainer.snp.makeConstraints {
-            $0.top.equalTo(textFieldBackgroundView.snp.bottom).offset(16) // 8pt 그리드 (16 = 2 * 8)
+            $0.top.equalTo(saveTemplateButton.snp.bottom).offset(8) // 8pt 그리드
             $0.leading.trailing.equalToSuperview().inset(20)
             $0.height.equalTo(56) // 최소 터치 타겟 44pt + 패딩
         }
@@ -1421,10 +1461,23 @@ final class NewEventView: UIView {
         let hasText = !(textField.text ?? "").trimmingCharacters(in: .whitespaces).isEmpty
         saveButton.isEnabled = hasText
         saveButton.setTitle(hasText ? saveButtonActiveTitle : "제목을 입력하세요", for: .normal)
+        saveTemplateButton.isHidden = !hasText
         UIView.animate(withDuration: 0.2) {
             self.saveButton.alpha = hasText ? 1.0 : 0.4
         }
     }
+
+    #if canImport(NowerCore)
+    /// 자동완성 드롭다운 업데이트
+    func updateAutocomplete(suggestions: [EventTemplate]) {
+        autocompleteView.suggestions = suggestions
+        let newHeight = suggestions.isEmpty ? 0 : CGFloat(min(suggestions.count, 5)) * TemplateAutocompleteView.rowHeight
+        autocompleteHeightConstraint?.update(offset: newHeight)
+        UIView.animate(withDuration: 0.15) {
+            self.layoutIfNeeded()
+        }
+    }
+    #endif
 
     // MARK: - Error Feedback
 

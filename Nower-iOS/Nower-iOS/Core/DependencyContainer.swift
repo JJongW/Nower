@@ -30,6 +30,9 @@ public final class DependencyContainer {
     /// 이벤트 저장소
     public lazy var eventRepository: NowerCore.EventRepository = EventRepositoryImpl(storage: storageProvider)
 
+    /// 템플릿 저장소
+    public lazy var templateRepository: NowerCore.TemplateRepository = TemplateRepositoryImpl(storage: storageProvider)
+
     // MARK: - Migration
 
     /// 마이그레이션 관리자
@@ -53,6 +56,9 @@ public final class DependencyContainer {
     public lazy var updateEventUseCase: NowerCore.UpdateEventUseCase = DefaultUpdateEventUseCase(repository: eventRepository)
     public lazy var fetchEventsUseCase: NowerCore.FetchEventsUseCase = DefaultFetchEventsUseCase(repository: eventRepository)
     public lazy var moveEventUseCase: NowerCore.MoveEventUseCase = DefaultMoveEventUseCase(repository: eventRepository)
+    public lazy var fetchTemplatesUseCase: NowerCore.FetchTemplatesUseCase = DefaultFetchTemplatesUseCase(repository: templateRepository)
+    public lazy var saveTemplateUseCase: NowerCore.SaveTemplateUseCase = DefaultSaveTemplateUseCase(repository: templateRepository)
+    public lazy var deleteTemplateUseCase: NowerCore.DeleteTemplateUseCase = DefaultDeleteTemplateUseCase(repository: templateRepository)
 
     // MARK: - Initialization
 
