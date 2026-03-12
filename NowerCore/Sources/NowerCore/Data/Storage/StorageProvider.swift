@@ -16,6 +16,7 @@ public enum StorageKeys {
     public static let schemaVersion = "SchemaVersion"
     public static let lastSyncDate = "LastSyncDate"
     public static let userPreferences = "UserPreferences"
+    public static let eventTemplates = "EventTemplates"
 }
 
 /// 저장소 제공자 프로토콜
