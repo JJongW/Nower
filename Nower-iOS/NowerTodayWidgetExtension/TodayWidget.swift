@@ -174,6 +174,12 @@ enum WidgetAppColors {
         }
     }
     
+    // MARK: 강조 색상
+    /// 오늘 날짜 하이라이트 색상 (AppColors.textHighlighted)
+    static func textHighlighted(_ scheme: ColorScheme) -> Color {
+        scheme == .dark ? Color(red: 1.0, green: 0.60, blue: 0.52) : Color(red: 1.0, green: 0.49, blue: 0.38)
+    }
+
     // MARK: 테마 색상 (일정 색상)
     /// skyblue (AppColors.skyblue)
     static func skyblue(_ scheme: ColorScheme) -> Color {

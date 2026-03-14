@@ -9,11 +9,6 @@
 /* Begin PBXBuildFile section */
 		C3CE4DE02DB6168E00357F86 /* Moya in Frameworks */ = {isa = PBXBuildFile; productRef = C3CE4DDF2DB6168E00357F86 /* Moya */; };
 		C3D777A12F3A386B00398804 /* NowerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C3D777A02F3A386B00398804 /* NowerCore */; };
-		C3E007B42F1F8EBA004CBAD6 /* Debug.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = C3E007B32F1F8EB1004CBAD6 /* Debug.xcconfig */; };
-		C3E007B62F1F8FDC004CBAD6 /* Release.xcconfig in Sources */ = {isa = PBXBuildFile; fileRef = C3E007B52F1F8FD2004CBAD6 /* Release.xcconfig */; };
-		C3E008D52F20E16A004CBAD6 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3E008D42F20E16A004CBAD6 /* WidgetKit.framework */; };
-		C3E008D72F20E16A004CBAD6 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3E008D62F20E16A004CBAD6 /* SwiftUI.framework */; };
-		C3E008E82F20E16C004CBAD6 /* NowerTodayWidgetExtensionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C3E008D22F20E16A004CBAD6 /* NowerTodayWidgetExtensionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C3E07EF92DA8E5D200BB0D0A /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = C3E07EF82DA8E5D200BB0D0A /* SnapKit */; };
 /* End PBXBuildFile section */
 
@@ -24,13 +19,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		C3E008D92F20E16B004CBAD6 /* Exceptions for "NowerTodayWidgetExtension" folder in "NowerTodayWidgetExtensionExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = C3E008D12F20E16A004CBAD6 /* NowerTodayWidgetExtensionExtension */;
-		};
 		C3E07EE32DA8E2CB00BB0D0A /* Exceptions for "Nower-iOS" folder in "Nower-iOS" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -41,14 +29,6 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		C3E008D82F20E16B004CBAD6 /* NowerTodayWidgetExtension */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				C3E008D92F20E16B004CBAD6 /* Exceptions for "NowerTodayWidgetExtension" folder in "NowerTodayWidgetExtensionExtension" target */,
-			);
-			path = NowerTodayWidgetExtension;
-			sourceTree = "<group>";
-		};
 		C3E07ED32DA8E2CA00BB0D0A /* Nower-iOS */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -186,72 +166,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		C3E008EA2F20E16C004CBAD6 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
-				CODE_SIGN_ENTITLEMENTS = NowerTodayWidgetExtensionExtension.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = 39MK2JX9R4;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = NowerTodayWidgetExtension/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = NowerTodayWidgetExtension;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.1;
-				PRODUCT_BUNDLE_IDENTIFIER = pr.jongwon.Nower.NowerTodayWidgetExtension;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		C3E008EB2F20E16C004CBAD6 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
-				CODE_SIGN_ENTITLEMENTS = NowerTodayWidgetExtensionExtension.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = 39MK2JX9R4;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = NowerTodayWidgetExtension/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = NowerTodayWidgetExtension;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.1;
-				PRODUCT_BUNDLE_IDENTIFIER = pr.jongwon.Nower.NowerTodayWidgetExtension;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
 		C3E07EE52DA8E2CB00BB0D0A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReferenceAnchor = C3E07ED32DA8E2CA00BB0D0A /* Nower-iOS */;
@@ -262,7 +176,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Nower-iOS/Nower-iOS.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 39MK2JX9R4;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Nower-iOS/Info.plist";
@@ -277,7 +191,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = pr.jongwon.Nower;
 				PRODUCT_NAME = Nower;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -297,7 +211,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Nower-iOS/Nower-iOS.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 39MK2JX9R4;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Nower-iOS/Info.plist";
@@ -312,7 +226,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = pr.jongwon.Nower;
 				PRODUCT_NAME = Nower;
 				PROVISIONING_PROFILE_SPECIFIER = "";
