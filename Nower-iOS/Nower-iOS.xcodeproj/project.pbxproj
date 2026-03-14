@@ -8,17 +8,58 @@
 
 /* Begin PBXBuildFile section */
 		C3CE4DE02DB6168E00357F86 /* Moya in Frameworks */ = {isa = PBXBuildFile; productRef = C3CE4DDF2DB6168E00357F86 /* Moya */; };
-		C3D777A12F3A386B00398804 /* NowerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C3D777A02F3A386B00398804 /* NowerCore */; };
+		C3D7751F2F2F606E00398804 /* NowerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C3D7751E2F2F606E00398804 /* NowerCore */; };
+		C3E007B42F1F8EBA004CBAD6 /* Debug.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = C3E007B32F1F8EB1004CBAD6 /* Debug.xcconfig */; };
+		C3E007B62F1F8FDC004CBAD6 /* Release.xcconfig in Sources */ = {isa = PBXBuildFile; fileRef = C3E007B52F1F8FD2004CBAD6 /* Release.xcconfig */; };
+		C3E008D52F20E16A004CBAD6 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3E008D42F20E16A004CBAD6 /* WidgetKit.framework */; };
+		C3E008D72F20E16A004CBAD6 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3E008D62F20E16A004CBAD6 /* SwiftUI.framework */; };
+		C3E008E82F20E16C004CBAD6 /* NowerTodayWidgetExtensionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C3E008D22F20E16A004CBAD6 /* NowerTodayWidgetExtensionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C3E07EF92DA8E5D200BB0D0A /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = C3E07EF82DA8E5D200BB0D0A /* SnapKit */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		C3E008E62F20E16C004CBAD6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C3E07EC92DA8E2CA00BB0D0A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C3E008D12F20E16A004CBAD6;
+			remoteInfo = NowerTodayWidgetExtensionExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		C3E008E92F20E16C004CBAD6 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				C3E008E82F20E16C004CBAD6 /* NowerTodayWidgetExtensionExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
-		C3CE4DE52DB61ABF00357F86 /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = "/Users/sjw/ted.urssu/Nower/Nower-iOS/Nower-iOS/SupportingFiles/debug.xcconfig"; sourceTree = "<absolute>"; };
-		C3CE4DE72DB61B5A00357F86 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = "/Users/sjw/ted.urssu/Nower/Nower-iOS/Nower-iOS/SupportingFiles/Release.xcconfig"; sourceTree = "<absolute>"; };
+		C3D7751C2F2F5FFB00398804 /* NowerCore */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = NowerCore; path = ../NowerCore; sourceTree = "<group>"; };
+		C3E007B32F1F8EB1004CBAD6 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		C3E007B52F1F8FD2004CBAD6 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		C3E008D22F20E16A004CBAD6 /* NowerTodayWidgetExtensionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NowerTodayWidgetExtensionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		C3E008D42F20E16A004CBAD6 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		C3E008D62F20E16A004CBAD6 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		C3E008F82F20E33B004CBAD6 /* NowerTodayWidgetExtensionExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NowerTodayWidgetExtensionExtension.entitlements; sourceTree = "<group>"; };
 		C3E07ED12DA8E2CA00BB0D0A /* Nower.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Nower.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C3E008D92F20E16B004CBAD6 /* Exceptions for "NowerTodayWidgetExtension" folder in "NowerTodayWidgetExtensionExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = C3E008D12F20E16A004CBAD6 /* NowerTodayWidgetExtensionExtension */;
+		};
 		C3E07EE32DA8E2CB00BB0D0A /* Exceptions for "Nower-iOS" folder in "Nower-iOS" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -29,6 +70,14 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		C3E008D82F20E16B004CBAD6 /* NowerTodayWidgetExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C3E008D92F20E16B004CBAD6 /* Exceptions for "NowerTodayWidgetExtension" folder in "NowerTodayWidgetExtensionExtension" target */,
+			);
+			path = NowerTodayWidgetExtension;
+			sourceTree = "<group>";
+		};
 		C3E07ED32DA8E2CA00BB0D0A /* Nower-iOS */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -40,12 +89,21 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		C3E008CF2F20E16A004CBAD6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C3E008D72F20E16A004CBAD6 /* SwiftUI.framework in Frameworks */,
+				C3E008D52F20E16A004CBAD6 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C3E07ECE2DA8E2CA00BB0D0A /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				C3CE4DE02DB6168E00357F86 /* Moya in Frameworks */,
-				C3D777A12F3A386B00398804 /* NowerCore in Frameworks */,
+				C3D7751F2F2F606E00398804 /* NowerCore in Frameworks */,
 				C3E07EF92DA8E5D200BB0D0A /* SnapKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -56,16 +114,29 @@
 		C3C6EADB2DC5D05200302399 /* Recovered References */ = {
 			isa = PBXGroup;
 			children = (
-				C3CE4DE52DB61ABF00357F86 /* debug.xcconfig */,
-				C3CE4DE72DB61B5A00357F86 /* Release.xcconfig */,
+				C3E007B32F1F8EB1004CBAD6 /* Debug.xcconfig */,
+				C3E007B52F1F8FD2004CBAD6 /* Release.xcconfig */,
 			);
 			name = "Recovered References";
+			sourceTree = "<group>";
+		};
+		C3E008D32F20E16A004CBAD6 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				C3D7751C2F2F5FFB00398804 /* NowerCore */,
+				C3E008D42F20E16A004CBAD6 /* WidgetKit.framework */,
+				C3E008D62F20E16A004CBAD6 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		C3E07EC82DA8E2CA00BB0D0A = {
 			isa = PBXGroup;
 			children = (
+				C3E008F82F20E33B004CBAD6 /* NowerTodayWidgetExtensionExtension.entitlements */,
 				C3E07ED32DA8E2CA00BB0D0A /* Nower-iOS */,
+				C3E008D82F20E16B004CBAD6 /* NowerTodayWidgetExtension */,
+				C3E008D32F20E16A004CBAD6 /* Frameworks */,
 				C3E07ED22DA8E2CA00BB0D0A /* Products */,
 				C3C6EADB2DC5D05200302399 /* Recovered References */,
 			);
@@ -75,6 +146,7 @@
 			isa = PBXGroup;
 			children = (
 				C3E07ED12DA8E2CA00BB0D0A /* Nower.app */,
+				C3E008D22F20E16A004CBAD6 /* NowerTodayWidgetExtensionExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -82,6 +154,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		C3E008D12F20E16A004CBAD6 /* NowerTodayWidgetExtensionExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C3E008EC2F20E16C004CBAD6 /* Build configuration list for PBXNativeTarget "NowerTodayWidgetExtensionExtension" */;
+			buildPhases = (
+				C3E008CE2F20E16A004CBAD6 /* Sources */,
+				C3E008CF2F20E16A004CBAD6 /* Frameworks */,
+				C3E008D02F20E16A004CBAD6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				C3E008D82F20E16B004CBAD6 /* NowerTodayWidgetExtension */,
+			);
+			name = NowerTodayWidgetExtensionExtension;
+			packageProductDependencies = (
+			);
+			productName = NowerTodayWidgetExtensionExtension;
+			productReference = C3E008D22F20E16A004CBAD6 /* NowerTodayWidgetExtensionExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		C3E07ED02DA8E2CA00BB0D0A /* Nower-iOS */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = C3E07EE42DA8E2CB00BB0D0A /* Build configuration list for PBXNativeTarget "Nower-iOS" */;
@@ -89,10 +183,12 @@
 				C3E07ECD2DA8E2CA00BB0D0A /* Sources */,
 				C3E07ECE2DA8E2CA00BB0D0A /* Frameworks */,
 				C3E07ECF2DA8E2CA00BB0D0A /* Resources */,
+				C3E008E92F20E16C004CBAD6 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				C3E008E72F20E16C004CBAD6 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				C3E07ED32DA8E2CA00BB0D0A /* Nower-iOS */,
@@ -101,7 +197,7 @@
 			packageProductDependencies = (
 				C3E07EF82DA8E5D200BB0D0A /* SnapKit */,
 				C3CE4DDF2DB6168E00357F86 /* Moya */,
-				C3D777A02F3A386B00398804 /* NowerCore */,
+				C3D7751E2F2F606E00398804 /* NowerCore */,
 			);
 			productName = "Nower-iOS";
 			productReference = C3E07ED12DA8E2CA00BB0D0A /* Nower.app */;
@@ -114,9 +210,12 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1620;
+				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 1620;
 				TargetAttributes = {
+					C3E008D12F20E16A004CBAD6 = {
+						CreatedOnToolsVersion = 26.2;
+					};
 					C3E07ED02DA8E2CA00BB0D0A = {
 						CreatedOnToolsVersion = 16.2;
 					};
@@ -134,6 +233,7 @@
 			packageReferences = (
 				C3E07EF72DA8E5D200BB0D0A /* XCRemoteSwiftPackageReference "SnapKit" */,
 				C3CE4DDE2DB6168E00357F86 /* XCRemoteSwiftPackageReference "Moya" */,
+				C3D7751D2F2F604600398804 /* XCLocalSwiftPackageReference "../NowerCore" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C3E07ED22DA8E2CA00BB0D0A /* Products */;
@@ -141,11 +241,19 @@
 			projectRoot = "";
 			targets = (
 				C3E07ED02DA8E2CA00BB0D0A /* Nower-iOS */,
+				C3E008D12F20E16A004CBAD6 /* NowerTodayWidgetExtensionExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		C3E008D02F20E16A004CBAD6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C3E07ECF2DA8E2CA00BB0D0A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -156,6 +264,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		C3E008CE2F20E16A004CBAD6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C3E07ECD2DA8E2CA00BB0D0A /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -165,11 +280,84 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		C3E008E72F20E16C004CBAD6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C3E008D12F20E16A004CBAD6 /* NowerTodayWidgetExtensionExtension */;
+			targetProxy = C3E008E62F20E16C004CBAD6 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		C3E008EA2F20E16C004CBAD6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = NowerTodayWidgetExtensionExtension.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 3;
+				DEVELOPMENT_TEAM = 39MK2JX9R4;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NowerTodayWidgetExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = NowerTodayWidgetExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.2;
+				PRODUCT_BUNDLE_IDENTIFIER = pr.jongwon.Nower.NowerTodayWidgetExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		C3E008EB2F20E16C004CBAD6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = NowerTodayWidgetExtensionExtension.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 3;
+				DEVELOPMENT_TEAM = 39MK2JX9R4;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NowerTodayWidgetExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = NowerTodayWidgetExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.2;
+				PRODUCT_BUNDLE_IDENTIFIER = pr.jongwon.Nower.NowerTodayWidgetExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		C3E07EE52DA8E2CB00BB0D0A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReferenceAnchor = C3E07ED32DA8E2CA00BB0D0A /* Nower-iOS */;
-			baseConfigurationReferenceRelativePath = Debug.xcconfig;
+			baseConfigurationReference = C3E007B32F1F8EB1004CBAD6 /* Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -203,8 +391,7 @@
 		};
 		C3E07EE62DA8E2CB00BB0D0A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReferenceAnchor = C3E07ED32DA8E2CA00BB0D0A /* Nower-iOS */;
-			baseConfigurationReferenceRelativePath = Release.xcconfig;
+			baseConfigurationReference = C3E007B52F1F8FD2004CBAD6 /* Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -358,6 +545,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		C3E008EC2F20E16C004CBAD6 /* Build configuration list for PBXNativeTarget "NowerTodayWidgetExtensionExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C3E008EA2F20E16C004CBAD6 /* Debug */,
+				C3E008EB2F20E16C004CBAD6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		C3E07ECC2DA8E2CA00BB0D0A /* Build configuration list for PBXProject "Nower-iOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -377,6 +573,13 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		C3D7751D2F2F604600398804 /* XCLocalSwiftPackageReference "../NowerCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../NowerCore;
+		};
+/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
 		C3CE4DDE2DB6168E00357F86 /* XCRemoteSwiftPackageReference "Moya" */ = {
@@ -403,8 +606,9 @@
 			package = C3CE4DDE2DB6168E00357F86 /* XCRemoteSwiftPackageReference "Moya" */;
 			productName = Moya;
 		};
-		C3D777A02F3A386B00398804 /* NowerCore */ = {
+		C3D7751E2F2F606E00398804 /* NowerCore */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = C3D7751D2F2F604600398804 /* XCLocalSwiftPackageReference "../NowerCore" */;
 			productName = NowerCore;
 		};
 		C3E07EF82DA8E5D200BB0D0A /* SnapKit */ = {
