@@ -91,6 +91,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.ignoresMouseEvents = false
         // 윈도우 복원 비활성화 (restoreWindowWithIdentifier className=null 경고 및 복원 시 콘텐츠 안 그려지는 현상 방지)
         window.isRestorable = false
+        window.minSize = CGSize(width: 700, height: 500)
         
         // 배경 드래그로 창 이동 비활성화 (타이틀바에서만 이동 가능)
         window.isMovableByWindowBackground = false

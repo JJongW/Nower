@@ -185,7 +185,7 @@ struct ContentView: View {
                 )
                 .environmentObject(viewModel)
             }
-            .frame(width: 1024, height: 720)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
 
             // Popup for adding events (날짜 더블클릭 시 해당 날짜로 열림)
@@ -212,7 +212,7 @@ struct ContentView: View {
             }
         }
         #if os(macOS)
-        .frame(minWidth: 1024, maxWidth: .infinity, minHeight: 720, maxHeight: .infinity)
+        .frame(minWidth: 700, maxWidth: .infinity, minHeight: 500, maxHeight: .infinity)
         #endif
         #if os(macOS)
         .onChange(of: isPopupVisible) { visible in
