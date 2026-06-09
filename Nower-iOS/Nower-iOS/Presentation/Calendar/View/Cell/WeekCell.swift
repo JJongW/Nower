@@ -29,6 +29,12 @@ final class WeekCell: UICollectionViewCell {
         }
     }
 
+    var onMoreTapped: ((String, [TodoItem]) -> Void)? {
+        didSet {
+            weekView.onMoreTapped = onMoreTapped
+        }
+    }
+
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupUI()

@@ -71,28 +71,22 @@ public final class DependencyContainer {
     @discardableResult
     public func runMigrationIfNeeded() -> Bool {
         if migrationManager.needsMigration {
-            print("🔄 [DependencyContainer] 데이터 마이그레이션 시작...")
-
             let result = migrationManager.migrateIfNeeded()
 
             switch result {
             case .success:
-                print("✅ [DependencyContainer] 마이그레이션 완료")
                 return true
-            case .failure(let error):
-                print("❌ [DependencyContainer] 마이그레이션 실패: \(error.localizedDescription)")
+            case .failure:
                 return false
             }
         }
 
-        print("ℹ️ [DependencyContainer] 마이그레이션 필요 없음 (현재 버전: \(storageProvider.schemaVersion))")
         return true
     }
 
     /// 동기화 리스너 시작
     public func startSyncListening() {
         syncManager.startListening()
-        print("🔄 [DependencyContainer] iCloud 동기화 리스너 시작")
     }
 
     /// 동기화 리스너 중지
@@ -143,12 +137,10 @@ public final class DependencyContainer {
 
     @discardableResult
     public func runMigrationIfNeeded() -> Bool {
-        print("⚠️ NowerCore 패키지가 연결되지 않았습니다.")
         return true
     }
 
     public func startSyncListening() {
-        print("⚠️ NowerCore 패키지가 연결되지 않았습니다.")
     }
 
     public func stopSyncListening() {}

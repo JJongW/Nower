@@ -39,7 +39,6 @@ struct DailyQuoteManager {
     /// - Returns: 명언 배열 (로드 실패 시 nil)
     private static func loadQuotes() -> [String]? {
         guard let url = Bundle.main.url(forResource: "quotes", withExtension: "json") else {
-            print("⚠️ quotes.json 파일을 찾을 수 없습니다.")
             return nil
         }
         
@@ -49,7 +48,6 @@ struct DailyQuoteManager {
             let response = try decoder.decode(QuotesResponse.self, from: data)
             return response.quotes
         } catch {
-            print("⚠️ 명언 로드 실패: \(error.localizedDescription)")
             return nil
         }
     }

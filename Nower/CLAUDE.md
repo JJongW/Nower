@@ -1,188 +1,268 @@
-# Nower macOS - Claude Context
+# Nower macOS — Claude Context & Figma Integration Rules
+
+## Brand (read before any UI/UX/copy/product decision)
+
+Read `.claude/plans/brand/17-ai-context.md` and `.claude/plans/brand/14-product-principles.md`
+before making UI, UX, copy, branding, or product decisions.
+The one-line test: "이 변경이 사용자가 하루를 덜 망가지게 쓰도록 돕는가?" 아니면 다시 생각한다.
+(전체 브랜드 바이블: `.claude/plans/brand/`. 밀도 채점식: `.claude/plans/density-scoring-spec.md`.)
 
 ## 프로젝트 개요
-Nower는 macOS 일정 관리 앱으로, Apple Human Interface Guidelines와 WCAG 접근성 기준을 준수하여 개발되었습니다. SwiftUI 기반으로 구현되었으며, iOS 버전과 동일한 디자인 시스템을 공유합니다.
 
-## 핵심 디자인 원칙
+Nower macOS는 SwiftUI 기반 달력 앱입니다. Apple HIG와 WCAG AA를 준수하며, iOS 버전과 공통 색상 시스템·도메인 모델을 공유합니다.
 
-### 1. Apple HIG 준수
-- **다크모드 필수 지원**: 모든 UI 컴포넌트는 라이트/다크 모드를 완전히 지원합니다.
-- **시스템 네이티브 느낌**: macOS 네이티브 컴포넌트와 일관된 UX 제공
-- **동적 색상 사용**: `ThemeManager.isDarkMode`를 사용하여 자동 다크모드 전환
-- **윈도우 관리**: DraggableWindow를 통한 창 위치 기억 및 이동 제어
+**Platform:** macOS, SwiftUI
+**Min target:** macOS 13+
+**Architecture:** Clean Architecture (Presentation → Domain → Data)
 
-### 2. 접근성 (WCAG AA)
-- **색상 대비 최소 4.5:1**: 모든 텍스트는 배경 대비 4.5:1 이상 유지
-- **큰 텍스트 대비 3:1**: 18pt 이상 또는 14pt 이상 bold 텍스트는 3:1 이상
-- **클릭 타겟 최소 44pt**: 모든 인터랙티브 요소는 최소 44pt 크기 (macOS HIG 기준)
+---
 
-### 3. 색상 시스템
+## 디자인 시스템 — 토큰
 
-#### 기본 색상
-- **배경 (라이트)**: #FFFFFF
-- **배경 (다크)**: #000000
-- **텍스트 기본 (라이트)**: #0F0F0F (대비 15.8:1)
-- **텍스트 기본 (다크)**: #F5F5F7 (대비 16.1:1)
+### 색상 토큰 (`Extension/AppColors.swift`)
 
-#### 강조 색상
-- **라이트 모드**: #FF7E62
-- **다크 모드**: #FF9A85 (더 밝게 조정)
+모든 색상은 `AppColors` struct에 정의. **하드코딩 절대 금지.**
 
-#### 테마 색상 (일정 카테고리)
-- skyblue, peach, lavender, mintgreen, coralred
-- 모든 색상은 다크모드에서 자동 조정되어 가독성 향상
-- **텍스트 색상은 배경색에 따라 자동 선택** (밝은 배경 → 어두운 텍스트, 어두운 배경 → 밝은 텍스트)
-- WCAG 4.5:1 대비 기준을 충족하도록 자동 계산
+| 토큰 | 라이트 | 다크 | 용도 |
+|------|--------|------|------|
+| `textPrimary` | `#0F0F0F` | `#F5F5F7` | 기본 텍스트 |
+| `textHighlighted` | `#FF7E62` | `#FF9A85` | 오늘 날짜, 강조 |
+| `background` | `#FFFFFF` | `#000000` | 앱 배경 |
+| `popupBackground` | `#FFFFFF` | `#1C1C1E` | 팝업/모달 배경 |
+| `textFieldBackground` | `#F7F7F7` | `#1C1C1E` | 입력 필드 |
+| `todoBackground` | `#F2F2F7` | `#2C2C2E` | 카드/셀 배경 |
+| `buttonBackground` | `#007AFF` | `#007AFF` | 메인 버튼 |
+| `buttonTextColor` | `#FFFFFF` | `#FFFFFF` | 버튼 텍스트 |
 
-#### 버튼 색상 (HIG 준수)
-- **buttonBackground**: #007AFF (시스템 블루)
-- **buttonTextColor**: #FFFFFF (흰색)
-- **buttonSecondaryBackground**: 다크모드에 따라 자동 조정
+#### 이벤트 테마 색상 (5종)
 
-### 4. 레이아웃 시스템
-- **8pt 그리드 시스템**: 모든 간격은 4pt 또는 8pt의 배수
-- **주 단위 캘린더**: 달력을 주 단위로 구성하여 기간별 일정이 자연스럽게 연결됨
-- **셀 간격 없음**: 연결된 느낌을 위해 셀 간 간격 제거
-- **고정 높이 셀**: 주 내 모든 날짜 셀의 높이를 동일하게 설정하여 기간별 일정이 끊기지 않도록 함
+| 이름 | 라이트 | 다크 |
+|------|--------|------|
+| `skyblue` | `#73B3D9` | `#59A0CC` |
+| `peach` | `#F2BF8C` | `#F2A673` |
+| `lavender` | `#B399D9` | `#A68CCC` |
+| `mintgreen` | `#66B399` | `#4DA68C` |
+| `coralred` | `#F28C80` | `#F28073` |
 
-## 주요 컴포넌트
+#### 톤 시스템 (1–8)
+- `"skyblue-1"` ~ `"skyblue-8"` (밝음 → 어두움)
+- `AppColors.colorTones(for: "skyblue")` → `[Color]` (8개)
+- `AppColors.color(for: "skyblue-3")` 으로 직접 접근
 
-### ContentView
-- 메인 뷰 컨테이너
-- 월 변경 버튼, 일일 명언, 요일 헤더 포함
-- 팝업 오버레이 관리
-
-### CalendarGridView
-- 주별로 구성된 달력 뷰
-- ScrollView를 통한 스크롤 지원
-- 드래그 앤 드롭 기능 지원
-
-### WeekView
-- 한 주를 표시하는 컨테이너
-- GeometryReader를 사용하여 모든 셀의 높이를 동일하게 설정
-- 7개의 DayView를 가로로 배치
-
-### DayView
-- 개별 날짜 표시
-- 날짜 라벨, 공휴일, 일정 목록 포함
-- 기간별 일정과 단일 일정 모두 지원
-- 드롭 영역으로 사용 가능
-
-### EventCapsuleView
-- 일정을 표시하는 캡슐 뷰
-- 기간별 일정의 경우 연결된 형태로 표시 (시작/중간/종료 위치별 스타일)
-- 단일 일정은 둥근 모서리
-- 드래그 기능 지원 (단일 일정만)
-
-### AddEventView
-- 일정 추가 팝업 뷰
-- 단일 일정, 반복 일정, 다중 일정, 기간별 일정 지원
-- 색상 선택 UI 포함
-- ScrollView를 통한 스크롤 지원
-
-### EditTodoPopupView
-- 일정 편집 팝업 뷰
-- 기간별 일정 수정 지원
-- 삭제, 반복 전체 삭제 기능 포함
-
-## 색상 사용 가이드
-
-### AppColors 사용
+#### 색상 사용 패턴
 ```swift
-// 동적 색상 사용 (권장)
+// 의미 기반 색상 (권장)
 Text("Hello")
     .foregroundColor(AppColors.textPrimary)
     .background(AppColors.background)
 
-// 테마 색상 사용
-let eventColor = AppColors.color(for: "skyblue")
-Text("Event")
-    .foregroundColor(Color.white) // 배경색에 맞춰 자동 선택
-    .background(eventColor)
+// 이벤트 테마 색상
+let bg = AppColors.color(for: event.colorName)
+let fg = AppColors.contrastingTextColor(for: bg)  // WCAG 자동 계산
 
-// 버튼 색상 사용 (HIG 준수)
-Button("Save") {
-    // action
-}
-.foregroundColor(AppColors.buttonTextColor)
-.background(AppColors.buttonBackground)
+// 다크모드 감지
+ThemeManager.isDarkMode  // Bool
 ```
 
-### 색상 정의 위치
-- **Extension/AppColors.swift**: 모든 색상 정의
-- **ThemeManager**: 다크모드 감지 로직
+---
 
-## 개발 가이드라인
+### 타이포그래피
 
-### 새로운 UI 컴포넌트 추가 시
-1. **다크모드 필수 지원**: 항상 라이트/다크 모드 색상 제공
-2. **대비 확인**: 텍스트 색상은 배경 대비 4.5:1 이상 유지
-3. **동적 색상 사용**: 하드코딩된 색상 금지, AppColors 사용
-4. **테스트**: 라이트/다크 모드 모두에서 UI 확인
-5. **HIG 준수**: 버튼, 텍스트 필드 등은 macOS HIG 가이드라인 준수
+전용 파일 없음. 인라인 시스템 폰트 사용. 아래 패턴 따를 것.
 
-### 코드 스타일
-- `AppColors` struct를 통한 색상 접근
-- `ThemeManager.isDarkMode`로 다크모드 감지
-- SwiftUI의 `@Environment` 활용 권장
+| 용도 | 폰트 | 크기 | 굵기 |
+|------|------|------|------|
+| 월/년 헤더 | `.title` | - | `.bold` |
+| 요일 헤더 | `.system` | 14pt | `.medium` |
+| 날짜 숫자 | `.system` | 12pt | `.medium` |
+| 이벤트 제목 | `.system` | 10pt | `.medium` |
+| 이벤트 시간 | `.system + .monospacedDigit()` | 9pt | `.bold` |
+| 공휴일 | `.system` | 9pt | `.regular` |
 
-### 윈도우 관리
-- `DraggableWindow`를 통한 창 위치 기억
-- `isMovableByWindowBackground = false`로 배경 드래그 방지
-- 타이틀바 또는 지정된 영역에서만 창 이동 가능
+```swift
+// 시간 표시 패턴 (monospaced 필수)
+Text(timeString)
+    .font(.system(size: 9, weight: .bold).monospacedDigit())
 
-## 파일 구조
+// 오버플로우 처리 필수
+.lineLimit(1)
+.truncationMode(.tail)
+.minimumScaleFactor(0.8)
+```
 
-### 색상 및 디자인
-- `Extension/AppColors.swift`: 색상 정의
-- `Extension/AppIcons.swift`: 아이콘 정의
-- `ThemeManager`: 다크모드 감지
+---
 
-### 캘린더 관련
-- `View/View/ContentView.swift`: 메인 뷰
-- `View/View/CalendarGridView.swift`: 캘린더 그리드
-- `View/View/WeekView.swift`: 주 단위 뷰
-- `View/View/DayView.swift`: 날짜 뷰
-- `View/View/EventCapsuleView.swift`: 일정 캡슐
-- `View/View/AddEventView.swift`: 일정 추가 뷰
-- `View/View/EditTodoPopupView.swift`: 일정 편집 뷰
+### 스페이싱 / 사이징
 
-### 윈도우 관리
-- `DraggableWindow.swift`: 커스텀 윈도우 클래스
-- `AppDelegate.swift`: 앱 라이프사이클 및 윈도우 관리
-- `SettingsManager.swift`: 설정 관리
+**8pt 그리드 시스템.** 4pt 또는 8pt 배수 사용.
+
+| 토큰 | 값 | 용도 |
+|------|----|------|
+| `eventHeight` | 20pt | 이벤트 캡슐 높이 |
+| `eventSpacing` | 2pt | 이벤트 사이 간격 |
+| `eventHPadding` | 6pt | 이벤트 수평 패딩 |
+| `eventVPadding` | 3pt | 이벤트 수직 패딩 |
+| `dayLabelHeight` | 14pt | 날짜 숫자 영역 |
+| `holidayLabelHeight` | 8pt | 공휴일 라벨 높이 |
+| `topPadding` | 2pt | 셀 상단 패딩 |
+| `bottomPadding` | 4pt | 셀 하단 패딩 |
+| `todayCircleSize` | 24pt | 오늘 날짜 원 크기 |
+
+**창 크기:**
+```swift
+let windowSize = CGSize(width: 1024, height: 720)
+window.minSize = CGSize(width: 700, height: 500)
+```
+
+---
+
+## 컴포넌트 라이브러리
+
+### 뷰 계층 구조
+```
+ContentView
+├── Header (월 네비게이션, 버튼들)
+├── DailyQuote
+├── Weekday Headers
+└── CalendarGridView
+    └── ScrollView → VStack
+        └── WeekView (× n주)
+            ├── HStack of DayView (× 7)
+            └── EventCapsule overlay
+```
+
+### 컴포넌트 위치 (`View/View/`)
+
+| 컴포넌트 | 파일 | 핵심 역할 |
+|---------|------|---------|
+| `ContentView` | `ContentView.swift` | 메인 컨테이너, 팝업 관리 |
+| `CalendarGridView` | `CalendarGridView.swift` | 주별 달력 그리드, drag-drop |
+| `WeekView` | `WeekView.swift` | 1주 컨테이너, GeometryReader |
+| `DayView` | `DayView.swift` | 날짜 셀, drop target |
+| `EventCapsuleView` | `EventCapsuleView.swift` | 이벤트 표시, 드래그 |
+| `AddEventView` | `AddEventView.swift` | 이벤트 생성 팝업 |
+| `EditTodoPopupView` | `EditTodoPopupView.swift` | 이벤트 편집 팝업 |
+| `ToastView` | `ToastView.swift` | 알림 토스트 |
+| `SyncStatusView` | `SyncStatusView.swift` | iCloud 동기화 상태 |
+| `TemplateAutocompleteView` | `TemplateAutocompleteView.swift` | 자동완성 팝업 |
+| `ColorVariationPickerView` | `ColorVariationPickerView.swift` | 색상 선택 |
+
+### EventCapsuleView 상태 로직
+```swift
+// 기간 이벤트 렌더링 — 4가지 상태
+enum CapsulePosition { case single, start, middle, end }
+
+// start: 왼쪽 둥근 모서리, 오른쪽 직각
+// middle: 양쪽 직각 (연속된 띠)
+// end: 왼쪽 직각, 오른쪽 둥근 모서리
+// single: 양쪽 둥근 모서리
+```
+
+---
+
+## SwiftUI 패턴
+
+### 상태 관리
+```swift
+@EnvironmentObject var viewModel: CalendarViewModel
+@EnvironmentObject var themeManager: ThemeManager
+@EnvironmentObject var settingsManager: SettingsManager
+@StateObject private var syncViewModel = SyncStatusViewModel()
+@State private var isPopupVisible: Bool = false
+```
+
+### 레이아웃 패턴
+```swift
+// 7열 그리드 (항상 GeometryReader 사용)
+GeometryReader { geometry in
+    HStack(spacing: 0) {
+        ForEach(days) { day in
+            DayView(day: day)
+                .frame(width: geometry.size.width / 7)
+        }
+    }
+}
+
+// 꽉 차는 너비
+.frame(maxWidth: .infinity, alignment: .leading)
+
+// VStack 간격 없음 (연결된 주 느낌)
+VStack(spacing: 0) { ... }
+```
+
+### Drag & Drop
+```swift
+.onDrag { NSItemProvider(object: eventId as NSString) }
+.onDrop(of: [.text], isTargeted: nil) { providers in ... }
+```
+
+---
+
+## 아이콘 시스템 (`Extension/AppIcons.swift`)
+
+SF Symbols 사용. 인라인 문자열 대신 `AppIcons` 상수 참조.
+
+```swift
+// 현재 정의된 심볼들
+AppIcons.plus           // "plus"
+AppIcons.chevronLeft    // "chevron.left"
+AppIcons.chevronRight   // "chevron.right"
+AppIcons.gear           // "gear"
+// 추가 시 AppIcons.swift에 상수 추가
+```
+
+---
 
 ## macOS 특화 기능
 
-### 윈도우 관리
-- 창 위치 기억 기능
-- 창 고정 기능 (isPositionLocked)
-- 배경 드래그 방지 (타이틀바에서만 이동)
+### 창 관리 (`DraggableWindow.swift`)
+- `UserDefaults`로 창 위치 기억
+- `isMovableByWindowBackground = false` (타이틀바만 이동)
+- `canJoinAllSpaces` vs `현재 Space만` (설정에 따라)
+- Desktop 위젯 모드: `.accessory` activation policy (Dock 숨김)
 
-### 드래그 앤 드롭
-- 일정을 마우스로 드래그하여 다른 날짜로 이동
-- 기간별 일정은 이동 불가
-- ID 기반 이동으로 안정성 향상
+### 알림 (NotificationCenter)
+```swift
+NotificationCenter.default.post(name: .nowerPopupOpened, object: nil)
+NotificationCenter.default.post(name: .nowerPopupClosed, object: nil)
+```
 
-### 기간별 일정 표시
-- 여러 날짜에 걸친 일정을 연결된 형태로 표시
-- 주 내 모든 셀의 높이를 동일하게 설정하여 끊김 방지
-- 시작일, 중간일, 종료일별 스타일 적용
+---
 
-## 업데이트 이력
+## Figma → SwiftUI 변환 규칙
 
-### 2025-05-12
-- 다크모드 완전 지원 추가
-- WCAG 4.5:1 대비 기준 준수
-- Apple HIG 가이드라인 적용
-- 주 단위 캘린더 구조로 변경
-- 기간별 일정 지원 추가
-- 드래그 앤 드롭 기능 추가
-- 윈도우 관리 기능 개선
-- 요일 헤더와 날짜 셀 정렬 개선
+Figma 디자인을 코드로 전환할 때 아래 규칙 적용:
+
+1. **색상**: Figma 색상 → `AppColors` 토큰으로 매핑. 신규 색상은 `AppColors.swift`에 추가 후 사용.
+2. **폰트**: `SF Pro` → `.system(size:, weight:)`. 고정 pt 값 그대로 적용.
+3. **스페이싱**: `8pt 그리드` 준수. Figma 값이 5pt이면 4pt 또는 8pt로 반올림.
+4. **컴포넌트 재사용**: 기존 컴포넌트 있으면 신규 생성 금지. 위 컴포넌트 테이블 먼저 확인.
+5. **다크모드**: Figma 라이트 디자인만 있어도, 구현 시 반드시 다크모드 대응 포함.
+6. **절대 좌표 금지**: Figma absolute position → SwiftUI `VStack/HStack/ZStack + GeometryReader`로 변환.
+7. **이벤트 캡슐**: Figma의 이벤트 바(bar) 디자인 → `EventCapsuleView` 재사용.
+
+---
+
+## 접근성 (WCAG AA)
+
+- **텍스트 대비 4.5:1 이상** (모든 텍스트)
+- **큰 텍스트 3:1** (18pt+ 또는 14pt+ bold)
+- **터치/클릭 타겟 44pt 이상**
+- `AppColors.contrastingTextColor(for: background)` 로 자동 계산
+
+---
+
+## 개발 워크플로우 (필수)
+
+코드 변경 후: `/why` → `/validate` → `/ship`
+
+1. **구현 후 즉시** `/why` — What/Why 기록 (`docs/decisions/`)
+2. 선택적 `/validate` — 계획 대비 검증
+3. 배포 시 `/ship` — 이슈 + PR + 머지
+
+---
 
 ## 참고 자료
-- [Apple Human Interface Guidelines - macOS](https://developer.apple.com/design/human-interface-guidelines/macos)
-- [WCAG 2.1 Accessibility Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
-- [Color Contrast Analyzer](https://www.tpgi.com/color-contrast-checker/)
-- [SwiftUI Documentation](https://developer.apple.com/documentation/swiftui/)
+- [Apple HIG macOS](https://developer.apple.com/design/human-interface-guidelines/macos)
+- [WCAG 2.1](https://www.w3.org/WAI/WCAG21/quickref/)
+- [SwiftUI Docs](https://developer.apple.com/documentation/swiftui/)

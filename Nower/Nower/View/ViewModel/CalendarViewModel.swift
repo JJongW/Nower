@@ -7,6 +7,9 @@
 //
 import SwiftUI
 import Foundation
+#if canImport(NowerCore)
+import NowerCore
+#endif
 
 /// 달력 화면의 ViewModel
 /// Clean Architecture 패턴을 적용하여 UseCase를 통해 비즈니스 로직을 처리합니다.
@@ -23,6 +26,9 @@ class CalendarViewModel: ObservableObject {
     // iOS 버전과의 호환성을 위한 추가 프로퍼티
     @Published var todosByDate: [String: [TodoItem]] = [:]
     @Published var selectedDate: Date?
+
+    /// 날짜키(yyyy-MM-dd) → 밀도 밴드 색 hex. 히트맵 틴트용. (빈 날 제외)
+    @Published private(set) var densityBandHexByDate: [String: String] = [:]
     @Published var todoText: String = ""
     @Published var isRepeating: Bool = false
     @Published var selectedColorName: String = "skyblue"
@@ -90,6 +96,7 @@ class CalendarViewModel: ObservableObject {
             DispatchQueue.main.async {
                 self.currentMonth = newDate
                 self.generateCalendarDays(for: newDate)
+                self.recomputeDensityMap()
             }
         }
     }
@@ -99,7 +106,6 @@ class CalendarViewModel: ObservableObject {
         do {
             NSUbiquitousKeyValueStore.default.synchronize()
         } catch {
-            print("⚠️ [CalendarViewModel] iCloud 동기화 실패: \(error.localizedDescription)")
         }
 
         todosByDate = [:]
@@ -111,6 +117,34 @@ class CalendarViewModel: ObservableObject {
             }
             todosByDate[todo.date, default: []].append(todo)
         }
+        recomputeDensityMap()
+    }
+
+    /// 현재 월의 일별 밀도를 계산해 히트맵 틴트용 색 맵을 만든다.
+    func recomputeDensityMap() {
+        #if canImport(NowerCore)
+        let calendar = Calendar.current
+        let comps = calendar.dateComponents([.year, .month], from: currentMonth)
+        guard let first = calendar.date(from: comps),
+              let range = calendar.range(of: .day, in: .month, for: currentMonth) else { return }
+        let days: [Date] = range.compactMap { day in
+            calendar.date(byAdding: .day, value: day - 1, to: first)
+        }
+        let report = NowerDensity.monthReport(days: days) { [weak self] date in
+            self?.todos(for: date) ?? []
+        }
+        var map: [String: String] = [:]
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        for date in days {
+            let key = f.string(from: date)
+            // 여유(light)는 표시하지 않는다 — 주의가 필요한 보통/과부하만 dot 표기 (차분 유지)
+            if let band = report.band(forDateKey: key), band != .light {
+                map[key] = band.colorHex
+            }
+        }
+        densityBandHexByDate = map
+        #endif
     }
 
     /// 특정 날짜의 Todo 목록을 반환합니다.
@@ -434,8 +468,6 @@ class CalendarViewModel: ObservableObject {
                     self.generateCalendarDays(for: self.currentMonth)
                 }
             }
-        } else {
-            print("❌ [CalendarViewModel] 이동할 Todo를 찾을 수 없습니다 (oldDate: \(oldDate), text: \(todoText))")
         }
     }
 
@@ -444,7 +476,6 @@ class CalendarViewModel: ObservableObject {
         let allTodos = loadAllTodosUseCase.execute()
         if let todoToMove = allTodos.first(where: { $0.id == todoId }) {
             guard !todoToMove.isPeriodEvent else {
-                print("⚠️ [CalendarViewModel] 기간별 일정은 이동할 수 없습니다")
                 return
             }
 
@@ -454,8 +485,6 @@ class CalendarViewModel: ObservableObject {
             DispatchQueue.main.async {
                 self.generateCalendarDays(for: self.currentMonth)
             }
-        } else {
-            print("❌ [CalendarViewModel] 이동할 Todo를 찾을 수 없습니다 (id: \(todoId))")
         }
     }
 
@@ -469,6 +498,22 @@ class CalendarViewModel: ObservableObject {
             name: CloudSyncManager.todosDidUpdateNotification,
             object: nil
         )
+        #if os(macOS)
+        // 자정에 날짜가 바뀌면 캘린더 재생성 (고정 모드에서도 동작)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(calendarDayChanged),
+            name: .NSCalendarDayChanged,
+            object: nil
+        )
+        // 절전 복귀 후 날짜가 바뀐 경우에도 대응
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(calendarDayChanged),
+            name: NSWorkspace.didWakeNotification,
+            object: nil
+        )
+        #endif
     }
 
     /// Todo 업데이트 알림을 처리합니다.
@@ -478,4 +523,13 @@ class CalendarViewModel: ObservableObject {
             self.generateCalendarDays(for: self.currentMonth)
         }
     }
+
+    #if os(macOS)
+    /// 날짜 변경 시 오늘 날짜 표시를 갱신합니다 (고정 모드 포함).
+    @objc private func calendarDayChanged() {
+        DispatchQueue.main.async {
+            self.generateCalendarDays(for: self.currentMonth)
+        }
+    }
+    #endif
 }

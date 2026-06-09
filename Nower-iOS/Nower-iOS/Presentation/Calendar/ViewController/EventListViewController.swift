@@ -30,12 +30,14 @@ final class EventListViewController: UIViewController {
     private func reload() {
         viewModel.selectedDate = selectedDate
         viewModel.loadAllTodos()
+        let todos = viewModel.todos(for: selectedDate)
         eventListView.eventTableView.reloadData()
         eventListView.eventDateLabel.text = selectedDate.formatted("dd")
         eventListView.eventWeekLabel.text = selectedDate.formattedUS("EEE.").uppercased()
 
         // 날짜에 따른 라벨 표시
         eventListView.eventLabel.text = getDateDescription(for: selectedDate)
+        eventListView.configure(date: selectedDate, eventCount: todos.count)
     }
 
     private func getDateDescription(for date: Date) -> String {

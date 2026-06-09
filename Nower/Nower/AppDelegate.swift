@@ -106,6 +106,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let contentView = ContentView()
             .environmentObject(sharedCalendarViewModel)
             .environmentObject(settingsManager)
+            .environmentObject(ThemeManager.shared)
         let hostingController = NSHostingController(rootView: AnyView(contentView))
         mainHostingController = hostingController
         hostingController.view.frame = containerView.bounds

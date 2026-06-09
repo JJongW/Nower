@@ -47,7 +47,6 @@ struct CalendarDayGenerator {
         
         let components = calendar.dateComponents([.year, .month], from: date)
         guard let firstDayOfMonth = calendar.date(from: components) else {
-            print("⚠️ [CalendarDayGenerator] 첫 번째 날짜를 생성할 수 없습니다")
             return weeks
         }
         

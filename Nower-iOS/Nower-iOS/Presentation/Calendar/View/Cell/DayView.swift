@@ -12,6 +12,10 @@ import SnapKit
 /// 기간별 일정은 WeekView에서 렌더링되므로, 이 뷰는 단일 날짜 일정만 표시합니다.
 final class DayView: UIView {
 
+    /// 날짜키(yyyy-MM-dd) → 밀도 밴드 색 hex 공급자. CalendarViewController가 주입.
+    /// 셀 체인(WeekCell→WeekView→DayView)에 시그니처를 늘리지 않으려고 정적 후크 사용.
+    static var densityBandHexProvider: ((String) -> String?)?
+
     // MARK: - Properties
     private var periodEventSlotCount: Int = 0
     private var currentDateString: String = ""
@@ -26,6 +30,15 @@ final class DayView: UIView {
     private let periodEventTopOffset: CGFloat = 38 // 공휴일 라벨 공간 포함 (dayLabel 26pt + holidayLabel 10pt = 36pt)
 
     // MARK: - UI Components
+
+    private let selectedPillView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .clear
+        view.layer.cornerRadius = 15
+        view.layer.masksToBounds = true
+        view.isHidden = true
+        return view
+    }()
 
     /// 오늘 날짜 표시를 위한 원형 배경 뷰
     private let todayCircleView: UIView = {
@@ -72,12 +85,22 @@ final class DayView: UIView {
         return view
     }()
 
+    /// 밀도 표시 dot (우측 상단) — 전면 배경 대신 작은 점. 보통/과부하만 표시.
+    private let densityDotView: UIView = {
+        let view = UIView()
+        view.layer.cornerRadius = 3
+        view.isHidden = true
+        return view
+    }()
+
     private let moreLabel: UILabel = {
         let label = UILabel()
-        label.font = UIFont.systemFont(ofSize: 10, weight: .medium)
-        label.textColor = AppColors.textFieldPlaceholder // 덜 강조되는 색상
+        label.font = UIFont.systemFont(ofSize: 10, weight: .semibold)
+        label.textColor = AppColors.textHighlighted
         label.textAlignment = .center
-        label.backgroundColor = .clear // 배경 제거
+        label.backgroundColor = AppColors.textFieldBackground.withAlphaComponent(0.9)
+        label.layer.cornerRadius = 7
+        label.layer.masksToBounds = true
         label.isUserInteractionEnabled = true
         return label
     }()
@@ -104,10 +127,25 @@ final class DayView: UIView {
             $0.edges.equalToSuperview()
         }
 
+        backgroundHighlightView.addSubview(selectedPillView)
         backgroundHighlightView.addSubview(todayCircleView)
         backgroundHighlightView.addSubview(dayLabel)
         backgroundHighlightView.addSubview(holidayLabel)
         backgroundHighlightView.addSubview(eventStackView)
+        backgroundHighlightView.addSubview(densityDotView)
+
+        densityDotView.snp.makeConstraints {
+            $0.top.equalToSuperview().offset(5)
+            $0.trailing.equalToSuperview().offset(-5)
+            $0.width.height.equalTo(6)
+        }
+
+        selectedPillView.snp.makeConstraints {
+            $0.centerX.equalToSuperview()
+            $0.top.equalToSuperview().offset(0)
+            $0.width.equalTo(38)
+            $0.height.equalTo(30)
+        }
 
         todayCircleView.snp.makeConstraints {
             $0.centerX.equalToSuperview()
@@ -154,11 +192,14 @@ final class DayView: UIView {
 
         eventStackTopConstraint?.update(offset: totalOffset)
 
+        // 밀도 히트맵 틴트 (배경)
+        applyDensityTint(for: dayInfo.dateString, hasDay: dayInfo.day != nil)
+
         guard let day = dayInfo.day else {
             // 빈 날짜
             dayLabel.text = ""
             holidayLabel.text = ""
-            backgroundHighlightView.backgroundColor = .clear
+            updateSelectionHighlight(isSelected: false)
             todayCircleView.isHidden = true
             allSingleDayTodos = []
             return
@@ -189,15 +230,15 @@ final class DayView: UIView {
             }
         }
 
-        // 선택 상태 배경색 (다크모드 지원)
-        backgroundHighlightView.backgroundColor = dayInfo.isSelected ?
-            UIColor { trait in
-                if trait.userInterfaceStyle == .dark {
-                    return UIColor(white: 1.0, alpha: 0.2) // 다크모드: 밝은 반투명
-                } else {
-                    return UIColor(white: 0.0, alpha: 0.1) // 라이트모드: 어두운 반투명
-                }
-            } : .clear
+        updateSelectionHighlight(isSelected: dayInfo.isSelected)
+        if dayInfo.isSelected {
+            dayLabel.font = UIFont.systemFont(ofSize: 12, weight: .bold)
+            if !dayInfo.isToday {
+                dayLabel.textColor = AppColors.textHighlighted
+            }
+        } else {
+            dayLabel.font = UIFont.systemFont(ofSize: 12, weight: .medium)
+        }
 
         // 단일 날짜 일정만 필터링 (기간별 일정은 WeekView에서 렌더링됨)
         let singleDayTodos = dayInfo.todos.filter { !$0.isPeriodEvent }
@@ -232,9 +273,8 @@ final class DayView: UIView {
         for todo in sortedTodos.prefix(maxVisibleEvents) {
             let capsule = EventCapsuleView()
             capsule.configure(
-                title: todo.text,
-                color: AppColors.color(for: todo.colorName),
-                time: todo.scheduledTime
+                todo: todo,
+                color: AppColors.color(for: todo.colorName)
             )
             eventStackView.addArrangedSubview(capsule)
         }
@@ -242,19 +282,74 @@ final class DayView: UIView {
         // 남은 일정 개수 표시 (3개 이상일 때)
         if shouldShowMore {
             let remainingCount = singleDayTodos.count - maxVisibleEvents
-            moreLabel.text = "+\(remainingCount)개"
+            moreLabel.text = "외 \(remainingCount)개"
 
             // 탭 제스처 추가
             moreLabel.gestureRecognizers?.forEach { moreLabel.removeGestureRecognizer($0) }
             let tapGesture = UITapGestureRecognizer(target: self, action: #selector(moreLabelTapped))
             moreLabel.addGestureRecognizer(tapGesture)
 
+            // 눌러볼 수 있음을 명확히 (접근성 + 터치 영역)
+            moreLabel.isAccessibilityElement = true
+            moreLabel.accessibilityTraits = .button
+            moreLabel.accessibilityLabel = "일정 \(remainingCount)개 더 보기"
+
             eventStackView.addArrangedSubview(moreLabel)
         }
+    }
+
+    /// 밀도 표시: 전면 배경 대신 우측 상단 작은 dot (보통/과부하만)
+    private func applyDensityTint(for dateString: String, hasDay: Bool) {
+        backgroundHighlightView.backgroundColor = .clear
+        guard hasDay, let hex = DayView.densityBandHexProvider?(dateString) else {
+            densityDotView.isHidden = true
+            return
+        }
+        densityDotView.backgroundColor = DayView.uiColor(densityHex: hex, alpha: 1.0)
+        densityDotView.isHidden = false
+    }
+
+    private static func uiColor(densityHex hex: String, alpha: CGFloat) -> UIColor {
+        let s = hex.replacingOccurrences(of: "#", with: "")
+        var rgb: UInt64 = 0
+        Scanner(string: s).scanHexInt64(&rgb)
+        return UIColor(
+            red: CGFloat((rgb >> 16) & 0xFF) / 255.0,
+            green: CGFloat((rgb >> 8) & 0xFF) / 255.0,
+            blue: CGFloat(rgb & 0xFF) / 255.0,
+            alpha: alpha
+        )
     }
 
     @objc private func moreLabelTapped() {
         guard !currentDateString.isEmpty else { return }
         onMoreTapped?(currentDateString, allSingleDayTodos)
+    }
+
+    /// 오늘 = 코랄 원(채움), 선택 = 얇은 ring, 둘 다 = 원에 stroke만 (과하지 않게)
+    private func updateSelectionHighlight(isSelected: Bool) {
+        let isToday = !todayCircleView.isHidden
+
+        if isSelected && isToday {
+            // 오늘이면서 선택됨 → 코랄 원 유지 + 흰 stroke만 (pill 없음)
+            selectedPillView.isHidden = true
+            selectedPillView.backgroundColor = .clear
+            selectedPillView.layer.borderWidth = 0
+            todayCircleView.layer.borderWidth = 2
+            todayCircleView.layer.borderColor = UIColor.white.withAlphaComponent(0.9).cgColor
+        } else if isSelected {
+            // 선택만 → 채움 없는 얇은 ring (날짜 주변)
+            selectedPillView.isHidden = false
+            selectedPillView.backgroundColor = .clear
+            selectedPillView.layer.borderWidth = 1.5
+            selectedPillView.layer.borderColor = AppColors.textHighlighted.withAlphaComponent(0.7).cgColor
+            todayCircleView.layer.borderWidth = 0
+        } else {
+            // 미선택
+            selectedPillView.isHidden = true
+            selectedPillView.backgroundColor = .clear
+            selectedPillView.layer.borderWidth = 0
+            todayCircleView.layer.borderWidth = 0
+        }
     }
 }

@@ -33,6 +33,9 @@ final class CustomRecurrenceViewController: UIViewController {
     /// 기존 RecurrenceInfo로 초기화
     var initialInfo: RecurrenceInfo?
 
+    /// 미리보기 계산 기준 날짜 (이벤트 시작일). 호출부에서 주입.
+    var anchorDate: Date = Date()
+
     // MARK: - UI Components
 
     private let scrollView: UIScrollView = {
@@ -50,6 +53,16 @@ final class CustomRecurrenceViewController: UIViewController {
         label.font = UIFont.systemFont(ofSize: 20, weight: .bold)
         label.textColor = AppColors.textPrimary
         label.textAlignment = .center
+        return label
+    }()
+
+    /// 다음 반복 미리보기 (예: "다음 반복: 6/14, 6/21, 6/28")
+    private let previewLabel: UILabel = {
+        let label = UILabel()
+        label.font = UIFont.systemFont(ofSize: 13, weight: .medium)
+        label.textColor = AppColors.textPrimary
+        label.textAlignment = .center
+        label.numberOfLines = 2
         return label
     }()
 
@@ -188,6 +201,14 @@ final class CustomRecurrenceViewController: UIViewController {
         return button
     }()
 
+    private lazy var buttonStack: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: [cancelButton, saveButton])
+        stack.axis = .horizontal
+        stack.spacing = 12
+        stack.distribution = .fillEqually
+        return stack
+    }()
+
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
@@ -195,16 +216,25 @@ final class CustomRecurrenceViewController: UIViewController {
         view.backgroundColor = AppColors.popupBackground
         setupUI()
         restoreInitialInfo()
+        updatePreview()
     }
 
     // MARK: - UI Setup
 
     private func setupUI() {
         view.addSubview(scrollView)
+        view.addSubview(buttonStack)
         scrollView.addSubview(contentView)
 
         scrollView.snp.makeConstraints {
-            $0.edges.equalTo(view.safeAreaLayoutGuide)
+            $0.top.leading.trailing.equalTo(view.safeAreaLayoutGuide)
+            $0.bottom.equalTo(buttonStack.snp.top).offset(-12)
+        }
+
+        buttonStack.snp.makeConstraints {
+            $0.leading.trailing.equalToSuperview().inset(20)
+            $0.bottom.equalTo(view.safeAreaLayoutGuide.snp.bottom).offset(-16)
+            $0.height.equalTo(52)
         }
 
         contentView.snp.makeConstraints {
@@ -353,18 +383,15 @@ final class CustomRecurrenceViewController: UIViewController {
             $0.center.equalToSuperview()
         }
 
-        // 버튼
-        let buttonStack = UIStackView(arrangedSubviews: [cancelButton, saveButton])
-        buttonStack.axis = .horizontal
-        buttonStack.spacing = 12
-        buttonStack.distribution = .fillEqually
-
-        contentView.addSubview(buttonStack)
-        buttonStack.snp.makeConstraints {
-            $0.top.equalTo(dateContainer.snp.bottom).offset(32)
+        // 다음 반복 미리보기
+        contentView.addSubview(previewLabel)
+        previewLabel.snp.makeConstraints {
+            $0.top.equalTo(dateContainer.snp.bottom).offset(16)
             $0.leading.trailing.equalToSuperview().inset(20)
-            $0.height.equalTo(52)
-            $0.bottom.equalToSuperview().offset(-24)
+        }
+
+        contentView.snp.makeConstraints {
+            $0.bottom.equalTo(previewLabel.snp.bottom).offset(24)
         }
 
         // 접근성
@@ -462,6 +489,7 @@ final class CustomRecurrenceViewController: UIViewController {
             selectedDaysOfWeek.insert(day)
             updateWeekdayButton(sender, selected: true)
         }
+        updatePreview()
     }
 
     @objc private func endConditionChanged(_ sender: UISegmentedControl) {
@@ -481,24 +509,27 @@ final class CustomRecurrenceViewController: UIViewController {
         default:
             break
         }
+        updatePreview()
     }
 
     @objc private func countChanged(_ sender: UIStepper) {
         endAfterCount = Int(sender.value)
         countLabel.text = "\(endAfterCount)회 후 종료"
+        updatePreview()
     }
 
     @objc private func endDateChanged(_ sender: UIDatePicker) {
         endDate = sender.date
+        updatePreview()
     }
 
-    @objc private func saveTapped() {
+    /// 현재 컨트롤 상태로 RecurrenceInfo 구성
+    private func buildCurrentInfo() -> RecurrenceInfo {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
 
         var endDateStr: String? = nil
         var endCount: Int? = nil
-
         switch endCondition {
         case .never: break
         case .afterCount: endCount = endAfterCount
@@ -508,7 +539,7 @@ final class CustomRecurrenceViewController: UIViewController {
         let daysOfWeek: [Int]? = (selectedFrequency == "weekly" && !selectedDaysOfWeek.isEmpty) ? Array(selectedDaysOfWeek).sorted() : nil
         let dayOfMonth: Int? = (selectedFrequency == "monthly") ? selectedDayOfMonth : nil
 
-        let info = RecurrenceInfo(
+        return RecurrenceInfo(
             frequency: selectedFrequency,
             interval: selectedInterval,
             endDate: endDateStr,
@@ -516,8 +547,36 @@ final class CustomRecurrenceViewController: UIViewController {
             daysOfWeek: daysOfWeek,
             dayOfMonth: dayOfMonth
         )
+    }
 
-        onRecurrenceSelected?(info)
+    /// 다음 반복 3회를 계산해 미리보기 라벨 갱신 (UX 검토 §11)
+    private func updatePreview() {
+        let info = buildCurrentInfo()
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        let anchorTodo = TodoItem(
+            text: "", isRepeating: true,
+            date: f.string(from: anchorDate),
+            colorName: "skyblue",
+            recurrenceInfo: info
+        )
+        let cal = Calendar.current
+        let from = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: anchorDate)) ?? anchorDate
+        let to = cal.date(byAdding: .year, value: 1, to: anchorDate) ?? anchorDate
+        let next = RecurringEventExpander.occurrences(of: anchorTodo, from: from, to: to).prefix(3)
+
+        guard !next.isEmpty else {
+            previewLabel.text = "다음 반복 없음"
+            return
+        }
+        let md = DateFormatter()
+        md.dateFormat = "M/d"
+        let dates = next.compactMap { $0.dateObject }.map { md.string(from: $0) }
+        previewLabel.text = "다음 반복: " + dates.joined(separator: ", ")
+    }
+
+    @objc private func saveTapped() {
+        onRecurrenceSelected?(buildCurrentInfo())
         dismiss(animated: true)
     }
 
@@ -537,6 +596,7 @@ final class CustomRecurrenceViewController: UIViewController {
         default: unit = ""
         }
         intervalLabel.text = "\(selectedInterval)\(unit)마다"
+        updatePreview()
     }
 
     private func updateWeekdayVisibility() {

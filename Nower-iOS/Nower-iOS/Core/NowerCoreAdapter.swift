@@ -205,9 +205,6 @@ public extension Date {
 /// NowerCore 패키지가 연결되지 않았을 때의 플레이스홀더
 /// Xcode에서 NowerCore 패키지를 추가한 후 이 코드는 사용되지 않습니다.
 enum NowerCoreNotLinked {
-    static func warning() {
-        print("⚠️ NowerCore 패키지가 연결되지 않았습니다. Xcode에서 패키지를 추가해주세요.")
-    }
 }
 
 #endif

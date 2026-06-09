@@ -26,7 +26,6 @@ final class LocalNotificationManager: NSObject {
             let granted = try await center.requestAuthorization(options: [.alert, .sound, .badge])
             return granted
         } catch {
-            print("❌ [LocalNotificationManager] 권한 요청 실패: \(error)")
             return false
         }
     }
@@ -60,11 +59,7 @@ final class LocalNotificationManager: NSObject {
             trigger: trigger
         )
 
-        center.add(request) { error in
-            if let error = error {
-                print("❌ [LocalNotificationManager] 알림 예약 실패: \(error)")
-            }
-        }
+        center.add(request)
     }
 
     // MARK: - Recurring Event Notifications
@@ -101,11 +96,7 @@ final class LocalNotificationManager: NSObject {
             let identifier = "\(todo.id.uuidString)-recurring-\(index)"
             let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
 
-            center.add(request) { error in
-                if let error = error {
-                    print("❌ [LocalNotificationManager] 반복 알림 예약 실패: \(error)")
-                }
-            }
+            center.add(request)
         }
     }
 

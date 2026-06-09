@@ -59,6 +59,7 @@ final class DesktopWindowController: NSWindowController {
         let contentView = ContentView()
             .environmentObject(calendarViewModel)
             .environmentObject(settingsManager)
+            .environmentObject(ThemeManager.shared)
             .environment(\.openAddScheduleWithDate, openAddSchedule)
 
         let hosting = NSHostingController(rootView: AnyView(contentView))

@@ -236,7 +236,6 @@ final class CloudSyncManager {
             guard let self = self else { return }
 
             guard let data = self.store.data(forKey: self.todosKey) else {
-                print("⚠️ [CloudSyncManager] iCloud에 저장된 데이터가 없습니다")
                 self.cachedTodos = []
 
                 DispatchQueue.main.async {
@@ -255,7 +254,6 @@ final class CloudSyncManager {
                     NotificationCenter.default.post(name: Self.syncDidCompleteName, object: nil)
                 }
             } catch {
-                print("❌ [CloudSyncManager] 데이터 디코딩 실패: \(error)")
                 self.cachedTodos = []
 
                 DispatchQueue.main.async {
@@ -294,8 +292,6 @@ final class CloudSyncManager {
                 #endif
             }
         } catch {
-            print("❌ [CloudSyncManager] 데이터 인코딩 실패: \(error)")
-
             DispatchQueue.main.async {
                 NotificationCenter.default.post(
                     name: Self.syncDidFailName,
@@ -326,8 +322,6 @@ final class CloudSyncManager {
                 #endif
             }
         } catch {
-            print("❌ [CloudSyncManager] 데이터 인코딩 실패: \(error)")
-
             DispatchQueue.main.async {
                 NotificationCenter.default.post(
                     name: Self.syncDidFailName,
@@ -341,22 +335,6 @@ final class CloudSyncManager {
     /// 로컬 스냅샷을 현재 캐시 상태로 갱신합니다. syncQueue 내부에서 호출합니다.
     private func updateSnapshot() {
         localSnapshot = Dictionary(uniqueKeysWithValues: cachedTodos.map { ($0.id, $0) })
-    }
-}
-
-// MARK: - Debugging
-extension CloudSyncManager {
-    /// 디버깅용 iCloud 상태를 출력합니다.
-    func debugPrintStatus() {
-        #if DEBUG
-        print("🔍 [CloudSyncManager] 디버그 정보:")
-        print("  - 캐시된 Todo 수: \(cachedTodos.count)")
-        print("  - iCloud 동기화 상태: \(store.dictionaryRepresentation)")
-
-        for (index, todo) in cachedTodos.enumerated() {
-            print("  - [\(index)] \(todo.text) | \(todo.date) | \(todo.colorName)")
-        }
-        #endif
     }
 }
 

@@ -44,7 +44,6 @@ struct DailyQuoteManager {
     private static func loadQuotes() -> [String]? {
         // Bundle이 준비되지 않았을 수 있으므로 안전하게 처리
         guard let bundle = Bundle.main.url(forResource: "quotes", withExtension: "json") else {
-            print("⚠️ quotes.json 파일을 찾을 수 없습니다.")
             return nil
         }
         
@@ -55,13 +54,11 @@ struct DailyQuoteManager {
             
             // 빈 배열 체크
             guard !response.quotes.isEmpty else {
-                print("⚠️ quotes.json이 비어있습니다.")
                 return nil
             }
             
             return response.quotes
         } catch {
-            print("⚠️ 명언 로드 실패: \(error.localizedDescription)")
             return nil
         }
     }

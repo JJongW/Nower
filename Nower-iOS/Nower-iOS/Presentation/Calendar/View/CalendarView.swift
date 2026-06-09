@@ -56,6 +56,13 @@ final class CalendarView: UIView {
 
     let weekdays = ["S", "M", "T", "W", "T", "F", "S"]
 
+    /// 하루 밀도 컴팩트 칩을 담는 컨테이너 (헤더, 월 라벨 아래 우측)
+    let densityChipContainer: UIView = {
+        let view = UIView()
+        view.backgroundColor = .clear
+        return view
+    }()
+
     let collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.minimumInteritemSpacing = 0 // 셀 간격 제거
@@ -90,6 +97,7 @@ final class CalendarView: UIView {
         addSubview(syncStatusView)
         addSubview(textLabel)
         addSubview(weekdayStackView)
+        addSubview(densityChipContainer)
         addSubview(collectionView)
 
         for (index, day) in weekdays.enumerated() {
@@ -152,8 +160,16 @@ final class CalendarView: UIView {
         textLabel.snp.makeConstraints {
             $0.top.equalTo(monthLabel.snp.bottom).offset(12) // 축소 (48 → 12)
             $0.leading.equalToSuperview().offset(20)
-            $0.trailing.equalToSuperview().inset(20)
+            $0.trailing.equalTo(densityChipContainer.snp.leading).offset(-8)
         }
+
+        // 밀도 컴팩트 칩: 명언 줄 우측. 내부 SwiftUI 콘텐츠가 크기 결정.
+        densityChipContainer.snp.makeConstraints {
+            $0.centerY.equalTo(textLabel)
+            $0.trailing.equalToSuperview().inset(16)
+        }
+        densityChipContainer.setContentHuggingPriority(.required, for: .horizontal)
+        densityChipContainer.setContentCompressionResistancePriority(.required, for: .horizontal)
 
         weekdayStackView.snp.makeConstraints {
             $0.top.equalTo(textLabel.snp.bottom).offset(16) // 축소 (36 → 16)

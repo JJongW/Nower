@@ -17,8 +17,8 @@ final class NewEventView: UIView {
 
     let dateContextLabel: UILabel = {
         let label = UILabel()
-        label.font = UIFont.systemFont(ofSize: 14, weight: .medium)
-        label.textColor = AppColors.textFieldPlaceholder
+        label.font = UIFont.systemFont(ofSize: 15, weight: .semibold)
+        label.textColor = AppColors.textPrimary
         return label
     }()
 
@@ -62,29 +62,48 @@ final class NewEventView: UIView {
         return button
     }()
     
+    // 삭제는 위험 동작 — 저장과 동등한 무게를 주지 않는다 (UX 검토 §12).
+    // 테두리/박스 제거해 조용한 텍스트로 강등. 확인 다이얼로그는 VC에서 유지.
     let deleteButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("삭제", for: .normal)
-        button.setTitleColor(UIColor.systemRed, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .medium)
+        button.setTitle("일정 삭제", for: .normal)
+        button.setTitleColor(UIColor.systemRed.withAlphaComponent(0.85), for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 14, weight: .regular)
         button.backgroundColor = .clear
-        button.layer.cornerRadius = 12
-        button.layer.borderWidth = 1.5
-        button.layer.borderColor = UIColor.systemRed.cgColor
         return button
     }()
 
+    // 제목 입력 시 노출. 저대비 텍스트라 잘 안 보여 아이콘+강조색으로 발견성↑ (UX 검토 P3).
     let saveTemplateButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("템플릿 저장", for: .normal)
-        button.setTitleColor(AppColors.textFieldPlaceholder, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 13)
+        button.setTitle(" 템플릿으로 저장", for: .normal)
+        button.setImage(UIImage(systemName: "bookmark"), for: .normal)
+        button.setTitleColor(AppColors.textHighlighted, for: .normal)
+        button.tintColor = AppColors.textHighlighted
+        button.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
         button.isHidden = true
         return button
     }()
 
     #if canImport(NowerCore)
     let autocompleteView = TemplateAutocompleteView()
+
+    /// 자연어 분석 결과를 적용하는 제안 pill (제목에서 날짜/시간/반복을 감지하면 노출).
+    /// 자동 저장하지 않고, 사용자가 탭해야 폼에 반영된다.
+    let nlApplyButton: UIButton = {
+        let b = UIButton(type: .system)
+        b.titleLabel?.font = .systemFont(ofSize: 13, weight: .medium)
+        b.setTitleColor(AppColors.textHighlighted, for: .normal)
+        b.backgroundColor = AppColors.textFieldBackground
+        b.layer.cornerRadius = 10
+        b.titleLabel?.numberOfLines = 1
+        b.titleLabel?.lineBreakMode = .byTruncatingTail
+        b.contentEdgeInsets = UIEdgeInsets(top: 6, left: 12, bottom: 6, right: 12)
+        b.isHidden = true
+        return b
+    }()
+    private var nlHeightConstraint: Constraint?
+    private var currentDraft: ParsedEventDraft?
     #endif
 
     private var autocompleteHeightConstraint: Constraint?
@@ -412,9 +431,9 @@ final class NewEventView: UIView {
 
     private let buttonStackView: UIStackView = {
         let stack = UIStackView()
-        stack.axis = .horizontal
+        stack.axis = .vertical
         stack.distribution = .fill
-        stack.spacing = 12
+        stack.spacing = 10
         stack.alignment = .fill
         return stack
     }()
@@ -433,17 +452,15 @@ final class NewEventView: UIView {
 
         buttonStackView.snp.makeConstraints {
             $0.leading.trailing.equalToSuperview().inset(20)
-            buttonBottomConstraint = $0.bottom.equalTo(safeAreaLayoutGuide.snp.bottom).offset(-16).constraint
-            $0.height.equalTo(52)
+            buttonBottomConstraint = $0.bottom.equalTo(safeAreaLayoutGuide.snp.bottom).offset(-32).constraint
         }
 
         saveButton.snp.makeConstraints {
             $0.height.equalTo(52)
-            $0.width.equalTo(deleteButton).multipliedBy(2)
         }
 
         deleteButton.snp.makeConstraints {
-            $0.height.equalTo(52)
+            $0.height.equalTo(48)
         }
 
         deleteButton.isHidden = true
@@ -507,13 +524,29 @@ final class NewEventView: UIView {
             $0.height.equalTo(20)
         }
 
+        // 자연어 분석 제안 pill (초기 height=0, 감지 시 노출)
+        #if canImport(NowerCore)
+        contentView.addSubview(nlApplyButton)
+        nlApplyButton.snp.makeConstraints {
+            $0.top.equalTo(saveTemplateButton.snp.bottom).offset(8)
+            $0.leading.equalToSuperview().offset(20)
+            $0.trailing.lessThanOrEqualToSuperview().inset(20)
+            nlHeightConstraint = $0.height.equalTo(0).constraint
+        }
+        nlApplyButton.addTarget(self, action: #selector(applyNaturalLanguage), for: .touchUpInside)
+        #endif
+
         // 기간 모드 스위치
         contentView.addSubview(periodModeContainer)
         periodModeContainer.addSubview(periodModeLabel)
         periodModeContainer.addSubview(periodModeSwitch)
 
         periodModeContainer.snp.makeConstraints {
+            #if canImport(NowerCore)
+            $0.top.equalTo(nlApplyButton.snp.bottom).offset(8)
+            #else
             $0.top.equalTo(saveTemplateButton.snp.bottom).offset(8) // 8pt 그리드
+            #endif
             $0.leading.trailing.equalToSuperview().inset(20)
             $0.height.equalTo(56) // 최소 터치 타겟 44pt + 패딩
         }
@@ -760,6 +793,7 @@ final class NewEventView: UIView {
         endTimeValueButton.addPressAnimation()
         reminderValueButton.addPressAnimation()
         recurrenceValueButton.addPressAnimation()
+        saveTemplateButton.addPressAnimation()
 
         // 텍스트 필드 변경 감지 → 저장 버튼 활성화/비활성화
         textField.addTarget(self, action: #selector(textFieldDidChange), for: .editingChanged)
@@ -863,7 +897,7 @@ final class NewEventView: UIView {
 
         let options = UIView.AnimationOptions(rawValue: curveValue << 16)
 
-        buttonBottomConstraint?.update(offset: -16)
+        buttonBottomConstraint?.update(offset: -32)
 
         UIView.animate(withDuration: duration, delay: 0, options: options) {
             self.layoutIfNeeded()
@@ -1087,10 +1121,24 @@ final class NewEventView: UIView {
 
     // MARK: - 시간/알림 Actions
 
+    /// 타임피커에 보여줄 맥락 한 줄 (예: "코딩테스트 · 6월 7일")
+    private func timePickerContextText() -> String? {
+        let title = textField.text?.trimmingCharacters(in: .whitespaces)
+        let date = initialSelectedDate ?? selectedStartDate
+        let dateStr: String? = date.map {
+            let f = DateFormatter()
+            f.locale = Locale(identifier: "ko_KR")
+            f.dateFormat = "M월 d일"
+            return f.string(from: $0)
+        }
+        let parts = [title, dateStr].compactMap { $0 }.filter { !$0.isEmpty }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
     @objc private func timeValueButtonTapped() {
         endEditing(true)
         guard let parentView = findViewController()?.view else { return }
-        let picker = TimePickerView(currentTime: selectedScheduledTime)
+        let picker = TimePickerView(currentTime: selectedScheduledTime, contextText: timePickerContextText())
         picker.onTimeSelected = { [weak self] time in
             self?.selectedScheduledTime = time
             self?.updateReminderEnabled()
@@ -1106,7 +1154,7 @@ final class NewEventView: UIView {
     @objc private func endTimeValueButtonTapped() {
         endEditing(true)
         guard let parentView = findViewController()?.view else { return }
-        let picker = TimePickerView(currentTime: selectedEndScheduledTime)
+        let picker = TimePickerView(currentTime: selectedEndScheduledTime, contextText: timePickerContextText())
         picker.onTimeSelected = { [weak self] time in
             self?.selectedEndScheduledTime = time
         }
@@ -1116,7 +1164,10 @@ final class NewEventView: UIView {
 
     @objc private func reminderValueButtonTapped() {
         endEditing(true)
-        guard selectedScheduledTime != nil else { return }
+        guard selectedScheduledTime != nil else {
+            findViewController()?.showToast(message: "시간을 설정하면 알림을 추가할 수 있어요")
+            return
+        }
         guard let parentView = findViewController()?.view else { return }
         let picker = ReminderPickerView(currentMinutes: selectedReminderMinutesBefore)
         picker.onReminderSelected = { [weak self] minutes in
@@ -1192,6 +1243,7 @@ final class NewEventView: UIView {
         // 기간 모드와 상호 배타
         if isPeriodMode {
             // 기간 모드에서는 반복 비활성화 → 안내
+            findViewController()?.showToast(message: "기간별 일정은 반복 설정을 함께 사용할 수 없어요")
             return
         }
 
@@ -1207,6 +1259,7 @@ final class NewEventView: UIView {
             guard let self = self else { return }
             let customVC = CustomRecurrenceViewController()
             customVC.initialInfo = self.selectedRecurrenceInfo
+            customVC.anchorDate = self.initialSelectedDate ?? self.selectedStartDate ?? Date()
             customVC.onRecurrenceSelected = { [weak self] info in
                 self?.selectedRecurrenceInfo = info
                 self?.updateRecurrencePeriodExclusivity()
@@ -1252,9 +1305,13 @@ final class NewEventView: UIView {
             if selectedRecurrenceInfo != nil {
                 selectedRecurrenceInfo = nil
             }
+            // 비활성 사유를 인라인으로 설명 (UX 검토 §8)
+            recurrenceValueButton.setTitle("기간 일정은 반복 미지원", for: .normal)
+            recurrenceValueButton.setTitleColor(AppColors.textFieldPlaceholder, for: .normal)
         } else {
             recurrenceSettingContainer.alpha = 1.0
             recurrenceValueButton.isEnabled = true
+            updateRecurrenceDisplay() // 정상 반복 표시 복원
         }
     }
 
@@ -1437,6 +1494,10 @@ final class NewEventView: UIView {
 
     /// 선택된 날짜 설정 (새 일정 추가 시 외부에서 호출)
     func setInitialSelectedDate(_ date: Date) {
+        setDateContext(date, actionText: "에 추가")
+    }
+
+    func setDateContext(_ date: Date, actionText: String) {
         initialSelectedDate = date
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "ko_KR")
@@ -1447,7 +1508,13 @@ final class NewEventView: UIView {
         let iconSize: CGFloat = 14
         attachment.bounds = CGRect(x: 0, y: -2, width: iconSize, height: iconSize)
         let attrStr = NSMutableAttributedString(attachment: attachment)
-        attrStr.append(NSAttributedString(string: " \(formatter.string(from: date))"))
+        attrStr.append(NSAttributedString(
+            string: " \(formatter.string(from: date))\(actionText)",
+            attributes: [
+                .font: dateContextLabel.font as Any,
+                .foregroundColor: dateContextLabel.textColor as Any
+            ]
+        ))
         dateContextLabel.attributedText = attrStr
     }
 
@@ -1455,7 +1522,61 @@ final class NewEventView: UIView {
 
     @objc private func textFieldDidChange() {
         updateSaveButtonState()
+        #if canImport(NowerCore)
+        updateNaturalLanguageSuggestion()
+        #endif
     }
+
+    #if canImport(NowerCore)
+    /// 제목 입력을 자연어로 분석해 적용 제안 pill을 갱신한다. (자동 적용하지 않음)
+    private func updateNaturalLanguageSuggestion() {
+        let text = (textField.text ?? "").trimmingCharacters(in: .whitespaces)
+        guard text.count >= 2 else { hideNLSuggestion(); return }
+
+        let draft = EventDraftParser.parse(text, referenceDate: initialSelectedDate ?? Date())
+        currentDraft = draft
+
+        // 시간 또는 반복이 감지된 경우에만 제안 (날짜는 진입점 날짜를 따름)
+        guard draft.startTime != nil || draft.recurrenceRule != nil else {
+            hideNLSuggestion()
+            return
+        }
+
+        var parts: [String] = []
+        if let s = draft.startTime {
+            parts.append(draft.endTime != nil ? "\(s.hhmm)~\(draft.endTime!.hhmm)" : s.hhmm)
+        }
+        if let r = draft.recurrenceRule {
+            parts.append(RecurrenceInfo.from(r).displayString)
+        }
+        if !draft.title.isEmpty {
+            parts.append("“\(draft.title)”")
+        }
+        nlApplyButton.setTitle("✨ " + parts.joined(separator: " · ") + " 적용", for: .normal)
+        nlApplyButton.isHidden = false
+        nlHeightConstraint?.update(offset: 34)
+        UIView.animate(withDuration: 0.15) { self.layoutIfNeeded() }
+    }
+
+    private func hideNLSuggestion() {
+        guard !nlApplyButton.isHidden else { return }
+        nlApplyButton.isHidden = true
+        nlHeightConstraint?.update(offset: 0)
+        UIView.animate(withDuration: 0.15) { self.layoutIfNeeded() }
+    }
+
+    /// 제안 pill 탭 → 분석 결과를 폼에 반영 (저장은 여전히 사용자가 추가 버튼으로)
+    @objc private func applyNaturalLanguage() {
+        guard let d = currentDraft else { return }
+        if let s = d.startTime { selectedScheduledTime = s.hhmm }
+        // 종료 시간은 기간 모드에서만 의미가 있으므로 그 때만 적용 (단일 일정엔 종료 시간 행이 없음)
+        if let e = d.endTime, isPeriodMode { selectedEndScheduledTime = e.hhmm }
+        if let r = d.recurrenceRule { selectedRecurrenceInfo = RecurrenceInfo.from(r) }
+        if !d.title.isEmpty { textField.text = d.title }
+        hideNLSuggestion()
+        updateSaveButtonState()
+    }
+    #endif
 
     func updateSaveButtonState() {
         let hasText = !(textField.text ?? "").trimmingCharacters(in: .whitespaces).isEmpty
