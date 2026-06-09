@@ -523,6 +523,9 @@ final class CalendarViewController: UIViewController {
         recomputeMonthDensity()
         calendarView.collectionView.reloadData()
         updateDensityCard()
+        #if canImport(NowerCore)
+        refreshLiveActivity()
+        #endif
 
         if let year = components.year, let month = components.month {
             holidayUseCase.fetchHolidays(for: year, month: month) { _ in
@@ -569,6 +572,45 @@ final class CalendarViewController: UIViewController {
         let day = selectedDate ?? Date()
         return NowerDensity.viewState(todos: viewModel.todos(for: day), day: day)
     }
+
+    /// 오늘 "다음 시간 일정"으로 Live Activity Companion을 동기화. 없으면 종료.
+    /// (정확한 시간 알림은 Local Notification 담당 — 여기는 보조 카운트다운)
+    #if canImport(NowerCore)
+    func refreshLiveActivity() {
+        guard #available(iOS 16.2, *) else { return }
+        let now = Date()
+        let today = Calendar.current.startOfDay(for: now)
+        let todos = viewModel.todos(for: today)
+
+        // 시간이 있고 아직 시작 전인 일정 중 가장 이른 것
+        let next = todos
+            .compactMap { todo -> (TodoItem, Date)? in
+                guard let t = todo.scheduledTime,
+                      let start = TodoItem.combineTime(t, with: today),
+                      start > now else { return nil }
+                return (todo, start)
+            }
+            .min { $0.1 < $1.1 }
+
+        let densityLabel = NowerDensity.report(todos: todos, day: today).band.label
+
+        #if DEBUG
+        print("[LiveActivity] refresh — 오늘 일정 \(todos.count)개, 다음 시간일정: \(next?.0.text ?? "없음")")
+        #endif
+
+        guard let (todo, start) = next else {
+            NowerLiveActivityManager.shared.sync(densityLabel: densityLabel, state: nil)
+            return
+        }
+        let state = NowerLiveActivityAttributes.ContentState(
+            eventTitle: todo.text,
+            eventDate: start,
+            startTime: todo.scheduledTime ?? "",
+            mode: .upcoming
+        )
+        NowerLiveActivityManager.shared.sync(densityLabel: densityLabel, state: state)
+    }
+    #endif
 
     /// 현재 표시 월의 일별 밀도를 계산해 히트맵 밴드맵 갱신
     private func recomputeMonthDensity() {

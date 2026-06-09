@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C335CEDB2FD8044000E9CEDC /* NowerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C335CEDA2FD8044000E9CEDC /* NowerCore */; };
 		C3CE4DE02DB6168E00357F86 /* Moya in Frameworks */ = {isa = PBXBuildFile; productRef = C3CE4DDF2DB6168E00357F86 /* Moya */; };
 		C3D7751F2F2F606E00398804 /* NowerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C3D7751E2F2F606E00398804 /* NowerCore */; };
 		C3E008D52F20E16A004CBAD6 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3E008D42F20E16A004CBAD6 /* WidgetKit.framework */; };
@@ -92,6 +93,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C3E008D72F20E16A004CBAD6 /* SwiftUI.framework in Frameworks */,
+				C335CEDB2FD8044000E9CEDC /* NowerCore in Frameworks */,
 				C3E008D52F20E16A004CBAD6 /* WidgetKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -169,6 +171,7 @@
 			);
 			name = NowerTodayWidgetExtensionExtension;
 			packageProductDependencies = (
+				C335CEDA2FD8044000E9CEDC /* NowerCore */,
 			);
 			productName = NowerTodayWidgetExtensionExtension;
 			productReference = C3E008D22F20E16A004CBAD6 /* NowerTodayWidgetExtensionExtension.appex */;
@@ -599,6 +602,10 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		C335CEDA2FD8044000E9CEDC /* NowerCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = NowerCore;
+		};
 		C3CE4DDF2DB6168E00357F86 /* Moya */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = C3CE4DDE2DB6168E00357F86 /* XCRemoteSwiftPackageReference "Moya" */;
