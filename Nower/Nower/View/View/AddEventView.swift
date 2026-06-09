@@ -42,6 +42,9 @@ struct AddEventView: View {
     @State private var selectedRecurrence: RecurrenceInfo? = nil
     @State private var showCustomRecurrence: Bool = false
 
+    /// 자연어 분석 초안 (제목에서 감지). 적용은 사용자 클릭으로만.
+    @State private var nlDraft: ParsedEventDraft? = nil
+
     let colorOptions: [String] = ["skyblue", "peach", "lavender", "mintgreen", "coralred"]
     let reminderOptions: [(label: String, minutes: Int)] = [
         ("정시", 0),
@@ -111,6 +114,7 @@ struct AddEventView: View {
                                 .cornerRadius(6)
                                 .onChange(of: eventText) { newValue in
                                     updateTemplateSuggestions(for: newValue)
+                                    updateNLDraft(for: newValue)
                                 }
 
                             if showTemplateSuggestions {
@@ -118,6 +122,22 @@ struct AddEventView: View {
                                     applyTemplate(template)
                                 }
                                 .zIndex(1)
+                            }
+
+                            // 자연어 분석 보조 — 감지된 날짜/시간/반복을 한 번에 폼에 채움 (클릭 시에만)
+                            if let hint = nlSuggestionText {
+                                Button(action: applyNLDraft) {
+                                    HStack(spacing: 5) {
+                                        Image(systemName: "sparkles").font(.system(size: 11))
+                                        Text(hint).font(.system(size: 12, weight: .medium)).lineLimit(1)
+                                    }
+                                    .foregroundColor(AppColors.textHighlighted)
+                                    .padding(.horizontal, 10).padding(.vertical, 5)
+                                    .background(AppColors.textFieldBackground)
+                                    .cornerRadius(8)
+                                }
+                                .buttonStyle(.plain)
+                                .help("자연어 분석 결과를 폼에 채웁니다")
                             }
                         }
                     }
@@ -445,6 +465,46 @@ struct AddEventView: View {
             showTemplateSuggestions = !templateSuggestions.isEmpty
         }
         #endif
+    }
+
+    // MARK: - 자연어 보조 입력
+
+    /// 제목을 자연어로 분석해 초안 갱신 (적용은 사용자 클릭)
+    private func updateNLDraft(for text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard trimmed.count >= 2 else { nlDraft = nil; return }
+        let draft = EventDraftParser.parse(trimmed, referenceDate: selectedDate)
+        // 시간/날짜/반복 중 하나라도 감지됐을 때만 보조 제안
+        nlDraft = (draft.startTime != nil || draft.recurrenceRule != nil || draft.date != nil) ? draft : nil
+    }
+
+    /// 제안 라벨 (없으면 nil → 버튼 숨김)
+    private var nlSuggestionText: String? {
+        guard let d = nlDraft else { return nil }
+        var parts: [String] = []
+        if let date = d.date {
+            let f = DateFormatter(); f.locale = Locale(identifier: "ko_KR"); f.dateFormat = "M월 d일"
+            parts.append(f.string(from: date))
+        }
+        if let s = d.startTime { parts.append(d.endTime != nil ? "\(s.hhmm)~\(d.endTime!.hhmm)" : s.hhmm) }
+        if let r = d.recurrenceRule { parts.append(RecurrenceInfo.from(r).displayString) }
+        guard !parts.isEmpty else { return nil }
+        return parts.joined(separator: " · ") + " 적용"
+    }
+
+    /// 분석 결과를 폼 상태에 채움 (저장은 Command+Return / 저장 버튼)
+    private func applyNLDraft() {
+        guard let d = nlDraft else { return }
+        if let date = d.date { selectedDate = date }
+        if let s = d.startTime {
+            hasTime = true
+            if let combined = Calendar.current.date(bySettingHour: s.hour, minute: s.minute, second: 0, of: selectedDate) {
+                selectedTime = combined
+            }
+        }
+        if let r = d.recurrenceRule { selectedRecurrence = RecurrenceInfo.from(r) }
+        if !d.title.isEmpty { eventText = d.title }
+        nlDraft = nil
     }
 
     private func applyTemplate(_ template: EventTemplate) {

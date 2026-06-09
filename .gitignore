@@ -35,3 +35,11 @@ Nower/Nower.xcodeproj/project.xcworkspace/xcuserdata/sinjong-won.xcuserdatad/Use
 # NowerCore (Swift Package)
 NowerCore/.build/
 NowerCore/.swiftpm/
+# Local tooling / planning (not part of product source)
+.claude/
+.agents/
+.codex/
+docs/
+nower-design.html
+*.xcuserdatad/
+xcuserdata/

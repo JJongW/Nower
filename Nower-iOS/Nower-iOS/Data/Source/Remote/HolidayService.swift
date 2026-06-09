@@ -84,7 +84,6 @@ extension HolidayService: TargetType {
             guard let serviceKey = Bundle.main.infoDictionary?["KASI_API_KEY"] as? String,
                   serviceKey != "$(KASI_API_KEY)",
                   let encodedKey = serviceKey.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
-                print("⚠️ KASI_API_KEY가 Info.plist에 설정되지 않았거나 올바르지 않습니다.")
                 // 키가 없어도 API 호출은 진행 (401 에러가 발생할 것)
                 let params: [String: Any] = [
                     "solYear": year,

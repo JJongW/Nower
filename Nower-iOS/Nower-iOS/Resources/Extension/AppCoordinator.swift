@@ -72,6 +72,10 @@ final class AppCoordinator {
         listVC.selectedDate = date
         listVC.viewModel = viewModel
         listVC.coordinator = self
+        if let sheet = listVC.sheetPresentationController {
+            sheet.detents = [.medium(), .large()]
+            sheet.prefersGrabberVisible = true
+        }
         navigationController.topViewController?.present(listVC, animated: true)
     }
 

@@ -7,11 +7,15 @@
 
 import SwiftUI
 import Foundation
+#if canImport(NowerCore)
+import NowerCore
+#endif
 
 struct ContentView: View {
     let days: [String] = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
 
     @EnvironmentObject var viewModel: CalendarViewModel
+    @EnvironmentObject var themeManager: ThemeManager
     #if os(macOS)
     @EnvironmentObject var settingsManager: SettingsManager
     @Environment(\.openAddScheduleWithDate) private var openAddScheduleWithDate
@@ -25,6 +29,7 @@ struct ContentView: View {
 
     @State private var toastMessage: String = ""
     @State private var showToast: Bool = false
+    @State private var showDensityDetail: Bool = false
     
     // 안전하게 일일 명언 로드
     private var todayQuote: String {
@@ -93,6 +98,28 @@ struct ContentView: View {
                         .help("다음 달")
 
                         Spacer()
+
+                        #if canImport(NowerCore)
+                        // 하루 밀도 컴팩트 칩 — 탭하면 상세 카드 팝오버
+                        DensityChipView(
+                            state: NowerDensity.viewState(
+                                todos: viewModel.todos(for: viewModel.selectedDate ?? Date()),
+                                day: viewModel.selectedDate ?? Date()
+                            )
+                        ) {
+                            showDensityDetail.toggle()
+                        }
+                        .popover(isPresented: $showDensityDetail, arrowEdge: .bottom) {
+                            DensityCardView(
+                                state: NowerDensity.viewState(
+                                    todos: viewModel.todos(for: viewModel.selectedDate ?? Date()),
+                                    day: viewModel.selectedDate ?? Date()
+                                )
+                            )
+                            .frame(width: 320)
+                            .padding(16)
+                        }
+                        #endif
 
                         #if os(macOS)
                         // 배경화면 고정 토글 (데스크톱 위젯 모드가 아닐 때만 표시)
@@ -211,6 +238,7 @@ struct ContentView: View {
                 }
             }
         }
+        .preferredColorScheme(themeManager.isDarkMode ? .dark : .light)
         #if os(macOS)
         .frame(minWidth: 700, maxWidth: .infinity, minHeight: 500, maxHeight: .infinity)
         #endif

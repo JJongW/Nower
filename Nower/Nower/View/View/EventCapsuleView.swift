@@ -53,31 +53,31 @@ struct EventCapsuleView: View {
     /// 단일 날짜 일정 뷰
     @ViewBuilder
     private var singleDayEventView: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // 일정 제목
-            HStack(spacing: 4) {
-                // 시간이 있으면 시간 표시
-                if let time = todo.scheduledTime {
-                    Text(time)
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundColor(textColor.opacity(0.9))
-                }
-                
-                Text(todo.text)
-                    .font(.system(size: 10))
-                    .foregroundColor(textColor)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-
-                if todo.isRecurringEvent {
-                    Image(systemName: "arrow.2.squarepath")
-                        .font(.system(size: 7))
-                        .foregroundColor(textColor.opacity(0.7))
-                }
+        HStack(spacing: 3) {
+            // 시간: 모노스페이스 + 흐리게 → 시각적으로 제목보다 덜 강조
+            if let time = todo.scheduledTime {
+                Text(time)
+                    .font(.system(size: 9, weight: .bold).monospacedDigit())
+                    .foregroundColor(textColor.opacity(0.65))
+                Text("·")
+                    .font(.system(size: 9, weight: .regular))
+                    .foregroundColor(textColor.opacity(0.45))
             }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
+
+            Text(todo.text)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(textColor)
+                .lineLimit(1)
+                .truncationMode(.tail)
+
+            if todo.isRecurringEvent {
+                Image(systemName: "arrow.2.squarepath")
+                    .font(.system(size: 7))
+                    .foregroundColor(textColor.opacity(0.7))
+            }
         }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(backgroundColor)
         .cornerRadius(6)
@@ -92,16 +92,17 @@ struct EventCapsuleView: View {
                 // 시작일: 텍스트 표시, 왼쪽만 둥글게
                 // 오른쪽은 다음 셀과 연결되도록 확장
                 HStack(spacing: 0) {
-                    HStack(spacing: 4) {
-                        // 시간이 있으면 시간 표시
+                    HStack(spacing: 3) {
                         if let time = todo.scheduledTime {
                             Text(time)
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundColor(textColor.opacity(0.9))
+                                .font(.system(size: 9, weight: .bold).monospacedDigit())
+                                .foregroundColor(textColor.opacity(0.65))
+                            Text("·")
+                                .font(.system(size: 9, weight: .regular))
+                                .foregroundColor(textColor.opacity(0.45))
                         }
-                        
                         Text(todo.text)
-                            .font(.system(size: 10))
+                            .font(.system(size: 10, weight: .medium))
                             .foregroundColor(textColor)
                             .lineLimit(1)
                             .truncationMode(.tail)

@@ -5,6 +5,8 @@
 //  Created by 신종원 on 4/11/25.
 
 import UIKit
+import SwiftUI
+import SnapKit
 #if canImport(NowerCore)
 import NowerCore
 #endif
@@ -13,10 +15,17 @@ final class CalendarViewController: UIViewController {
 
     var coordinator: AppCoordinator?
     private let calendarView = CalendarView()
+    #if canImport(NowerCore)
+    /// 헤더 밀도 칩 호스팅 컨트롤러
+    private var densityChipHostingController: UIHostingController<DensityChipView>?
+    /// 현재 월 날짜키 → 밴드 색 hex (히트맵 틴트용)
+    private var densityBandHexByDate: [String: String] = [:]
+    #endif
     private var currentDate = Date()
     private var weeks: [[WeekDayInfo]] = [] // 주 단위로 그룹화된 날짜들
 
     private var selectedIndexPath: IndexPath?
+    private var selectedDate: Date?
     private var isNextMonth = false
 
     private let viewModel: CalendarViewModel
@@ -42,7 +51,6 @@ final class CalendarViewController: UIViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        viewModel.debugPrintICloudTodos()
         // 날짜가 바뀌었을 수 있으므로 일일 명언 갱신
         calendarView.textLabel.text = DailyQuoteManager.getTodayQuote()
     }
@@ -54,6 +62,7 @@ final class CalendarViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupCollectionView()
+        setupDensityCard()
         generateCalendar()
         setupSwipeGesture()
 
@@ -321,7 +330,7 @@ final class CalendarViewController: UIViewController {
 
         // 새 달력 데이터로 업데이트
         currentDate = newDate
-        generateCalendar()
+        generateCalendar(updateHeader: false)
         collectionView.alpha = 1
         collectionView.transform = .identity
 
@@ -355,14 +364,7 @@ final class CalendarViewController: UIViewController {
             self.isTransitioning = false
         }
 
-        // 월 라벨도 함께 애니메이션 (더 부드럽게)
-        UIView.transition(
-            with: calendarView.monthLabel,
-            duration: 0.5,
-            options: [.transitionCrossDissolve]
-        ) {
-            self.updateMonthLabel()
-        }
+        updateMonthLabel(animated: true)
     }
 
     /// 달력 데이터만 생성 (UI reloadData 없이)
@@ -465,7 +467,7 @@ final class CalendarViewController: UIViewController {
         })
     }
 
-    private func generateCalendar() {
+    private func generateCalendar(updateHeader: Bool = true) {
         weeks = []
 
         var calendar = Calendar.current
@@ -515,8 +517,12 @@ final class CalendarViewController: UIViewController {
             currentDay += daysInThisWeek
         }
 
-        updateMonthLabel()
+        if updateHeader {
+            updateMonthLabel(animated: false)
+        }
+        recomputeMonthDensity()
         calendarView.collectionView.reloadData()
+        updateDensityCard()
 
         if let year = components.year, let month = components.month {
             holidayUseCase.fetchHolidays(for: year, month: month) { _ in
@@ -527,6 +533,80 @@ final class CalendarViewController: UIViewController {
         }
     }
     
+    // MARK: - Density Card (하루 밀도)
+
+    private func setupDensityCard() {
+        #if canImport(NowerCore)
+        // DayView 히트맵 틴트가 읽어갈 밴드맵 공급자 주입
+        DayView.densityBandHexProvider = { [weak self] key in
+            self?.densityBandHexByDate[key]
+        }
+        let host = UIHostingController(rootView: makeChip(state: densityViewState()))
+        host.view.backgroundColor = .clear
+        addChild(host)
+        calendarView.densityChipContainer.addSubview(host.view)
+        host.view.snp.makeConstraints { $0.edges.equalToSuperview() }
+        host.didMove(toParent: self)
+        densityChipHostingController = host
+        #endif
+    }
+
+    /// 선택 날짜(없으면 오늘)의 밀도 칩을 갱신
+    private func updateDensityCard() {
+        #if canImport(NowerCore)
+        densityChipHostingController?.rootView = makeChip(state: densityViewState())
+        #endif
+    }
+
+    #if canImport(NowerCore)
+    private func makeChip(state: DensityViewState) -> DensityChipView {
+        DensityChipView(state: state) { [weak self] in
+            self?.presentDensityDetail()
+        }
+    }
+
+    private func densityViewState() -> DensityViewState {
+        let day = selectedDate ?? Date()
+        return NowerDensity.viewState(todos: viewModel.todos(for: day), day: day)
+    }
+
+    /// 현재 표시 월의 일별 밀도를 계산해 히트맵 밴드맵 갱신
+    private func recomputeMonthDensity() {
+        var calendar = Calendar.current
+        calendar.firstWeekday = 1
+        let comps = calendar.dateComponents([.year, .month], from: currentDate)
+        guard let first = calendar.date(from: comps),
+              let range = calendar.range(of: .day, in: .month, for: currentDate) else { return }
+        let days: [Date] = range.compactMap { calendar.date(byAdding: .day, value: $0 - 1, to: first) }
+        let report = NowerDensity.monthReport(days: days) { [weak self] date in
+            self?.viewModel.todos(for: date) ?? []
+        }
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        var map: [String: String] = [:]
+        for date in days {
+            let key = f.string(from: date)
+            // 여유(light)는 제외 — 주의가 필요한 보통/과부하만 dot 표기 (차분 유지)
+            if let band = report.band(forDateKey: key), band != .light {
+                map[key] = band.colorHex
+            }
+        }
+        densityBandHexByDate = map
+    }
+
+    /// 칩 탭 → 상세 밀도 카드를 바텀 시트로 표시
+    private func presentDensityDetail() {
+        let card = DensityCardView(state: densityViewState())
+            .padding(16)
+        let host = UIHostingController(rootView: card)
+        if let sheet = host.sheetPresentationController {
+            sheet.detents = [.medium()]
+            sheet.prefersGrabberVisible = true
+        }
+        present(host, animated: true)
+    }
+    #endif
+
     private func createDayInfo(day: Int, components: DateComponents, calendar: Calendar) -> WeekDayInfo {
         var dayComponents = components
         dayComponents.day = day
@@ -551,7 +631,7 @@ final class CalendarViewController: UIViewController {
             dateString: dateString,
             todos: todos,
             isToday: isToday,
-            isSelected: false, // TODO: 선택 상태 관리 필요시 수정
+            isSelected: selectedDate.map { calendar.isDate($0, inSameDayAs: date) } ?? false,
             holidayName: holidayName,
             isSunday: isSunday,
             isSaturday: isSaturday
@@ -571,10 +651,25 @@ final class CalendarViewController: UIViewController {
         )
     }
 
-    private func updateMonthLabel() {
+    private func updateMonthLabel(animated: Bool = false) {
         let formatter = DateFormatter()
-        formatter.dateFormat = "yy MMM"
-        calendarView.monthLabel.text = formatter.string(from: currentDate)
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "yyyy년 M월"
+        let text = formatter.string(from: currentDate)
+
+        guard animated else {
+            calendarView.monthLabel.text = text
+            return
+        }
+
+        calendarView.monthLabel.layer.removeAllAnimations()
+        UIView.transition(
+            with: calendarView.monthLabel,
+            duration: 0.22,
+            options: [.transitionCrossDissolve, .beginFromCurrentState, .allowUserInteraction]
+        ) {
+            self.calendarView.monthLabel.text = text
+        }
     }
 
     @objc private func didTapPreviousMonth() {
@@ -588,6 +683,11 @@ final class CalendarViewController: UIViewController {
     }
 
     private func animateMonthTransition(to newDate: Date, direction: SlideDirection) {
+        // 월을 바꾸면 이전 달의 선택 날짜 맥락을 정리한다 (UX 검토 §2):
+        // 밀도 칩이 "오늘" 기준으로 돌아가 어느 달의 선택인지 혼란 없앰.
+        selectedDate = nil
+        selectedIndexPath = nil
+
         let collectionView = calendarView.collectionView
         let containerWidth = calendarView.bounds.width
 
@@ -613,7 +713,7 @@ final class CalendarViewController: UIViewController {
 
         // 새 달력 데이터로 업데이트
         currentDate = newDate
-        generateCalendar()
+        generateCalendar(updateHeader: false)
 
         // 새 달력 초기 위치 설정 (화면 밖)
         let offsetX: CGFloat = direction == .left ? containerWidth : -containerWidth
@@ -635,14 +735,7 @@ final class CalendarViewController: UIViewController {
             snapshot.removeFromSuperview()
         }
 
-        // 월 라벨도 함께 애니메이션 (더 부드럽게)
-        UIView.transition(
-            with: calendarView.monthLabel,
-            duration: 0.5,
-            options: [.transitionCrossDissolve]
-        ) {
-            self.updateMonthLabel()
-        }
+        updateMonthLabel(animated: true)
     }
 
     private enum SlideDirection {
@@ -687,11 +780,7 @@ extension CalendarViewController: UICollectionViewDataSource {
         
         let week = weeks[indexPath.item]
         
-        // 선택 상태 업데이트 (필요시)
-        var updatedWeek = week
-        // TODO: 선택된 날짜에 따라 isSelected 업데이트
-        
-        cell.configure(weekDays: updatedWeek)
+        cell.configure(weekDays: week)
 
         // 날짜 선택 콜백 설정
         cell.onDaySelected = { [weak self] dateString in
@@ -701,6 +790,10 @@ extension CalendarViewController: UICollectionViewDataSource {
         // 일정 선택 콜백 설정 (기간별 일정 터치 시)
         cell.onTodoSelected = { [weak self] todo, dateString in
             self?.handleTodoSelection(todo: todo, dateString: dateString)
+        }
+
+        cell.onMoreTapped = { [weak self] dateString, _ in
+            self?.handleDaySelection(dateString: dateString)
         }
 
         return cell
@@ -719,13 +812,9 @@ extension CalendarViewController: UICollectionViewDataSource {
         formatter.dateFormat = "yyyy-MM-dd"
         guard let selectedDate = formatter.date(from: dateString) else { return }
 
-        let hasTodos = !viewModel.todos(for: selectedDate).isEmpty
-
-        if hasTodos {
-            coordinator?.presentEventList(for: selectedDate, viewModel: viewModel)
-        } else {
-            coordinator?.presentNewEvent(for: selectedDate, viewModel: viewModel)
-        }
+        self.selectedDate = selectedDate
+        generateCalendar()
+        coordinator?.presentEventList(for: selectedDate, viewModel: viewModel)
     }
 }
 

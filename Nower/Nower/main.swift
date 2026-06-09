@@ -22,6 +22,4 @@ app.delegate = delegate
 do {
     app.run()
 } catch {
-    print("❌ [main] 앱 실행 중 오류 발생: \(error)")
-    NSLog("Nower 앱 실행 오류: \(error.localizedDescription)")
 }

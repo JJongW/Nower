@@ -33,11 +33,24 @@ final class EventListView: UIView {
         return label
     }()
 
-    let emptyLabel: UILabel = {
+    // 상태 캡션 (탭 동작 없음 — 추가는 플로팅 + 버튼이 담당).
+    // 강조색/세미볼드는 링크처럼 보여 오해를 줘 회색 캡션으로 강등 (UX 검토 P1/P2).
+    let modeLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 24, weight: .bold)
+        label.font = .systemFont(ofSize: 12, weight: .regular)
+        label.textColor = AppColors.textFieldPlaceholder
+        label.textAlignment = .right
+        return label
+    }()
+
+    let emptyStateLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 15, weight: .medium)
         label.textColor = AppColors.textPrimary
-        label.text = "     "
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.text = "아직 일정이 없어요\n아래 + 버튼으로 이 날짜에 추가할 수 있어요"
+        label.isHidden = true
         return label
     }()
 
@@ -46,14 +59,6 @@ final class EventListView: UIView {
         stack.axis = .vertical
         stack.spacing = 4
         stack.alignment = .leading
-        return stack
-    }()
-
-    private let mainStack: UIStackView = {
-        let stack = UIStackView()
-        stack.axis = .horizontal
-        stack.alignment = .center
-        stack.distribution = .equalSpacing
         return stack
     }()
 
@@ -93,27 +98,43 @@ final class EventListView: UIView {
     private func setupUI() {
         backgroundColor = AppColors.background
 
-        addSubview(eventDateLabel)
         addSubview(eventTableView)
         addSubview(addButton)
 
         dateStack.addArrangedSubview(eventDateLabel)
         dateStack.addArrangedSubview(eventWeekLabel)
 
-        mainStack.addArrangedSubview(dateStack)
-        mainStack.addArrangedSubview(eventLabel)
-        mainStack.addArrangedSubview(emptyLabel)
+        addSubview(dateStack)
+        addSubview(eventLabel)
+        addSubview(modeLabel)
+        addSubview(emptyStateLabel)
 
-        addSubview(mainStack)
+        dateStack.snp.makeConstraints {
+            $0.top.equalToSuperview().offset(20)
+            $0.leading.equalToSuperview().offset(20)
+        }
 
-        mainStack.snp.makeConstraints {
-            $0.top.leading.equalToSuperview().offset(20)
-            $0.trailing.equalToSuperview().offset(-20)
+        eventLabel.snp.makeConstraints {
+            $0.centerX.equalToSuperview()
+            $0.centerY.equalTo(dateStack)
+            $0.leading.greaterThanOrEqualTo(dateStack.snp.trailing).offset(12)
+            $0.trailing.lessThanOrEqualTo(modeLabel.snp.leading).offset(-12)
+        }
+
+        modeLabel.snp.makeConstraints {
+            $0.trailing.equalToSuperview().inset(20)
+            $0.centerY.equalTo(dateStack)
         }
 
         eventTableView.snp.makeConstraints {
-            $0.top.equalTo(mainStack.snp.bottom).offset(12)
+            $0.top.equalTo(dateStack.snp.bottom).offset(12)
             $0.leading.trailing.bottom.equalToSuperview()
+        }
+
+        emptyStateLabel.snp.makeConstraints {
+            $0.centerX.equalToSuperview()
+            $0.centerY.equalTo(eventTableView.snp.centerY).offset(-20)
+            $0.leading.trailing.equalToSuperview().inset(32)
         }
 
         addButton.snp.makeConstraints {
@@ -121,5 +142,18 @@ final class EventListView: UIView {
             $0.bottom.equalTo(safeAreaLayoutGuide).inset(20)
             $0.width.height.equalTo(56) // 더 크게 (최소 터치 타겟 44pt + 여유)
         }
+
+        addButton.accessibilityLabel = "새 일정 추가"
+    }
+
+    func configure(date: Date, eventCount: Int) {
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "ko_KR")
+        dateFormatter.dateFormat = "M월 d일"
+
+        modeLabel.text = eventCount == 0 ? "일정 없음" : "일정 \(eventCount)개"
+        emptyStateLabel.isHidden = eventCount > 0
+        eventTableView.isHidden = eventCount == 0
+        addButton.accessibilityHint = "\(dateFormatter.string(from: date))에 일정을 추가합니다"
     }
 }

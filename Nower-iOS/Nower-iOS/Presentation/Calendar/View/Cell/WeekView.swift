@@ -360,11 +360,16 @@ final class WeekView: UIView {
         // 숨겨진 일정이 있으면 "+N개" 표시 (첫 번째 날짜 열에 표시)
         if hiddenPeriodEventCount > 0 {
             let moreLabel = UILabel()
-            moreLabel.text = "+\(hiddenPeriodEventCount)개"
-            moreLabel.font = UIFont.systemFont(ofSize: 10, weight: .medium)
-            moreLabel.textColor = AppColors.textFieldPlaceholder // 덜 강조되는 색상
+            moreLabel.text = "+\(hiddenPeriodEventCount)"
+            moreLabel.font = UIFont.systemFont(ofSize: 10, weight: .semibold)
+            moreLabel.textColor = AppColors.textHighlighted
             moreLabel.textAlignment = .center
-            moreLabel.backgroundColor = .clear // 배경 제거
+            moreLabel.backgroundColor = AppColors.textFieldBackground.withAlphaComponent(0.9)
+            moreLabel.layer.cornerRadius = 7
+            moreLabel.layer.masksToBounds = true
+            moreLabel.isUserInteractionEnabled = true
+            let tapGesture = UITapGestureRecognizer(target: self, action: #selector(hiddenPeriodMoreTapped))
+            moreLabel.addGestureRecognizer(tapGesture)
 
             // 마지막 행 아래에 표시 (첫 번째 날짜 열)
             let y = CGFloat(visibleRows.count) * (eventHeight + eventSpacing)
@@ -375,6 +380,12 @@ final class WeekView: UIView {
             periodEventContainer.addSubview(moreLabel)
             moreEventLabel = moreLabel
         }
+    }
+
+    @objc private func hiddenPeriodMoreTapped() {
+        guard let firstDate = weekDays.first(where: { !$0.dateString.isEmpty })?.dateString else { return }
+        let todos = weekDays.flatMap(\.todos)
+        onMoreTapped?(firstDate, todos)
     }
 
     @objc private func periodEventTapped(_ gesture: UITapGestureRecognizer) {

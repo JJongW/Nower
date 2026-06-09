@@ -277,23 +277,37 @@ extension NSColor {
 }
 #endif
 
-struct ThemeManager {
-    static var isDarkMode: Bool {
-#if os(iOS)
-        return UITraitCollection.current.userInterfaceStyle == .dark
-#elseif os(macOS)
-        // NSApp이 초기화되지 않았을 수 있으므로 안전하게 처리
-        // Thread-safe하게 접근
-        if Thread.isMainThread {
-            // 메인 스레드에서만 NSApp에 접근
-            if #available(macOS 10.14, *) {
-                return NSApp.effectiveAppearance.name == .darkAqua
+final class ThemeManager: ObservableObject {
+
+    static let shared = ThemeManager()
+
+    @Published private(set) var isDarkMode: Bool = false
+
+#if os(macOS)
+    private var appearanceObservation: NSKeyValueObservation?
+#endif
+
+    private init() {
+#if os(macOS)
+        DispatchQueue.main.async { [weak self] in
+            self?.syncDarkMode()
+            self?.appearanceObservation = NSApp.observe(\.effectiveAppearance) { [weak self] _, _ in
+                DispatchQueue.main.async { self?.syncDarkMode() }
             }
         }
-        // 초기화 전이거나 다른 스레드에서는 기본값 반환
-        return false
-#else
-        return false
+#elseif os(iOS)
+        isDarkMode = UITraitCollection.current.userInterfaceStyle == .dark
 #endif
     }
+
+#if os(macOS)
+    private func syncDarkMode() {
+        isDarkMode = NSApp.effectiveAppearance.name == .darkAqua
+    }
+
+    deinit { appearanceObservation?.invalidate() }
+#endif
+
+    /// AppColors 하위 호환용 정적 접근자
+    static var isDarkMode: Bool { shared.isDarkMode }
 }

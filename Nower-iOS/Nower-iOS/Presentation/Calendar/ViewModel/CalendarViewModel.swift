@@ -325,28 +325,6 @@ final class CalendarViewModel: ObservableObject {
         LocalNotificationManager.shared.scheduleNotification(for: updatedTodo)
     }
 
-    func debugPrintICloudTodos() {
-        #if DEBUG
-        NSUbiquitousKeyValueStore.default.synchronize()
-        print("🔍 [iCloud] todos 확인 시작")
-
-        guard let data = NSUbiquitousKeyValueStore.default.data(forKey: "SavedTodos") else {
-            print("⚠️ iCloud 저장소에 데이터 없음")
-            return
-        }
-
-        do {
-            let items = try JSONDecoder().decode([TodoItem].self, from: data)
-            print("✅ \(items.count)개의 TodoItem 디코딩 완료:")
-            for (i, item) in items.enumerated() {
-                print("🔸 [\(i)] \(item.text) | \(item.date) | \(item.colorName) | 반복: \(item.isRepeating)")
-            }
-        } catch {
-            print("❌ 디코딩 실패:", error)
-        }
-        #endif
-    }
-    
     // MARK: - Private Methods
     
     /// CloudSyncManager 알림 옵저버를 설정합니다.

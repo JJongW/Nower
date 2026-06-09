@@ -24,7 +24,7 @@ final class EditEventBottomSheetViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        popupView.setInitialSelectedDate(selectedDate)
+        popupView.setDateContext(selectedDate, actionText: " 일정 편집")
         popupView.textField.text = todo.text
         popupView.saveButtonActiveTitle = "수정"
         popupView.updateSaveButtonState()

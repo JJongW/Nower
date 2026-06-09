@@ -7,6 +7,9 @@
 //
 
 import SwiftUI
+#if canImport(NowerCore)
+import NowerCore
+#endif
 
 /// 주 내의 단일 날짜를 표시하는 뷰
 /// iOS 버전과 동일한 디자인을 SwiftUI로 구현합니다.
@@ -54,14 +57,19 @@ struct DayView: View {
                     Spacer()
                         .frame(height: topPadding)
                     
-                    // 오늘 날짜 원형 배경
+                    // 오늘 = 코랄 원(채움), 선택 = 숫자 주변 얇은 ring, 둘 다 = 원 + stroke
                     ZStack {
                         if dayInfo.isToday {
                             Circle()
                                 .fill(AppColors.textHighlighted)
                                 .frame(width: 24, height: 24)
                         }
-                        
+                        if dayInfo.isSelected {
+                            Circle()
+                                .stroke(AppColors.textHighlighted.opacity(0.7), lineWidth: 1.5)
+                                .frame(width: 24, height: 24)
+                        }
+
                         // dayLabel: 원형 배경 중앙에 배치
                         Text("\(day)")
                             .font(.system(size: 12, weight: .medium))
@@ -107,6 +115,16 @@ struct DayView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(dayBackgroundColor)
+        .overlay(alignment: .topTrailing) {
+            // 밀도 표시: 전면 배경 대신 작은 dot (보통/과부하만)
+            if dayInfo.day != nil, let dotColor = densityDotColor {
+                Circle()
+                    .fill(dotColor)
+                    .frame(width: 6, height: 6)
+                    .padding(.top, 5)
+                    .padding(.trailing, 5)
+            }
+        }
         .contentShape(Rectangle())
         #if os(macOS)
         .onTapGesture(count: 2) {
@@ -141,13 +159,19 @@ struct DayView: View {
         }
     }
     
-    /// 날짜 배경색 (선택 상태)
+    /// 날짜 배경색 — 선택은 전면 채움이 아니라 숫자 주변 ring으로 표현하므로 항상 clear.
     private var dayBackgroundColor: Color {
-        if dayInfo.isSelected {
-            return AppColors.todoBackground.opacity(0.5)
-        } else {
-            return Color.clear
+        Color.clear
+    }
+
+    /// 밀도 dot 색 (보통/과부하만 — 여유는 nil → dot 없음)
+    private var densityDotColor: Color? {
+        #if canImport(NowerCore)
+        if let hex = viewModel.densityBandHexByDate[dayInfo.dateString] {
+            return Color(densityHex: hex)
         }
+        #endif
+        return nil
     }
     
     

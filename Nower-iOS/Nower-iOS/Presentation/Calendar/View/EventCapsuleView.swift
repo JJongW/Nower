@@ -12,7 +12,7 @@ class EventCapsuleView: UIView {
 
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.font = UIFont.systemFont(ofSize: 10)
+        label.font = UIFont.systemFont(ofSize: 10, weight: .medium)
         label.textColor = AppColors.textMain
         label.textAlignment = .left // 기간별 일정은 좌측 정렬
         label.numberOfLines = 1
@@ -37,9 +37,9 @@ class EventCapsuleView: UIView {
 
         addSubview(titleLabel)
 
-        // 기본 패딩 설정 (기간별 일정에서는 다르게 설정됨)
+        // 기본 패딩 — 좌우를 넓혀 텍스트가 꽉 차 보이지 않게 (UX 검토 §1)
         titleLabel.snp.makeConstraints {
-            $0.edges.equalToSuperview().inset(3)
+            $0.edges.equalToSuperview().inset(UIEdgeInsets(top: 2, left: 6, bottom: 2, right: 6))
         }
 
         self.snp.makeConstraints {
@@ -48,12 +48,28 @@ class EventCapsuleView: UIView {
     }
 
     func configure(title: String, color: UIColor, time: String? = nil) {
-        titleLabel.text = title
+        titleLabel.text = time.map { "\($0) · \(title)" } ?? title
         backgroundColor = color
         // 배경색에 맞춰 텍스트 색상 자동 조정 (WCAG 4.5:1 대비 보장)
         titleLabel.textColor = AppColors.contrastingTextColor(for: color)
         // 기본 스타일 (단일 날짜 일정)
         layer.cornerRadius = 6
+    }
+
+    func configure(todo: TodoItem, color: UIColor) {
+        var parts: [String] = []
+        if let time = todo.scheduledTime {
+            parts.append(time)
+        }
+        if todo.isRecurringEvent {
+            parts.append("반복")
+        }
+        if todo.isPeriodEvent {
+            parts.append("기간")
+        }
+
+        let prefix = parts.isEmpty ? "" : parts.joined(separator: " · ") + " · "
+        configure(title: prefix + todo.text, color: color)
     }
     
     /// 기간별 일정을 위한 설정 메서드

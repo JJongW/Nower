@@ -9,8 +9,6 @@
 /* Begin PBXBuildFile section */
 		C3CE4DE02DB6168E00357F86 /* Moya in Frameworks */ = {isa = PBXBuildFile; productRef = C3CE4DDF2DB6168E00357F86 /* Moya */; };
 		C3D7751F2F2F606E00398804 /* NowerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C3D7751E2F2F606E00398804 /* NowerCore */; };
-		C3E007B42F1F8EBA004CBAD6 /* Debug.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = C3E007B32F1F8EB1004CBAD6 /* Debug.xcconfig */; };
-		C3E007B62F1F8FDC004CBAD6 /* Release.xcconfig in Sources */ = {isa = PBXBuildFile; fileRef = C3E007B52F1F8FD2004CBAD6 /* Release.xcconfig */; };
 		C3E008D52F20E16A004CBAD6 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3E008D42F20E16A004CBAD6 /* WidgetKit.framework */; };
 		C3E008D72F20E16A004CBAD6 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3E008D62F20E16A004CBAD6 /* SwiftUI.framework */; };
 		C3E008E82F20E16C004CBAD6 /* NowerTodayWidgetExtensionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C3E008D22F20E16A004CBAD6 /* NowerTodayWidgetExtensionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };

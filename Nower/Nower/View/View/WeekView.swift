@@ -76,17 +76,17 @@ struct WeekView: View {
         let holidayLabelHeight: CGFloat = 8 // iOS와 동일 (12 → 8)
         let holidayToEventSpacing: CGFloat = 0 // iOS와 동일 (6 → 0)
         let periodEventTopOffset: CGFloat = 28 // iOS와 동일
-        let maxVisiblePeriodEventRows: Int = 3 // 최대 표시 가능한 기간일정 행 수
-        
         let hasHoliday = weekDays.contains { $0.holidayName != nil }
-        let headerHeight = topPadding + 24 + dayLabelToHolidaySpacing + (hasHoliday ? holidayLabelHeight : 0) // 24는 원형 배경 높이
-        let eventAreaStartY = periodEventTopOffset // iOS와 동일하게 고정 오프셋 사용
-        
-        // 주 내 모든 일정 수집 및 행 배치 계산
-        let (eventRows, hiddenPeriodEventCount, hiddenSingleEventCounts) = calculateEventRows()
-        
+        let eventAreaStartY = periodEventTopOffset
+
+        // 실제 사용 가능한 높이에서 "+n개" 라벨 슬롯(1행)을 빼고 표시 가능 행 수 계산 (최솟값 2)
+        let availableHeight = geometry.size.height - eventAreaStartY - 4 // 4: bottomPadding
+        let maxDynamicRows = max(2, Int((availableHeight + eventSpacing) / (eventHeight + eventSpacing)) - 1)
+
+        let (eventRows, hiddenPeriodEventCount, hiddenSingleEventCounts) = calculateEventRows(maxRows: maxDynamicRows)
+
         // 표시 가능한 행까지만 렌더링
-        let visibleRows = Array(eventRows.prefix(maxVisiblePeriodEventRows))
+        let visibleRows = Array(eventRows.prefix(maxDynamicRows))
         
         // 각 행의 일정들을 렌더링
         ForEach(Array(visibleRows.enumerated()), id: \.offset) { rowIndex, rowEvents in
@@ -136,10 +136,10 @@ struct WeekView: View {
     
     /// 일정 행 배치 계산 (기간별 일정과 단일 일정을 함께 배치)
     /// Returns: (표시할 행들, 숨겨진 기간별 일정 개수, 각 날짜별 숨겨진 단일 일정 개수)
-    private func calculateEventRows() -> (rows: [[(id: UUID, todo: TodoItem, startIndex: Int, endIndex: Int, isPeriod: Bool)]], hiddenPeriodCount: Int, hiddenSingleCounts: [Int: Int]) {
+    private func calculateEventRows(maxRows: Int = 2) -> (rows: [[(id: UUID, todo: TodoItem, startIndex: Int, endIndex: Int, isPeriod: Bool)]], hiddenPeriodCount: Int, hiddenSingleCounts: [Int: Int]) {
         var rows: [[(id: UUID, todo: TodoItem, startIndex: Int, endIndex: Int, isPeriod: Bool)]] = []
-        let maxVisiblePeriodEventRows: Int = 3 // 최대 표시 가능한 기간일정 행 수
-        let maxVisibleSingleEventsPerDay: Int = 2 // 각 날짜별 최대 표시 가능한 단일 일정 개수
+        let maxVisiblePeriodEventRows: Int = maxRows
+        let maxVisibleSingleEventsPerDay: Int = maxRows
         
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
@@ -405,9 +405,8 @@ struct WeekView: View {
         var hasHoliday = false
         
         for dayInfo in weekDays {
-            // 각 날짜에서 표시되는 일정 개수 계산 (기간별 일정 포함)
-            // 최대 2개만 표시하고, 나머지는 "+N개"로 표시
-            let visibleEventCount = min(dayInfo.todos.count, 2) // 최대 2개 표시
+            // 최솟값 2개 보장
+            let visibleEventCount = min(dayInfo.todos.count, 2)
             maxVisibleEventCount = max(maxVisibleEventCount, visibleEventCount)
             
             // 공휴일이 있는 경우 확인
@@ -444,17 +443,11 @@ struct WeekView: View {
         // 주 내 모든 날짜의 일정 개수 중 최대값 찾기
         var maxVisibleEventCount = 0
         for dayInfo in weekDays {
-            let visibleEventCount = min(dayInfo.todos.count, 2) // 최대 2개 표시
+            let visibleEventCount = min(dayInfo.todos.count, 2) // 최솟값 2
             maxVisibleEventCount = max(maxVisibleEventCount, visibleEventCount)
         }
-        
-        // 최소 1개의 일정을 표시할 수 있는 높이 계산 (일정이 없는 날짜도 최소 높이 보장)
-        // 최대 2개 + "+N개" 라벨(1개) = 총 3개 높이 필요
-        let minVisibleEventCount = max(maxVisibleEventCount, 1)
-        // "+N개" 라벨을 위한 공간도 고려하여 최대 3개 높이 계산
-        let actualEventCount = minVisibleEventCount >= 2 ? 3 : minVisibleEventCount // 2개 이상이면 "+N개" 라벨 포함하여 3개 높이
-        
-        // macOS HIG 준수: 첫 번째 일정은 간격 없음, 나머지는 간격 포함
-        return CGFloat(actualEventCount) * eventHeight + CGFloat(max(0, actualEventCount - 1)) * eventSpacing
+
+        let minVisibleEventCount = max(maxVisibleEventCount, 2) // 최솟값 2
+        return CGFloat(minVisibleEventCount) * eventHeight + CGFloat(max(0, minVisibleEventCount - 1)) * eventSpacing
     }
 }

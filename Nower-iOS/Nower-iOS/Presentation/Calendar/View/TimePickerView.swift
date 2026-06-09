@@ -34,6 +34,16 @@ final class TimePickerView: UIView {
         return label
     }()
 
+    /// 어떤 일정의 시간인지 맥락 (예: "코딩테스트 · 6월 7일")
+    private let contextLabel: UILabel = {
+        let label = UILabel()
+        label.font = UIFont.systemFont(ofSize: 13, weight: .regular)
+        label.textColor = AppColors.textFieldPlaceholder
+        label.textAlignment = .center
+        label.numberOfLines = 1
+        return label
+    }()
+
     private let allDayContainer: UIView = {
         let view = UIView()
         view.backgroundColor = AppColors.textFieldBackground
@@ -91,8 +101,9 @@ final class TimePickerView: UIView {
 
     // MARK: - Init
 
-    init(currentTime: String? = nil) {
+    init(currentTime: String? = nil, contextText: String? = nil) {
         super.init(frame: .zero)
+        contextLabel.text = contextText
         if let time = currentTime {
             isAllDay = false
             allDaySwitch.isOn = false
@@ -120,6 +131,7 @@ final class TimePickerView: UIView {
 
         addSubview(containerView)
         containerView.addSubview(titleLabel)
+        containerView.addSubview(contextLabel)
         containerView.addSubview(allDayContainer)
         allDayContainer.addSubview(allDayLabel)
         allDayContainer.addSubview(allDaySwitch)
@@ -137,8 +149,13 @@ final class TimePickerView: UIView {
             $0.leading.trailing.equalToSuperview().inset(16)
         }
 
+        contextLabel.snp.makeConstraints {
+            $0.top.equalTo(titleLabel.snp.bottom).offset(4)
+            $0.leading.trailing.equalToSuperview().inset(16)
+        }
+
         allDayContainer.snp.makeConstraints {
-            $0.top.equalTo(titleLabel.snp.bottom).offset(16)
+            $0.top.equalTo(contextLabel.snp.bottom).offset(16)
             $0.leading.trailing.equalToSuperview().inset(16)
             $0.height.equalTo(52)
         }
