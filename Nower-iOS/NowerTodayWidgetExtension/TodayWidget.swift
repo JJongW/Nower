@@ -12,6 +12,7 @@
 import WidgetKit
 import SwiftUI
 import Foundation
+import NowerCore
 
 // MARK: - Widget 전용 TodoItem 정의
 
@@ -28,6 +29,9 @@ struct WidgetTodoItem: Identifiable, Codable {
     // 기간별 일정을 위한 필드들
     let startDate: String? // yyyy-MM-dd 형식, nil이면 단일 날짜 일정
     let endDate: String?   // yyyy-MM-dd 형식, nil이면 단일 날짜 일정
+
+    /// 시작 시각 "HH:mm" (앱의 TodoItem 데이터에서 함께 읽힘, 없으면 종일)
+    var scheduledTime: String? = nil
     
     /// 단일 날짜 WidgetTodoItem 생성자
     init(text: String, isRepeating: Bool, date: String, colorName: String) {
@@ -103,19 +107,16 @@ struct WidgetTodoItem: Identifiable, Codable {
         
         if isPeriodEvent {
             guard let start = startDate, let end = endDate else {
-                print("⚠️ [WidgetTodoItem] 기간별 일정이지만 startDate 또는 endDate가 nil: \(text)")
                 return false
             }
             // 문자열 비교로 날짜 범위 확인
             let isIncluded = dateString >= start && dateString <= end
             if isIncluded {
-                print("  ✅ 기간별 일정 포함 확인: \(text) (\(start) ~ \(end), 확인 날짜: \(dateString))")
             }
             return isIncluded
         } else {
             let isIncluded = self.date == dateString
             if isIncluded {
-                print("  ✅ 단일 일정 포함 확인: \(text) (일정 날짜: \(self.date), 확인 날짜: \(dateString))")
             }
             return isIncluded
         }
@@ -347,21 +348,17 @@ struct TodayProvider: TimelineProvider {
         formatter.dateFormat = "yyyy-MM-dd"
         formatter.locale = Locale(identifier: "en_US_POSIX")
         let todayString = formatter.string(from: today)
-        print("📅 [TodayWidget] 오늘 날짜: \(todayString)")
         
         // 안전하게 iCloud 데이터 로드
         let allTodos: [WidgetTodoItem]
         do {
             allTodos = try loadTodosFromICloud()
-            print("📦 [TodayWidget] 전체 일정 개수: \(allTodos.count)")
             
             // 디버깅: 모든 일정의 날짜 출력
             for (index, todo) in allTodos.enumerated() {
-                print("  [\(index)] \(todo.text) | date: \(todo.date) | startDate: \(todo.startDate ?? "nil") | endDate: \(todo.endDate ?? "nil")")
             }
         } catch {
             // 에러 발생 시 빈 배열 반환
-            print("⚠️ [TodayWidget] iCloud 데이터 로드 실패: \(error.localizedDescription)")
             return TodayEntry(date: today, todos: [])
         }
 
@@ -369,12 +366,10 @@ struct TodayProvider: TimelineProvider {
         let todayTodos = allTodos.filter { todo in
             let includes = todo.includesDate(today)
             if includes {
-                print("✅ [TodayWidget] 오늘 일정 포함: \(todo.text) (date: \(todo.date))")
             }
             return includes
         }
         
-        print("📋 [TodayWidget] 오늘 일정 개수: \(todayTodos.count)")
 
         return TodayEntry(date: today, todos: todayTodos)
     }
@@ -390,24 +385,84 @@ struct TodayProvider: TimelineProvider {
         
         // 디버깅: iCloud store의 모든 키 확인
         let allKeys = store.dictionaryRepresentation.keys
-        print("🔍 [TodayWidget] iCloud store의 모든 키: \(Array(allKeys))")
-        print("🔍 [TodayWidget] 찾는 키: '\(todosKey)'")
         
         // iCloud 접근 권한 확인
         guard let data = store.data(forKey: todosKey) else {
-            print("⚠️ [TodayWidget] iCloud에 'SavedTodos' 키가 없습니다")
-            print("⚠️ [TodayWidget] 사용 가능한 키: \(allKeys)")
             // 데이터가 없으면 빈 배열 반환 (에러 아님)
             return []
         }
         
-        print("✅ [TodayWidget] iCloud에서 데이터 로드 성공 (크기: \(data.count) bytes)")
 
         // iOS 앱의 TodoItem과 동일한 구조이므로 JSON 디코딩 가능
         // 위젯에서는 WidgetTodoItem으로 디코딩
         let todos = try JSONDecoder().decode([WidgetTodoItem].self, from: data)
-        print("✅ [TodayWidget] \(todos.count)개의 TodoItem 디코딩 완료")
         return todos
+    }
+}
+
+// MARK: - Companion Insight
+
+/// 위젯용 하루 인사이트 — 밀도 밴드(앱과 동일 엔진)·다음 일정·짧은 문구.
+struct WidgetTodayInsight {
+    let bandLabel: String
+    let bandHex: String
+    let nextTime: String?
+    let nextTitle: String?
+    let phrase: String
+    let count: Int
+
+    init(todos: [WidgetTodoItem], now: Date) {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: now)
+        let todays = todos.filter { $0.includesDate(today) }
+        count = todays.count
+
+        // 앱과 같은 밀도 엔진 사용 (의미 일치)
+        var events: [NowerCore.Event] = []
+        for t in todays {
+            if let timeStr = t.scheduledTime, let start = Self.combine(timeStr, today) {
+                events.append(NowerCore.Event(
+                    title: t.text, startDateTime: start,
+                    endDateTime: start.addingTimeInterval(3600), isAllDay: false))
+            } else {
+                events.append(NowerCore.Event(
+                    title: t.text, startDateTime: today,
+                    endDateTime: today.addingTimeInterval(86_399), isAllDay: true))
+            }
+        }
+        let report = DensityEngine.score(DensityInput(day: today, events: events))
+        bandLabel = report.band.label
+        bandHex = report.band.colorHex
+
+        // 다음 시간 일정
+        let upcoming = todays.compactMap { t -> (Date, WidgetTodoItem)? in
+            guard let s = t.scheduledTime, let d = Self.combine(s, today), d > now else { return nil }
+            return (d, t)
+        }.min { $0.0 < $1.0 }
+        nextTime = upcoming?.1.scheduledTime
+        nextTitle = upcoming?.1.text
+
+        switch report.band {
+        case .light:
+            phrase = (report.metrics.eventCount == 0 && report.metrics.allDayCount == 0)
+                ? "비어 있는 하루예요" : "여유로운 하루예요"
+        case .moderate: phrase = "적당히 채워진 하루예요"
+        case .heavy: phrase = "촘촘한 하루예요"
+        }
+    }
+
+    var color: Color { Color(densityHex: bandHex) }
+
+    /// 다음 일정 한 줄 ("15:00 병원") — 없으면 nil
+    var nextLine: String? {
+        guard let t = nextTime, let title = nextTitle else { return nil }
+        return "\(t) \(title)"
+    }
+
+    private static func combine(_ hhmm: String, _ day: Date) -> Date? {
+        let p = hhmm.split(separator: ":")
+        guard p.count == 2, let h = Int(p[0]), let m = Int(p[1]) else { return nil }
+        return Calendar.current.date(bySettingHour: h, minute: m, second: 0, of: day)
     }
 }
 
@@ -416,65 +471,112 @@ struct TodayProvider: TimelineProvider {
 struct TodayWidgetEntryView: View {
     let entry: TodayEntry
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.widgetFamily) private var family
 
-    // 오늘 일정 최대 2개까지만 표시
-    private var visibleTodos: [WidgetTodoItem] {
-        Array(entry.todos.prefix(2))
-    }
-
-    private var remainingCount: Int {
-        max(entry.todos.count - visibleTodos.count, 0)
-    }
-
-    private var headerDateText: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "M월 d일 EEEE"
-        formatter.locale = Locale(identifier: "ko_KR")
-        return formatter.string(from: entry.date)
+    private var insight: WidgetTodayInsight {
+        WidgetTodayInsight(todos: entry.todos, now: entry.date)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // 헤더
-            VStack(alignment: .leading, spacing: 2) {
-                Text("오늘의 일정")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(WidgetAppColors.textPrimary(colorScheme))
-
-                Text(headerDateText)
-                    .font(.system(size: 11, weight: .regular))
-                    .foregroundColor(WidgetAppColors.textFieldPlaceholder(colorScheme))
-            }
-
-            // 일정 목록
-            if visibleTodos.isEmpty {
-                Spacer()
-                Text("일정이 없습니다")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(WidgetAppColors.textFieldPlaceholder(colorScheme))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Spacer()
-            } else {
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(visibleTodos, id: \.id) { todo in
-                        CapsuleRow(todo: todo)
-                    }
-
-                    if remainingCount > 0 {
-                        Text("+\(remainingCount)개 더 있음")
-                            .font(.system(size: 11))
-                            .foregroundColor(WidgetAppColors.textFieldPlaceholder(colorScheme))
-                    }
-                }
-                .padding(.top, 4)
-                Spacer()
+        Group {
+            switch family {
+            case .systemMedium: mediumBody
+            default: smallBody
             }
         }
-        .padding(12)
         .containerBackground(for: .widget) {
-            // 다크모드: 검정, 라이트모드: 흰색
             colorScheme == .dark ? Color.black : Color.white
         }
+    }
+
+    // systemSmall — 오늘 / 밴드 / 다음 일정. 조용하게.
+    private var smallBody: some View {
+        let i = insight
+        return VStack(alignment: .leading, spacing: 0) {
+            Text("오늘")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(WidgetAppColors.textFieldPlaceholder(colorScheme))
+
+            Spacer(minLength: 6)
+
+            HStack(spacing: 7) {
+                Circle().fill(i.color).frame(width: 9, height: 9)
+                Text(i.bandLabel)
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundColor(WidgetAppColors.textPrimary(colorScheme))
+            }
+            Text(i.phrase)
+                .font(.system(size: 11))
+                .foregroundColor(WidgetAppColors.textFieldPlaceholder(colorScheme))
+                .lineLimit(1)
+
+            Spacer(minLength: 6)
+
+            if let next = i.nextLine {
+                Text("다음 · \(next)")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(WidgetAppColors.textPrimary(colorScheme))
+                    .lineLimit(1)
+            } else {
+                Text("남은 일정 없음")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(WidgetAppColors.textFieldPlaceholder(colorScheme))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .padding(14)
+        .accessibilityLabel("오늘 밀도 \(i.bandLabel). \(i.nextLine.map { "다음 일정 " + $0 } ?? "남은 일정 없음")")
+    }
+
+    // systemMedium — 좌: 밀도 / 우: 다음 일정
+    private var mediumBody: some View {
+        let i = insight
+        return HStack(alignment: .top, spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("오늘")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(WidgetAppColors.textFieldPlaceholder(colorScheme))
+                HStack(spacing: 7) {
+                    Circle().fill(i.color).frame(width: 10, height: 10)
+                    Text(i.bandLabel)
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundColor(WidgetAppColors.textPrimary(colorScheme))
+                }
+                Text(i.phrase)
+                    .font(.system(size: 12))
+                    .foregroundColor(WidgetAppColors.textFieldPlaceholder(colorScheme))
+                    .lineLimit(2)
+                Spacer(minLength: 0)
+                Text("오늘 일정 \(i.count)개")
+                    .font(.system(size: 11))
+                    .foregroundColor(WidgetAppColors.textFieldPlaceholder(colorScheme))
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("다음 일정")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(WidgetAppColors.textFieldPlaceholder(colorScheme))
+                if let time = i.nextTime, let title = i.nextTitle {
+                    Text(time)
+                        .font(.system(size: 22, weight: .bold, design: .rounded).monospacedDigit())
+                        .foregroundColor(i.color)
+                    Text(title)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(WidgetAppColors.textPrimary(colorScheme))
+                        .lineLimit(2)
+                } else {
+                    Text("남은 일정이 없어요")
+                        .font(.system(size: 13))
+                        .foregroundColor(WidgetAppColors.textFieldPlaceholder(colorScheme))
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(16)
+        .accessibilityLabel("오늘 밀도 \(i.bandLabel), 일정 \(i.count)개. \(i.nextLine.map { "다음 일정 " + $0 } ?? "남은 일정 없음")")
     }
 }
 
@@ -558,63 +660,42 @@ struct LockScreenCircularView: View {
     }
 }
 
-/// 잠금화면 사각형 위젯 뷰 (일정 최대 2개까지 표시)
+/// 잠금화면 사각형 — "오늘 {밴드}" + "다음 일정 15:00 병원"
 struct LockScreenRectangularView: View {
     let entry: TodayEntry
 
-    private var visibleTodos: [WidgetTodoItem] {
-        Array(entry.todos.prefix(2))
-    }
-
-    private var remainingCount: Int {
-        max(entry.todos.count - visibleTodos.count, 0)
-    }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Nower")
-                .font(.system(size: 12, weight: .bold))
-
-            if visibleTodos.isEmpty {
-                Text("일정 없음")
+        let i = WidgetTodayInsight(todos: entry.todos, now: entry.date)
+        return VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 5) {
+                Circle().fill(.primary).frame(width: 6, height: 6)
+                Text("오늘 \(i.bandLabel)")
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            if let next = i.nextLine {
+                Text("다음 일정 \(next)")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
             } else {
-                ForEach(visibleTodos, id: \.id) { todo in
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(WidgetAppColors.color(for: todo.colorName, scheme: .dark))
-                            .frame(width: 4, height: 4)
-
-                        Text(todo.text)
-                            .font(.system(size: 11, weight: .medium))
-                            .lineLimit(1)
-                    }
-                }
-
-                if remainingCount > 0 {
-                    Text("+\(remainingCount)개")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.secondary)
-                }
+                Text(i.phrase)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
         }
-        .containerBackground(for: .widget) {
-            Color.clear
-        }
+        .containerBackground(for: .widget) { Color.clear }
+        .accessibilityLabel("오늘 밀도 \(i.bandLabel). \(i.nextLine.map { "다음 일정 " + $0 } ?? i.phrase)")
     }
 }
 
-/// 잠금화면 인라인 위젯 뷰 (간단한 텍스트)
+/// 잠금화면 인라인 — "오늘 2개 · 여유"
 struct LockScreenInlineView: View {
     let entry: TodayEntry
 
     var body: some View {
-        if entry.todos.isEmpty {
-            Label("일정 없음", systemImage: "calendar")
-        } else {
-            Label("오늘 \(entry.todos.count)개 일정", systemImage: "calendar")
-        }
+        let i = WidgetTodayInsight(todos: entry.todos, now: entry.date)
+        return Label("오늘 \(i.count)개 · \(i.bandLabel)", systemImage: "circle.fill")
     }
 }
 
@@ -627,8 +708,8 @@ struct NowerTodayWidget: Widget {
         StaticConfiguration(kind: kind, provider: TodayProvider()) { entry in
             WidgetView(entry: entry)
         }
-        .configurationDisplayName("오늘의 일정")
-        .description("오늘 할 일과 기간 일정을 한 눈에 확인합니다.")
+        .configurationDisplayName("오늘의 리듬")
+        .description("오늘의 밀도와 다음 일정을 조용히 보여줍니다.")
         .supportedFamilies([
             .systemSmall,
             .systemMedium,

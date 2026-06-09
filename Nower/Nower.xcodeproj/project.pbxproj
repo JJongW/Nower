@@ -40,6 +40,7 @@
 /* Begin PBXFileReference section */
 		C36B65902F262D2F00DEB2AF /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		C36B65922F262D2F00DEB2AF /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		C373E6482FD80370005EC2DA /* NowerCore */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = NowerCore; path = ../NowerCore; sourceTree = "<group>"; };
 		C3B113652D6C6A1C00D142B5 /* Nower.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Nower.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C3D771462F26490B00398804 /* NowerWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NowerWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C3D775182F2F5E8E00398804 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
@@ -125,6 +126,7 @@
 		C3E00DEA2F25A18E004CBAD6 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				C373E6482FD80370005EC2DA /* NowerCore */,
 				C36B65902F262D2F00DEB2AF /* WidgetKit.framework */,
 				C36B65922F262D2F00DEB2AF /* SwiftUI.framework */,
 			);

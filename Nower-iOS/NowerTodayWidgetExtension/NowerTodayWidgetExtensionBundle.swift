@@ -15,5 +15,9 @@ struct NowerTodayWidgetExtensionBundle: WidgetBundle {
         NowerTodayWidget()
         // 월간 달력 위젯
         NowerMonthCalendarWidget()
+        // 하루 밀도 Companion (Live Activity)
+        if #available(iOS 16.1, *) {
+            NowerLiveActivity()
+        }
     }
 }

@@ -15,6 +15,8 @@
 	</dict>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>KASI_API_KEY</key>
 	<string>$(KASI_API_KEY)</string>
 	<key>UIApplicationSceneManifest</key>

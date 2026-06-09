@@ -533,7 +533,7 @@ struct DayCellWithEventsView: View {
                             isPeriod: allEvents[0].isPeriodEvent
                         )
                         
-                        Text("+\(allEvents.count - 1)")
+                        Text("외 \(allEvents.count - 1)")
                             .font(.system(size: 8, weight: .medium))
                             .foregroundColor(WidgetAppColors.textFieldPlaceholder(colorScheme))
                             .frame(height: 10)
@@ -679,8 +679,9 @@ struct DayCellView: View {
                 .frame(width: cellSize, height: cellSize)
                 
                 if !dayInfo.todos.isEmpty {
+                    // 일정명 대신 점으로만 가볍게 (월의 리듬). 최대 3개.
                     HStack(spacing: 3) {
-                        ForEach(Array(dayInfo.todos.prefix(5).enumerated()), id: \.offset) { _, todo in
+                        ForEach(Array(dayInfo.todos.prefix(3).enumerated()), id: \.offset) { _, todo in
                             Circle()
                                 .fill(WidgetAppColors.color(for: todo.colorName, scheme: colorScheme))
                                 .frame(width: dotSize, height: dotSize)
@@ -721,8 +722,8 @@ struct NowerCalendarWidget: Widget {
         StaticConfiguration(kind: kind, provider: CalendarProvider()) { entry in
             CalendarWidgetView(entry: entry)
         }
-        .configurationDisplayName("월 달력")
-        .description("전체 월 달력과 일정을 한 눈에 확인합니다.")
+        .configurationDisplayName("이번 달의 리듬")
+        .description("일정을 점으로 가볍게 — 이번 달의 리듬을 한눈에.")
         .supportedFamilies([
             .systemSmall,
             .systemLarge
