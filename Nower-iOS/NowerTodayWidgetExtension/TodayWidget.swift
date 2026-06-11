@@ -331,12 +331,29 @@ struct TodayProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<TodayEntry>) -> Void) {
-        let entry = loadTodayEntry()
+        let now = Date()
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: now)
+        let todos = loadTodayEntry().todos
 
-        // 다음 업데이트 시점: 15분 뒤 (배터리 고려)
-        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: Date()) ?? Date().addingTimeInterval(900)
-        let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
-        completion(timeline)
+        // 오늘 시간 일정의 경계(시작/끝)를 모아 각 시점마다 엔트리를 만든다.
+        // → 일정이 시작/끝나는 바로 그 순간 위젯이 다음 일정으로 자동 전환된다.
+        //   (시스템 reload 예산에 의존하지 않음)
+        var boundaries = Set<Date>()
+        for todo in todos {
+            guard let t = todo.scheduledTime, let start = WidgetTodayInsight.combine(t, today) else { continue }
+            if start > now { boundaries.insert(start) }
+            let end = start.addingTimeInterval(3600) // 인사이트와 동일한 1시간 길이 가정
+            if end > now { boundaries.insert(end) }
+        }
+
+        // 현재 시점 + 미래 경계들을 엔트리로. View가 entry.date를 'now'로 써서 다음 일정을 다시 계산.
+        let dates = ([now] + boundaries.sorted()).prefix(60)
+        let entries = dates.map { TodayEntry(date: $0, todos: todos) }
+
+        // 자정에 새 날짜로 다시 로드
+        let reload = cal.date(byAdding: .day, value: 1, to: today) ?? now.addingTimeInterval(86_400)
+        completion(Timeline(entries: Array(entries), policy: .after(reload)))
     }
 
     /// iCloud에 저장된 Todo들 중 오늘 포함 일정을 읽어와 Entry 생성
@@ -459,7 +476,7 @@ struct WidgetTodayInsight {
         return "\(t) \(title)"
     }
 
-    private static func combine(_ hhmm: String, _ day: Date) -> Date? {
+    static func combine(_ hhmm: String, _ day: Date) -> Date? {
         let p = hhmm.split(separator: ":")
         guard p.count == 2, let h = Int(p[0]), let m = Int(p[1]) else { return nil }
         return Calendar.current.date(bySettingHour: h, minute: m, second: 0, of: day)
