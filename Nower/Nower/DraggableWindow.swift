@@ -172,13 +172,15 @@ class DraggableWindow: NSWindow {
 
         if enabled {
             savedCollectionBehavior = collectionBehavior
-            // desktopIcon 레벨: fn+F11(Show Desktop)에서 보임, 일반 앱 창 아래에 위치
-            // 이 레벨은 고정 모드 해제 전까지 절대 변경되지 않는다
+            // desktopIcon 레벨: 데스크톱 아이콘 바로 위 — Show Desktop(핫코너/F11)에서 드러나고
+            // 클릭도 받는다. desktopWindow보다 한 단계 위라야 아이콘 뒤로 깔리지 않음.
+            // (Mission Control 제외는 이 낮은 레벨 + .accessory 정책이 처리)
             level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)))
-            // .transient: Mission Control 미표시
-            // .stationary: Space 전환 시 위치 고정
-            // .canJoinAllSpaces 제외 → Mission Control에서 숨김
-            collectionBehavior = [.stationary, .ignoresCycle, .transient]
+            // .canJoinAllSpaces: 위젯처럼 모든 Space 표시
+            // .stationary: Show Desktop/Space 전환 시 제자리 유지(밀려나지 않음)
+            // .ignoresCycle: Cmd+` 순환 제외
+            // (.transient는 Show Desktop에서 숨겨질 수 있어 제외)
+            collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             titlebarAppearsTransparent = true
             titleVisibility = .hidden
             styleMask.insert(.fullSizeContentView)
