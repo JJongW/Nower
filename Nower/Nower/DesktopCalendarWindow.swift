@@ -37,15 +37,16 @@ final class DesktopCalendarWindow: NSWindow {
 
     /// 데스크톱 위젯용 설정 적용 (레벨, collectionBehavior, 테두리/이동/리사이즈 방지).
     func configureAsDesktopWidget() {
-        // 1) 배경화면과 동일 레이어 (위젯처럼)
-        level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) + 1)
+        // 1) 데스크톱 아이콘 바로 위 — Show Desktop(핫코너/F11)서 드러나고 클릭 받음.
+        //    desktopWindow보다 한 단계 위라야 아이콘 뒤로 깔리지 않음.
+        level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)))
 
-        // 2) Mission Control 미표시, 모든 Space 표시, 윈도우 순환 제외
+        // 2) Mission Control 제외는 낮은 레벨 + .accessory 정책이 처리.
+        //    .stationary: Show Desktop/Space 전환 시 제자리. (.transient는 Show Desktop서 숨겨질 수 있어 제외)
         collectionBehavior = [
             .canJoinAllSpaces,
             .stationary,
-            .ignoresCycle,
-            .transient
+            .ignoresCycle
         ]
 
         // 3) 테두리 없음, 배경에 붙은 느낌

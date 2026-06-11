@@ -257,18 +257,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// 배경화면 고정 모드 변경 처리
+    /// 고정 = 위젯처럼: .accessory 정책(Dock/Cmd+Tab/Mission Control 앱 그룹에서 제외) + 데스크톱 레벨.
+    /// 해제 = 일반 앱: .regular 정책 + 일반 창.
     @objc func desktopModeChanged() {
         guard let window = window else { return }
         DispatchQueue.main.async {
-            window.setDesktopMode(self.settingsManager.isDesktopMode)
+            let pinned = self.settingsManager.isDesktopMode
+            NSApp.setActivationPolicy(pinned ? .accessory : .regular)
+            window.setDesktopMode(pinned)
+            if pinned {
+                window.orderBack(nil)
+            } else {
+                NSApp.activate(ignoringOtherApps: true)
+                window.makeKeyAndOrderFront(nil)
+            }
         }
     }
 
-    /// 앱 시작 시 저장된 설정 적용 (배경화면 고정만; 좌측 상단 고정/항상 위 표시 UI 제거로 해당 적용 제거)
+    /// 앱 시작 시 저장된 설정 적용 (배경화면 고정)
     private func applyInitialSettings() {
         guard let window = window else { return }
         if settingsManager.isDesktopMode {
+            NSApp.setActivationPolicy(.accessory)
             window.setDesktopMode(true)
+            window.orderBack(nil)
         }
     }
 }
