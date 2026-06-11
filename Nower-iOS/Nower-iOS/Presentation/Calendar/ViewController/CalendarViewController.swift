@@ -7,6 +7,7 @@
 import UIKit
 import SwiftUI
 import SnapKit
+import WidgetKit
 #if canImport(NowerCore)
 import NowerCore
 #endif
@@ -23,6 +24,8 @@ final class CalendarViewController: UIViewController {
     #endif
     private var currentDate = Date()
     private var weeks: [[WeekDayInfo]] = [] // 주 단위로 그룹화된 날짜들
+    /// 다음 일정 경계(시작/끝)에 Live Activity·위젯을 재동기화하기 위한 타이머
+    private var boundaryTimer: Timer?
 
     private var selectedIndexPath: IndexPath?
     private var selectedDate: Date?
@@ -600,6 +603,7 @@ final class CalendarViewController: UIViewController {
 
         guard let (todo, start) = next else {
             NowerLiveActivityManager.shared.sync(densityLabel: densityLabel, state: nil)
+            scheduleBoundaryRefresh(todos: todos, now: now, today: today)
             return
         }
         let state = NowerLiveActivityAttributes.ContentState(
@@ -609,6 +613,35 @@ final class CalendarViewController: UIViewController {
             mode: .upcoming
         )
         NowerLiveActivityManager.shared.sync(densityLabel: densityLabel, state: state)
+        scheduleBoundaryRefresh(todos: todos, now: now, today: today)
+    }
+
+    /// 다음 일정 경계(시작/끝)가 도래하면 Live Activity·위젯을 다시 동기화한다.
+    /// 포그라운드에서 시간이 흐를 때 멈춰 있지 않고 다음 일정으로 전환되도록 한다.
+    /// (백그라운드 자동 전환은 push가 필요 — 여기서는 다루지 않음. 위젯은 타임라인 엔트리로 자체 전환.)
+    private func scheduleBoundaryRefresh(todos: [TodoItem], now: Date, today: Date) {
+        boundaryTimer?.invalidate()
+        boundaryTimer = nil
+
+        // 오늘 시간 일정들의 시작/끝 시각 중 'now 이후' 가장 가까운 경계
+        var boundaries: [Date] = []
+        for todo in todos {
+            guard let t = todo.scheduledTime,
+                  let start = TodoItem.combineTime(t, with: today) else { continue }
+            if start > now { boundaries.append(start) }
+            let end = start.addingTimeInterval(3600)
+            if end > now { boundaries.append(end) }
+        }
+        guard let next = boundaries.min() else { return }
+
+        let interval = max(1, next.timeIntervalSince(now))
+        let timer = Timer(timeInterval: interval, repeats: false) { [weak self] _ in
+            self?.refreshLiveActivity()
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+        timer.tolerance = 5
+        RunLoop.main.add(timer, forMode: .common)
+        boundaryTimer = timer
     }
     #endif
 
