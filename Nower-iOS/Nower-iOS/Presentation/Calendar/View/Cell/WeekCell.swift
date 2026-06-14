@@ -35,6 +35,13 @@ final class WeekCell: UICollectionViewCell {
         }
     }
 
+    /// 접힘 진행도 패스스루 → WeekView → DayView.
+    var collapseProgress: CGFloat = 0 {
+        didSet {
+            weekView.collapseProgress = collapseProgress
+        }
+    }
+
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupUI()

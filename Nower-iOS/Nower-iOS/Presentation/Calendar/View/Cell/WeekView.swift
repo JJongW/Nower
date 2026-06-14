@@ -35,6 +35,17 @@ final class WeekView: UIView {
     var onTodoSelected: ((TodoItem, String) -> Void)? // 일정 선택 콜백 (TodoItem, dateString 전달)
     var onMoreTapped: ((String, [TodoItem]) -> Void)? // "+N개" 탭 콜백 (dateString, todos 전달)
 
+    /// 접힘 진행도(0 = 펼침, 1 = 접힘). 기간 바 페이드 + 각 DayView로 전파.
+    var collapseProgress: CGFloat = 0 {
+        didSet { applyCollapse() }
+    }
+
+    private func applyCollapse() {
+        let p = max(0, min(1, collapseProgress))
+        periodEventContainer.alpha = max(0, 1 - p * 2) // 캡슐과 동일하게 초반에 사라짐
+        dayViews.forEach { $0.collapseProgress = p }
+    }
+
     // MARK: - Layout Constants
     private let eventHeight: CGFloat = 18
     private let eventSpacing: CGFloat = 2 // 간격 축소 (4 → 2)

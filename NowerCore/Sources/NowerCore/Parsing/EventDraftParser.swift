@@ -32,6 +32,7 @@ public enum EventDraftParser {
         var recurrence: RecurrenceRule?
         var start: ParsedTime?
         var end: ParsedTime?
+        var ambiguousMeridiem = false
 
         // 1) 반복
         if let (rule, range) = matchRecurrence(in: working, calendar: cal) {
@@ -40,20 +41,20 @@ public enum EventDraftParser {
         }
 
         // 2) 날짜 (상대 → 요일 순)
-        if let (d, range) = matchRelativeDate(in: working, reference: referenceDate, calendar: cal) {
+        if let (d, cleaned) = matchRelativeDate(in: working, reference: referenceDate, calendar: cal) {
             date = d
-            working.removeSubrange(range)
+            working = cleaned
         } else if let (d, range) = matchWeekday(in: working, reference: referenceDate, calendar: cal) {
             date = d
             working.removeSubrange(range)
         }
 
         // 3) 시간 (범위 우선 → 단일)
-        if let (s, e, range) = matchTimeRange(in: working) {
-            start = s; end = e
+        if let (s, e, range, amb) = matchTimeRange(in: working) {
+            start = s; end = e; ambiguousMeridiem = amb
             working.removeSubrange(range)
-        } else if let (s, range) = matchSingleTime(in: working) {
-            start = s
+        } else if let (s, range, amb) = matchSingleTime(in: working) {
+            start = s; ambiguousMeridiem = amb
             working.removeSubrange(range)
         }
 
@@ -71,7 +72,8 @@ public enum EventDraftParser {
             endTime: end,
             isAllDay: isAllDay,
             recurrenceRule: recurrence,
-            confidence: confidence
+            confidence: confidence,
+            startMeridiemAmbiguous: ambiguousMeridiem
         )
     }
 
@@ -105,18 +107,31 @@ public enum EventDraftParser {
 
     // MARK: - 상대 날짜
 
-    private static func matchRelativeDate(in text: String, reference: Date, calendar: Calendar) -> (Date, Range<String.Index>)? {
-        let map: [(String, Int)] = [
-            ("내일모레", 2), ("모레", 2), ("글피", 3), ("내일", 1), ("오늘", 0)
+    /// 상대 날짜를 찾아 (날짜, 키워드를 모두 제거한 텍스트)를 반환한다.
+    /// "내일부터 모레까지"처럼 키워드가 여럿이면 전부 제거(제목 누수 방지)하고,
+    /// 가장 먼저 등장한 키워드를 단일 날짜로 채택한다(범위의 시작일 기준).
+    /// 긴 키워드(내일모레) 우선 매칭으로 부분 중복(내일/모레)을 막는다.
+    private static func matchRelativeDate(in text: String, reference: Date, calendar: Calendar) -> (Date, String)? {
+        let keywords: [(String, Int)] = [
+            ("내일모레", 2), ("글피", 3), ("모레", 2), ("내일", 1), ("오늘", 0)
         ]
-        for (word, offset) in map {
-            if let range = text.range(of: word) {
-                let base = calendar.startOfDay(for: reference)
-                let d = calendar.date(byAdding: .day, value: offset, to: base) ?? base
-                return (d, range)
+        var working = text
+        var picked: (pos: Int, offset: Int)?
+
+        for (word, offset) in keywords {
+            while let r = working.range(of: word) {
+                let pos = working.distance(from: working.startIndex, to: r.lowerBound)
+                if picked == nil || pos < picked!.pos { picked = (pos, offset) }
+                // 길이를 보존하는 공백으로 치환 → 남은 위치 비교가 안정적, 하위 키워드 재매칭 방지
+                let blanks = String(repeating: " ", count: word.count)
+                working.replaceSubrange(r, with: blanks)
             }
         }
-        return nil
+
+        guard let p = picked else { return nil }
+        let base = calendar.startOfDay(for: reference)
+        let d = calendar.date(byAdding: .day, value: p.offset, to: base) ?? base
+        return (d, working)
     }
 
     // MARK: - 요일
@@ -149,30 +164,38 @@ public enum EventDraftParser {
 
     // MARK: - 시간
 
-    private static func matchTimeRange(in text: String) -> (ParsedTime, ParsedTime, Range<String.Index>)? {
+    private static func matchTimeRange(in text: String) -> (ParsedTime, ParsedTime, Range<String.Index>, Bool)? {
         // (period)? H시 (M분|반)? (부터|~|-) (period)? H시 (M분|반)? (까지)?
         let pattern = "(오전|오후|아침|점심|저녁|밤|새벽)?\\s*(\\d{1,2})\\s*시\\s*(\\d{1,2})?\\s*(분|반)?\\s*(?:부터|~|-)\\s*(오전|오후|아침|점심|저녁|밤|새벽)?\\s*(\\d{1,2})\\s*시\\s*(\\d{1,2})?\\s*(분|반)?\\s*(?:까지)?"
         guard let r = firstMatch(text, pattern: pattern) else { return nil }
         let s = makeTime(text, hourGroup: r.groups[2], minGroup: r.groups[3], banGroup: r.groups[4], periodGroup: r.groups[1])
         let e = makeTime(text, hourGroup: r.groups[6], minGroup: r.groups[7], banGroup: r.groups[8], periodGroup: r.groups[5])
         guard let s = s, let e = e else { return nil }
-        return (s, e, r.full)
+        let ambiguous = isMeridiemAmbiguous(text, hourGroup: r.groups[2], periodGroup: r.groups[1])
+        return (s, e, r.full, ambiguous)
     }
 
-    private static func matchSingleTime(in text: String) -> (ParsedTime, Range<String.Index>)? {
-        // HH:mm
+    private static func matchSingleTime(in text: String) -> (ParsedTime, Range<String.Index>, Bool)? {
+        // HH:mm — 24시간 명시이므로 모호하지 않음
         if let r = firstMatch(text, pattern: "(\\d{1,2}):(\\d{2})") {
             let h = Int(text[r.groups[1]!]) ?? 0
             let m = Int(text[r.groups[2]!]) ?? 0
-            if h < 24 && m < 60 { return (ParsedTime(hour: h, minute: m), r.full) }
+            if h < 24 && m < 60 { return (ParsedTime(hour: h, minute: m), r.full, false) }
         }
         // (period)? H시 (M분|반)?
         if let r = firstMatch(text, pattern: "(오전|오후|아침|점심|저녁|밤|새벽)?\\s*(\\d{1,2})\\s*시\\s*(\\d{1,2})?\\s*(분|반)?") {
             if let t = makeTime(text, hourGroup: r.groups[2], minGroup: r.groups[3], banGroup: r.groups[4], periodGroup: r.groups[1]) {
-                return (t, r.full)
+                let ambiguous = isMeridiemAmbiguous(text, hourGroup: r.groups[2], periodGroup: r.groups[1])
+                return (t, r.full, ambiguous)
             }
         }
         return nil
+    }
+
+    /// 오전/오후 미명시 + 시각이 1~11시라 추정이 들어간 경우 true.
+    private static func isMeridiemAmbiguous(_ text: String, hourGroup: Range<String.Index>?, periodGroup: Range<String.Index>?) -> Bool {
+        guard periodGroup == nil, let hg = hourGroup, let h = Int(text[hg]) else { return false }
+        return (1...11).contains(h)
     }
 
     private static func makeTime(

@@ -52,6 +52,9 @@ public struct ParsedEventDraft: Sendable, Equatable {
     public var recurrenceRule: RecurrenceRule?
     /// 확신도
     public var confidence: ParseConfidence
+    /// 시작 시각의 오전/오후가 입력에 명시되지 않아 추정된 경우 true.
+    /// (예: "3시" → 오후로 추정. UI에서 오전/오후 토글을 띄워 교정받는다.)
+    public var startMeridiemAmbiguous: Bool
 
     public init(
         title: String = "",
@@ -60,7 +63,8 @@ public struct ParsedEventDraft: Sendable, Equatable {
         endTime: ParsedTime? = nil,
         isAllDay: Bool = true,
         recurrenceRule: RecurrenceRule? = nil,
-        confidence: ParseConfidence = .low
+        confidence: ParseConfidence = .low,
+        startMeridiemAmbiguous: Bool = false
     ) {
         self.title = title
         self.date = date
@@ -69,6 +73,7 @@ public struct ParsedEventDraft: Sendable, Equatable {
         self.isAllDay = isAllDay
         self.recurrenceRule = recurrenceRule
         self.confidence = confidence
+        self.startMeridiemAmbiguous = startMeridiemAmbiguous
     }
 
     /// 비어 있는(아무 것도 인식 못한) 초안인지

@@ -61,9 +61,14 @@ final class NowerLiveActivityManager {
     }
 
     /// 상태 갱신. 중요한 변화는 alert로 보조 알림(선택).
+    /// staleDate를 일정 종료 시각(+1h)으로 박아, 백그라운드/잠금화면에서 push 없이도
+    /// 종료 후 시스템이 자동으로 흐림 처리하도록 한다(= '이미 한 일'로 보이게).
     func update(_ state: NowerLiveActivityAttributes.ContentState, alert: AlertConfiguration? = nil) {
         Task {
-            let content = ActivityContent(state: state, staleDate: nil)
+            let content = ActivityContent(
+                state: state,
+                staleDate: state.eventDate.addingTimeInterval(3600)
+            )
             await current?.update(content, alertConfiguration: alert)
         }
     }

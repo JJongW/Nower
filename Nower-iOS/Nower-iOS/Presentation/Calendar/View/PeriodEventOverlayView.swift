@@ -57,8 +57,8 @@ final class PeriodEventOverlayView: UIView {
     ///   - isFirstSegment: 이 주에서 일정이 시작되는지 여부 (왼쪽 모서리 둥글게)
     ///   - isLastSegment: 이 주에서 일정이 끝나는지 여부 (오른쪽 모서리 둥글게)
     func configure(todo: TodoItem, isFirstSegment: Bool, isLastSegment: Bool) {
-        // 배경색 설정
-        let eventColor = AppColors.color(for: todo.colorName)
+        // 배경색 설정 (지난 일정은 그레이톤 통일)
+        let eventColor = todo.isPast ? .systemGray3 : AppColors.color(for: todo.colorName)
         backgroundColor = eventColor
 
         // 배경색에 맞춰 텍스트 색상 자동 조정 (WCAG 4.5:1 대비 보장)

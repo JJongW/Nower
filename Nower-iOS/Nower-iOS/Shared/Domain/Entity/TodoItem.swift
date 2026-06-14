@@ -318,6 +318,43 @@ extension TodoItem {
         return scheduled.addingTimeInterval(-Double(minutes) * 60)
     }
 
+    // MARK: - 지난 일정 판정 — 시간 기반
+
+    /// 일정이 끝나는 기준 시각.
+    /// - 기간 일정: 종료일 끝(23:59:59)
+    /// - 시간 일정: 종료 시각(있으면) / 없으면 시작 +1시간
+    /// - 종일 단일 일정: 그날 끝
+    var endReference: Date? {
+        let calendar = Calendar.current
+
+        if isPeriodEvent, let end = endDateObject {
+            return calendar.startOfDay(for: end).addingTimeInterval(86_399)
+        }
+
+        if let start = scheduledDateTime {
+            if let endStr = endScheduledTime, let base = dateObject {
+                let parts = endStr.split(separator: ":")
+                if parts.count == 2, let h = Int(parts[0]), let m = Int(parts[1]),
+                   let end = calendar.date(bySettingHour: h, minute: m, second: 0, of: base),
+                   end > start {
+                    return end
+                }
+            }
+            return start.addingTimeInterval(3600)
+        }
+
+        if let day = dateObject {
+            return calendar.startOfDay(for: day).addingTimeInterval(86_399)
+        }
+        return nil
+    }
+
+    /// 종료 시각이 지나 '이미 지난 일정'인지 (시간 기반, 저장·동기화 없이 매번 계산).
+    var isPast: Bool {
+        guard let end = endReference else { return false }
+        return end < Date()
+    }
+
     // MARK: - 반복 일정 관련 편의 프로퍼티/메서드
 
     /// 반복 일정인지 확인합니다.

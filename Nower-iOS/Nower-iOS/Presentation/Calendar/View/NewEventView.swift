@@ -104,6 +104,18 @@ final class NewEventView: UIView {
     }()
     private var nlHeightConstraint: Constraint?
     private var currentDraft: ParsedEventDraft?
+
+    /// 오전/오후가 모호한 시각("3시" 등)을 교정하는 토글. 모호할 때만 노출.
+    let meridiemToggle: UISegmentedControl = {
+        let c = UISegmentedControl(items: ["오전", "오후"])
+        c.selectedSegmentIndex = 1
+        c.setTitleTextAttributes([.font: UIFont.systemFont(ofSize: 11, weight: .medium)], for: .normal)
+        c.isHidden = true
+        return c
+    }()
+    /// 토글로 오전/오후를 뒤집기 위한 기준 12시간제 시(1~11)와 분.
+    private var nlBaseHour: Int?
+    private var nlMinute: Int = 0
     #endif
 
     private var autocompleteHeightConstraint: Constraint?
@@ -530,10 +542,18 @@ final class NewEventView: UIView {
         nlApplyButton.snp.makeConstraints {
             $0.top.equalTo(saveTemplateButton.snp.bottom).offset(8)
             $0.leading.equalToSuperview().offset(20)
-            $0.trailing.lessThanOrEqualToSuperview().inset(20)
             nlHeightConstraint = $0.height.equalTo(0).constraint
         }
         nlApplyButton.addTarget(self, action: #selector(applyNaturalLanguage), for: .touchUpInside)
+
+        contentView.addSubview(meridiemToggle)
+        meridiemToggle.snp.makeConstraints {
+            $0.centerY.equalTo(nlApplyButton)
+            $0.leading.equalTo(nlApplyButton.snp.trailing).offset(8)
+            $0.trailing.lessThanOrEqualToSuperview().inset(20)
+        }
+        meridiemToggle.setContentHuggingPriority(.required, for: .horizontal)
+        meridiemToggle.addTarget(self, action: #selector(meridiemChanged), for: .valueChanged)
         #endif
 
         // 기간 모드 스위치
@@ -1542,6 +1562,23 @@ final class NewEventView: UIView {
             return
         }
 
+        // 오전/오후 모호 시각이면 토글 노출 + 현재 추정값으로 기준 시/분 저장
+        if let s = draft.startTime, draft.startMeridiemAmbiguous {
+            nlBaseHour = s.hour > 11 ? s.hour - 12 : s.hour   // 1~11
+            nlMinute = s.minute
+            meridiemToggle.selectedSegmentIndex = s.hour >= 12 ? 1 : 0
+            meridiemToggle.isHidden = false
+        } else {
+            nlBaseHour = nil
+            meridiemToggle.isHidden = true
+        }
+
+        refreshNLPill()
+    }
+
+    /// currentDraft 기준으로 pill 제목/노출을 갱신한다 (재파싱 없이 토글 갱신에도 사용).
+    private func refreshNLPill() {
+        guard let draft = currentDraft else { return }
         var parts: [String] = []
         if let s = draft.startTime {
             parts.append(draft.endTime != nil ? "\(s.hhmm)~\(draft.endTime!.hhmm)" : s.hhmm)
@@ -1552,13 +1589,23 @@ final class NewEventView: UIView {
         if !draft.title.isEmpty {
             parts.append("“\(draft.title)”")
         }
-        nlApplyButton.setTitle("✨ " + parts.joined(separator: " · ") + " 적용", for: .normal)
+        nlApplyButton.setTitle("↳ " + parts.joined(separator: " · ") + " 적용", for: .normal)
         nlApplyButton.isHidden = false
         nlHeightConstraint?.update(offset: 34)
         UIView.animate(withDuration: 0.15) { self.layoutIfNeeded() }
     }
 
+    /// 오전/오후 토글 변경 → 기준 시각을 뒤집어 currentDraft·pill 갱신.
+    @objc private func meridiemChanged() {
+        guard let base = nlBaseHour else { return }
+        let hour = meridiemToggle.selectedSegmentIndex == 1 ? base + 12 : base
+        currentDraft?.startTime = ParsedTime(hour: hour % 24, minute: nlMinute)
+        refreshNLPill()
+    }
+
     private func hideNLSuggestion() {
+        meridiemToggle.isHidden = true
+        nlBaseHour = nil
         guard !nlApplyButton.isHidden else { return }
         nlApplyButton.isHidden = true
         nlHeightConstraint?.update(offset: 0)
