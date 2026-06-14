@@ -78,6 +78,18 @@ final class CalendarView: UIView {
         return collectionView
     }()
 
+    /// 하단 인라인 일정 패널을 호스팅하는 컨테이너 (자식 VC의 view를 담음).
+    /// 기본 높이 0 = 숨김. 날짜 탭 시 peek 높이로 등장.
+    let schedulePanelContainer: UIView = {
+        let view = UIView()
+        view.backgroundColor = .clear
+        view.clipsToBounds = false
+        return view
+    }()
+
+    /// 패널 높이 제약 — VC가 drag/스프링으로 갱신. 0이면 숨김.
+    var panelHeightConstraint: Constraint?
+
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupUI()
@@ -99,6 +111,7 @@ final class CalendarView: UIView {
         addSubview(weekdayStackView)
         addSubview(densityChipContainer)
         addSubview(collectionView)
+        addSubview(schedulePanelContainer)
 
         for (index, day) in weekdays.enumerated() {
             let label = UILabel()
@@ -180,7 +193,15 @@ final class CalendarView: UIView {
         collectionView.snp.makeConstraints {
             $0.top.equalTo(weekdayStackView.snp.bottom).offset(4)
             $0.leading.trailing.equalToSuperview().inset(8)
-            $0.bottom.equalTo(safeAreaLayoutGuide.snp.bottom)
+            // 그리드 하단을 패널 상단에 핀: 패널이 올라오면 그리드가 줄어들고(접힘),
+            // 동시에 캡슐→점 코스메틱이 진행되어 작아진 영역에 점이 깔끔히 들어감.
+            $0.bottom.equalTo(schedulePanelContainer.snp.top)
+        }
+
+        schedulePanelContainer.snp.makeConstraints {
+            $0.leading.trailing.equalToSuperview()
+            $0.bottom.equalToSuperview() // safeArea 아래까지 확장 (패널 내부에서 safe inset 처리)
+            self.panelHeightConstraint = $0.height.equalTo(0).constraint
         }
     }
 }

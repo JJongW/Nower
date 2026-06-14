@@ -24,6 +24,11 @@ final class DayView: UIView {
     /// "+N개" 라벨 탭 시 호출되는 콜백 (dateString, todos)
     var onMoreTapped: ((String, [TodoItem]) -> Void)?
 
+    /// 접힘 진행도(0 = 펼침/캡슐, 1 = 접힘/숫자 그리드). 드래그 중 연속 설정.
+    var collapseProgress: CGFloat = 0 {
+        didSet { applyCollapse() }
+    }
+
     // MARK: - Layout Constants
     private let eventHeight: CGFloat = 18
     private let eventSpacing: CGFloat = 2 // 간격 축소 (4 → 2)
@@ -34,7 +39,7 @@ final class DayView: UIView {
     private let selectedPillView: UIView = {
         let view = UIView()
         view.backgroundColor = .clear
-        view.layer.cornerRadius = 15
+        view.layer.cornerRadius = 12 // 오늘 원(24pt)과 동일한 원형 링
         view.layer.masksToBounds = true
         view.isHidden = true
         return view
@@ -93,6 +98,17 @@ final class DayView: UIView {
         return view
     }()
 
+    /// 접힘 시 표시되는 이벤트별 컬러 점 행 (캡슐 대체). dayLabel 아래 가로 배치.
+    private let collapsedDotsRow: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .horizontal
+        stack.spacing = 3
+        stack.alignment = .center
+        stack.distribution = .fill
+        stack.alpha = 0
+        return stack
+    }()
+
     private let moreLabel: UILabel = {
         let label = UILabel()
         label.font = UIFont.systemFont(ofSize: 10, weight: .semibold)
@@ -132,7 +148,15 @@ final class DayView: UIView {
         backgroundHighlightView.addSubview(dayLabel)
         backgroundHighlightView.addSubview(holidayLabel)
         backgroundHighlightView.addSubview(eventStackView)
+        backgroundHighlightView.addSubview(collapsedDotsRow)
         backgroundHighlightView.addSubview(densityDotView)
+
+        collapsedDotsRow.snp.makeConstraints {
+            $0.top.equalTo(todayCircleView.snp.bottom).offset(3)
+            $0.centerX.equalToSuperview()
+            $0.leading.greaterThanOrEqualToSuperview().offset(2)
+            $0.trailing.lessThanOrEqualToSuperview().offset(-2)
+        }
 
         densityDotView.snp.makeConstraints {
             $0.top.equalToSuperview().offset(5)
@@ -140,11 +164,11 @@ final class DayView: UIView {
             $0.width.height.equalTo(6)
         }
 
+        // 선택 링을 오늘 원과 동일 위치·크기(24pt)로 → 숫자만 감싸고 공휴일 라벨과 겹치지 않음
         selectedPillView.snp.makeConstraints {
             $0.centerX.equalToSuperview()
-            $0.top.equalToSuperview().offset(0)
-            $0.width.equalTo(38)
-            $0.height.equalTo(30)
+            $0.top.equalToSuperview().offset(2)
+            $0.width.height.equalTo(24)
         }
 
         todayCircleView.snp.makeConstraints {
@@ -158,8 +182,9 @@ final class DayView: UIView {
             $0.height.equalTo(14)
         }
 
+        // 공휴일 라벨을 원(오늘/선택, 하단 26pt) 아래로 내려 테두리와 겹치지 않게 함
         holidayLabel.snp.makeConstraints {
-            $0.top.equalTo(dayLabel.snp.bottom).offset(2) // 축소 (4 → 2)
+            $0.top.equalTo(todayCircleView.snp.bottom).offset(1)
             $0.leading.trailing.equalToSuperview()
             $0.height.equalTo(8).priority(.high) // 축소 (10 → 8)
         }
@@ -183,6 +208,7 @@ final class DayView: UIView {
 
         // 기존 뷰들 제거
         eventStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        collapsedDotsRow.arrangedSubviews.forEach { $0.removeFromSuperview() }
         moreLabel.text = ""
 
         // 기간별 일정 공간을 확보하기 위해 eventStackView의 top 제약 업데이트
@@ -202,6 +228,7 @@ final class DayView: UIView {
             updateSelectionHighlight(isSelected: false)
             todayCircleView.isHidden = true
             allSingleDayTodos = []
+            applyCollapse()
             return
         }
 
@@ -263,6 +290,10 @@ final class DayView: UIView {
         
         allSingleDayTodos = sortedTodos
 
+        // 접힘 표현용 컬러 점 — 그날의 모든 이벤트(단일+기간) 색을 최대 4개까지.
+        populateCollapsedDots(from: dayInfo.todos)
+        applyCollapse()
+
         guard !sortedTodos.isEmpty else { return }
 
         // 최대 표시 일정 개수: 3개 (2개 표시 + "+N개" 라벨)
@@ -274,7 +305,7 @@ final class DayView: UIView {
             let capsule = EventCapsuleView()
             capsule.configure(
                 todo: todo,
-                color: AppColors.color(for: todo.colorName)
+                color: todo.isPast ? .systemGray3 : AppColors.color(for: todo.colorName) // 지난 일정 그레이톤 통일
             )
             eventStackView.addArrangedSubview(capsule)
         }
@@ -319,6 +350,42 @@ final class DayView: UIView {
             blue: CGFloat(rgb & 0xFF) / 255.0,
             alpha: alpha
         )
+    }
+
+    /// 접힘 점 행 구성: 이벤트별 테마색 6pt 원, 최대 4개(+초과 시 회색 점).
+    private func populateCollapsedDots(from todos: [TodoItem]) {
+        let maxDots = 4
+        let colors = todos.prefix(maxDots).map { $0.isPast ? UIColor.systemGray3 : AppColors.color(for: $0.colorName) } // 지난 일정 그레이톤 통일
+        for color in colors {
+            let dot = UIView()
+            dot.backgroundColor = color
+            dot.layer.cornerRadius = 3
+            dot.snp.makeConstraints { $0.width.height.equalTo(6) }
+            collapsedDotsRow.addArrangedSubview(dot)
+        }
+        if todos.count > maxDots {
+            let overflow = UIView()
+            overflow.backgroundColor = AppColors.textFieldPlaceholder
+            overflow.layer.cornerRadius = 2.5
+            overflow.snp.makeConstraints { $0.width.height.equalTo(5) }
+            collapsedDotsRow.addArrangedSubview(overflow)
+        }
+    }
+
+    /// 접힘 진행도 적용: 캡슐↔점 교차 페이드 + 숫자 확대. densityDot은 유지.
+    private func applyCollapse() {
+        let p = max(0, min(1, collapseProgress))
+        // 캡슐은 초반(~p0.5)에 사라지고, 점은 후반(p0.45~)에 등장 → 겹침 없는 깔끔한 핸드오프.
+        eventStackView.alpha = max(0, 1 - p * 2)
+        holidayLabel.alpha = max(0, 1 - p * 2)
+        collapsedDotsRow.alpha = max(0, (p - 0.45) / 0.55)
+
+        // 숫자 확대는 하지 않는다: dayLabel 높이가 14pt 고정 + DayView clipsToBounds라
+        // transform 스케일이 글자를 잘리게 하고 선택 테두리와 겹치게 만들었음.
+        // 접힘에서도 풀 캘린더와 동일한 정상 크기로 렌더 → 테두리/오늘 원과 깔끔히 정렬.
+        dayLabel.transform = .identity
+        todayCircleView.transform = .identity
+        selectedPillView.transform = .identity
     }
 
     @objc private func moreLabelTapped() {

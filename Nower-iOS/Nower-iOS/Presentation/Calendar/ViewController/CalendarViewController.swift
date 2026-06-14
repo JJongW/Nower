@@ -16,6 +16,12 @@ final class CalendarViewController: UIViewController {
 
     var coordinator: AppCoordinator?
     private let calendarView = CalendarView()
+    /// 하단 인라인 일정 패널 (모달 시트 대체, 2-depth)
+    private let schedulePanelVC = SchedulePanelViewController()
+    /// 접힘 진행도(0 = 풀 캘린더 + 패널 peek, 1 = 숫자 그리드 + 패널 확장)
+    private var collapseProgress: CGFloat = 0
+    /// 패널 노출 여부 (런치 시 false = 숨김)
+    private var isPanelVisible = false
     #if canImport(NowerCore)
     /// 헤더 밀도 칩 호스팅 컨트롤러
     private var densityChipHostingController: UIHostingController<DensityChipView>?
@@ -65,6 +71,7 @@ final class CalendarViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupCollectionView()
+        setupSchedulePanel()
         setupDensityCard()
         generateCalendar()
         setupSwipeGesture()
@@ -180,15 +187,216 @@ final class CalendarViewController: UIViewController {
         calendarView.collectionView.delegate = self
     }
 
+    private var horizontalPan: UIPanGestureRecognizer?
+    private var verticalPan: UIPanGestureRecognizer?
+    private var calendarDragStartProgress: CGFloat = 0
+    private var didSummonThisDrag = false
+
     private func setupSwipeGesture() {
         let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
+        panGesture.delegate = self
         calendarView.collectionView.addGestureRecognizer(panGesture)
+        horizontalPan = panGesture
+
+        // 세로 pan: 위로 슬라이드 → 패널 소환/확장, 아래로 → peek/숨김
+        let vPan = UIPanGestureRecognizer(target: self, action: #selector(handleCalendarVerticalPan(_:)))
+        vPan.delegate = self
+        calendarView.collectionView.addGestureRecognizer(vPan)
+        verticalPan = vPan
+    }
+
+    @objc private func handleCalendarVerticalPan(_ gesture: UIPanGestureRecognizer) {
+        let ty = gesture.translation(in: calendarView).y
+        let span = max(1, schedulePanelVC.listHeight)
+
+        switch gesture.state {
+        case .began:
+            progressLink?.invalidate(); progressLink = nil // 드래그가 애니메이션 인수
+            calendarDragStartProgress = collapseProgress
+            didSummonThisDrag = false
+        case .changed:
+            if !isPanelVisible {
+                // 위로 슬라이드하면 패널 소환 (선택 날짜 없으면 오늘)
+                if ty < -8 && !didSummonThisDrag {
+                    didSummonThisDrag = true
+                    showSchedulePanel(for: selectedDate ?? Date())
+                }
+                return
+            }
+            if didSummonThisDrag { return } // 소환 애니메이션 중에는 추적 생략
+            let candidate = calendarDragStartProgress + (-ty / span)
+            applyCollapseProgress(candidate)
+        case .ended, .cancelled:
+            guard isPanelVisible, !didSummonThisDrag else { return }
+            let vy = gesture.velocity(in: calendarView).y
+            let target: CGFloat = abs(vy) > 800 ? (vy < 0 ? 1 : 0) : (collapseProgress > 0.5 ? 1 : 0)
+            settlePanel(to: target)
+        default:
+            break
+        }
+    }
+
+    // MARK: - Schedule Panel (인라인 하단 패널)
+
+    private func setupSchedulePanel() {
+        schedulePanelVC.delegate = self
+        addChild(schedulePanelVC)
+        calendarView.schedulePanelContainer.addSubview(schedulePanelVC.view)
+        schedulePanelVC.view.snp.makeConstraints { $0.edges.equalToSuperview() }
+        schedulePanelVC.didMove(toParent: self)
+        calendarView.schedulePanelContainer.isHidden = true
+    }
+
+    private var lastLayoutHeight: CGFloat = 0
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        let h = calendarView.bounds.height
+        // 실제 사이즈가 바뀐 경우(회전 등)에만 높이 재계산 — 진행 중 애니메이션과 싸우지 않도록.
+        guard h != lastLayoutHeight else { return }
+        lastLayoutHeight = h
+        updatePanelHeights()
+        if isPanelVisible {
+            calendarView.panelHeightConstraint?.update(offset: panelHeight(for: collapseProgress))
+        }
+    }
+
+    /// 화면 크기 기준 리스트(p=1) 높이 산출 후 패널 VC에 주입.
+    private func updatePanelHeights() {
+        let h = calendarView.bounds.height
+        guard h > 0 else { return }
+        // p=1에서 화면 하단 약 52%를 리스트가 차지 → 상단 48%는 점 그리드.
+        schedulePanelVC.listHeight = (h * 0.52).rounded()
+    }
+
+    /// 패널 높이: p=0이면 0(숨김), p=1이면 listHeight. 그리드는 패널 상단에 핀되어
+    /// 패널이 올라온 만큼 줄어들고, 코스메틱(캡슐→점)이 함께 진행된다.
+    private func panelHeight(for progress: CGFloat) -> CGFloat {
+        return schedulePanelVC.listHeight * max(0, min(1, progress))
+    }
+
+    /// 진행도 적용: 패널 높이 + 그리드 재분배(전체 압축/스트레치) + 코스메틱(캡슐↔점/숫자).
+    private func applyCollapseProgress(_ progress: CGFloat) {
+        let p = max(0, min(1, progress))
+        collapseProgress = p
+        calendarView.panelHeightConstraint?.update(offset: panelHeight(for: p))
+        calendarView.collectionView.visibleCells
+            .compactMap { $0 as? WeekCell }
+            .forEach { $0.collapseProgress = p }
+        // 그리드 영역이 줄어든 만큼 행 높이를 재분배 → 달력 전체가 같이 압축되어 올라오고,
+        // 되돌릴 때 다시 스트레치된다. (높이만 바뀌면 flow layout이 재질의를 안 하므로 강제 무효화)
+        calendarView.collectionView.collectionViewLayout.invalidateLayout()
+        calendarView.layoutIfNeeded()
+        schedulePanelVC.syncProgress(p)
+    }
+
+    // MARK: - Progress 애니메이션 (매 프레임 그리드+패널 동기화)
+
+    private var progressLink: CADisplayLink?
+    private var animFrom: CGFloat = 0
+    private var animTo: CGFloat = 0
+    private var animStart: CFTimeInterval = 0
+    private let animDuration: CFTimeInterval = 0.26
+
+    /// CADisplayLink로 progress를 보간하며 매 프레임 applyCollapseProgress 호출 →
+    /// 패널 슬라이드와 캘린더 압축/스트레치가 완전히 같이 움직인다.
+    private func animateProgress(to target: CGFloat) {
+        progressLink?.invalidate()
+        animFrom = collapseProgress
+        animTo = max(0, min(1, target))
+        animStart = CACurrentMediaTime()
+        let link = CADisplayLink(target: self, selector: #selector(stepProgress(_:)))
+        link.add(to: .main, forMode: .common)
+        progressLink = link
+    }
+
+    @objc private func stepProgress(_ link: CADisplayLink) {
+        let raw = (CACurrentMediaTime() - animStart) / animDuration
+        let t = max(0, min(1, raw))
+        let eased = 1 - pow(1 - t, 3) // easeOutCubic
+        applyCollapseProgress(animFrom + (animTo - animFrom) * CGFloat(eased))
+        if t >= 1 {
+            link.invalidate()
+            progressLink = nil
+            if animTo <= 0 {
+                isPanelVisible = false
+                calendarView.schedulePanelContainer.isHidden = true
+            }
+        }
+    }
+
+    /// 날짜 탭 시 리스트를 끝까지 올리고(p=1) 캘린더를 점 그리드로 접는다.
+    private func showSchedulePanel(for date: Date) {
+        updatePanelHeights()
+        schedulePanelVC.update(date: date, viewModel: viewModel)
+
+        if !isPanelVisible {
+            isPanelVisible = true
+            calendarView.schedulePanelContainer.isHidden = false
+            // 시작 상태: 패널 높이 0 / 캘린더 펼침
+            applyCollapseProgress(0)
+        }
+        // p=1까지 매 프레임 동기 보간 (리스트 업 + 캘린더 압축)
+        animateProgress(to: 1)
+    }
+
+    /// 패널을 닫고 그리드 복원 (월 전환 등 컨텍스트 변경 시).
+    private func hideSchedulePanel() {
+        guard isPanelVisible else { return }
+        settlePanel(to: 0)
+    }
+
+    /// 드래그 종료 시 0/1로 정돈. 0이면 닫고 숨김(stepProgress 완료 시).
+    private func settlePanel(to target: CGFloat) {
+        animateProgress(to: target)
     }
 
     // 이전/다음 달 스냅샷
     private var prevMonthSnapshot: UIView?
 
+    /// 패널이 올라온 상태에서의 좌우 스와이프 → 가벼운 월 전환 + 새 달 1일 선택(패널 유지).
+    private func handlePanelMonthSwipe(_ gesture: UIPanGestureRecognizer) {
+        switch gesture.state {
+        case .ended, .cancelled:
+            let tx = gesture.translation(in: calendarView).x
+            let vx = gesture.velocity(in: calendarView).x
+            let threshold = calendarView.bounds.width * 0.3
+            guard abs(tx) > threshold || abs(vx) > 500 else { return }
+            let delta = (tx < 0 || (tx == 0 && vx < 0)) ? 1 : -1 // 왼쪽 스와이프 = 다음 달
+            changeMonthKeepingPanel(by: delta)
+        default:
+            break
+        }
+    }
+
+    /// 월을 delta만큼 바꾸고, 그 달 1일을 선택한 것처럼 패널/캘린더를 갱신(접힘 유지).
+    private func changeMonthKeepingPanel(by delta: Int) {
+        guard let newDate = Calendar.current.date(byAdding: .month, value: delta, to: currentDate) else { return }
+        currentDate = newDate
+
+        var comps = Calendar.current.dateComponents([.year, .month], from: newDate)
+        comps.day = 1
+        guard let firstDay = Calendar.current.date(from: comps) else { return }
+        selectedDate = firstDay
+
+        // 새 달 데이터로 재구성(가로 슬라이드 페이드로 부드럽게). 접힘 상태는 cellForItemAt가 유지.
+        UIView.transition(with: calendarView.collectionView, duration: 0.22,
+                          options: [.transitionCrossDissolve, .allowUserInteraction]) {
+            self.generateCalendar(updateHeader: false)
+        }
+        updateMonthLabel(animated: true)
+        applyCollapseProgress(collapseProgress) // 새 가시 셀에 접힘 즉시 반영
+        schedulePanelVC.update(date: firstDay, viewModel: viewModel)
+    }
+
     @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+        // 패널이 올라온(접힘) 상태에서는 스냅샷 월전환(풀 캘린더 전제)이 레이아웃을 깨므로,
+        // 가벼운 월 전환 + 해당 달 1일 선택으로 대체한다.
+        if isPanelVisible {
+            handlePanelMonthSwipe(gesture)
+            return
+        }
+
         let collectionView = calendarView.collectionView
         let containerWidth = calendarView.bounds.width
         let translation = gesture.translation(in: collectionView)
@@ -331,6 +539,11 @@ final class CalendarViewController: UIViewController {
         let targetSnapshot = direction == .left ? nextMonthSnapshot : prevMonthSnapshot
         let otherSnapshot = direction == .left ? prevMonthSnapshot : nextMonthSnapshot
 
+        // 월이 바뀌면 선택/패널 컨텍스트 정리
+        selectedDate = nil
+        selectedIndexPath = nil
+        hideSchedulePanel()
+
         // 새 달력 데이터로 업데이트
         currentDate = newDate
         generateCalendar(updateHeader: false)
@@ -455,6 +668,7 @@ final class CalendarViewController: UIViewController {
         //viewModel.loadAllTodos()
         DispatchQueue.main.async {
             self.calendarView.collectionView.reloadData()
+            self.schedulePanelVC.refreshIfVisible()
         }
     }
 
@@ -552,6 +766,10 @@ final class CalendarViewController: UIViewController {
         addChild(host)
         calendarView.densityChipContainer.addSubview(host.view)
         host.view.snp.makeConstraints { $0.edges.equalToSuperview() }
+        // 빈 컨테이너엔 intrinsic size가 없어 우선순위가 무의미 → 실제 콘텐츠(host.view)에 적용.
+        // 명언 라벨(750)과의 경쟁에서 칩이 이겨 내부 텍스트가 잘리지 않도록.
+        host.view.setContentHuggingPriority(.required, for: .horizontal)
+        host.view.setContentCompressionResistancePriority(.required, for: .horizontal)
         host.didMove(toParent: self)
         densityChipHostingController = host
         #endif
@@ -748,11 +966,13 @@ final class CalendarViewController: UIViewController {
     }
 
     @objc private func didTapPreviousMonth() {
+        if isPanelVisible { changeMonthKeepingPanel(by: -1); return }
         guard let newDate = Calendar.current.date(byAdding: .month, value: -1, to: currentDate) else { return }
         animateMonthTransition(to: newDate, direction: .right)
     }
 
     @objc private func didTapNextMonth() {
+        if isPanelVisible { changeMonthKeepingPanel(by: 1); return }
         guard let newDate = Calendar.current.date(byAdding: .month, value: 1, to: currentDate) else { return }
         animateMonthTransition(to: newDate, direction: .left)
     }
@@ -762,6 +982,7 @@ final class CalendarViewController: UIViewController {
         // 밀도 칩이 "오늘" 기준으로 돌아가 어느 달의 선택인지 혼란 없앰.
         selectedDate = nil
         selectedIndexPath = nil
+        hideSchedulePanel()
 
         let collectionView = calendarView.collectionView
         let containerWidth = calendarView.bounds.width
@@ -825,6 +1046,8 @@ final class CalendarViewController: UIViewController {
             self.viewModel.loadAllTodos()
             // 달력 데이터 재생성 (주 단위로 그룹화)
             self.generateCalendar()
+            // 패널이 열려 있으면 동일 날짜로 리스트 갱신
+            self.schedulePanelVC.refreshIfVisible()
         }
     }
 }
@@ -871,6 +1094,9 @@ extension CalendarViewController: UICollectionViewDataSource {
             self?.handleDaySelection(dateString: dateString)
         }
 
+        // 재사용 셀에 현재 접힘 진행도 주입 (드래그 중 reloadData 없이도 일관)
+        cell.collapseProgress = collapseProgress
+
         return cell
     }
 
@@ -889,7 +1115,8 @@ extension CalendarViewController: UICollectionViewDataSource {
 
         self.selectedDate = selectedDate
         generateCalendar()
-        coordinator?.presentEventList(for: selectedDate, viewModel: viewModel)
+        // 모달 제거 → 인라인 하단 패널로 표시 (2-depth)
+        showSchedulePanel(for: selectedDate)
     }
 }
 
@@ -909,5 +1136,50 @@ extension CalendarViewController: UICollectionViewDelegateFlowLayout {
         let cellHeight = availableHeight / CGFloat(numberOfWeeks)
 
         return CGSize(width: availableWidth, height: cellHeight)
+    }
+}
+
+// MARK: - UIGestureRecognizerDelegate (가로 월전환 vs 세로 패널 방향 게이트)
+
+extension CalendarViewController: UIGestureRecognizerDelegate {
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        guard let pan = gestureRecognizer as? UIPanGestureRecognizer else { return true }
+        if isTransitioning { return false } // 월 전환 중 상호 배제
+        let v = pan.velocity(in: calendarView)
+        if pan === verticalPan {
+            return abs(v.y) > abs(v.x)
+        }
+        if pan === horizontalPan {
+            return abs(v.x) >= abs(v.y)
+        }
+        return true
+    }
+}
+
+// MARK: - SchedulePanelDelegate
+
+extension CalendarViewController: SchedulePanelDelegate {
+    func schedulePanel(_ panel: SchedulePanelViewController, didDragToProgress progress: CGFloat) {
+        progressLink?.invalidate(); progressLink = nil // 드래그가 애니메이션 인수
+        applyCollapseProgress(progress)
+    }
+
+    func schedulePanel(_ panel: SchedulePanelViewController, didEndDraggingWithProgress progress: CGFloat, velocity: CGFloat) {
+        let target: CGFloat
+        if abs(velocity) > 800 {
+            target = velocity < 0 ? 1 : 0 // 위로 빠르게 = 확장, 아래로 = peek
+        } else {
+            target = progress > 0.5 ? 1 : 0
+        }
+        settlePanel(to: target)
+    }
+
+    func schedulePanelDidRequestAdd(_ panel: SchedulePanelViewController) {
+        let date = selectedDate ?? Date()
+        coordinator?.presentNewEvent(for: date, viewModel: viewModel)
+    }
+
+    func schedulePanel(_ panel: SchedulePanelViewController, didSelect todo: TodoItem, on date: Date) {
+        coordinator?.presentEditEvent(todo: todo, date: date, viewModel: viewModel)
     }
 }

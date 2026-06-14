@@ -23,9 +23,6 @@ public struct DensityChipView: View {
             onTap?()
         } label: {
             HStack(spacing: 5) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(bandColor)
                 Circle()
                     .fill(bandColor)
                     .frame(width: 7, height: 7)
@@ -48,6 +45,7 @@ public struct DensityChipView: View {
                 Capsule().stroke(bandColor.opacity(0.35), lineWidth: 1)
             )
             .contentShape(Capsule())
+            .fixedSize(horizontal: true, vertical: false) // 칩 내부 텍스트 잘림 방지
         }
         .buttonStyle(.plain)
         .accessibilityLabel("오늘의 밀도 \(state.scoreText)점, \(state.bandLabel)")

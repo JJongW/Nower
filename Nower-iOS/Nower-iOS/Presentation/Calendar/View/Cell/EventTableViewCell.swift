@@ -46,8 +46,19 @@ class EventTableViewCell: UITableViewCell {
         fatalError("init(coder:) has not been implemented")
     }
 
+    // 탭 피드백은 셀 전체가 아니라 일정 캡슐(containerView)에만.
+    override func setHighlighted(_ highlighted: Bool, animated: Bool) {
+        super.setHighlighted(highlighted, animated: animated)
+        UIView.animate(withDuration: 0.15) {
+            self.containerView.alpha = highlighted ? 0.6 : 1.0
+        }
+    }
+
     private func setupUI() {
-        backgroundColor = AppColors.background
+        // 셀 자체는 투명 — 색은 캡슐(containerView)만. 패널 배경이 캡슐 주위로 비치게.
+        backgroundColor = .clear
+        contentView.backgroundColor = .clear
+        selectionStyle = .none
         contentView.addSubview(containerView)
         containerView.addSubview(eventTitleLabel)
         containerView.addSubview(recurrenceIconView)
@@ -80,7 +91,8 @@ class EventTableViewCell: UITableViewCell {
     }
 
     func configure(with todo: TodoItem) {
-        let backgroundColor = AppColors.color(for: todo.colorName)
+        // 지난 일정은 원래 색 대신 그레이톤으로 통일 (흐림·취소선 없이 색으로만 구분, 그대로 읽힘)
+        let backgroundColor = todo.isPast ? .systemGray3 : AppColors.color(for: todo.colorName)
         containerView.backgroundColor = backgroundColor
 
         // 배경색에 맞춰 텍스트 색상 자동 조정 (WCAG 4.5:1 대비 보장)
