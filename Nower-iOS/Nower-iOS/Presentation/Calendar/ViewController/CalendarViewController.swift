@@ -791,7 +791,8 @@ final class CalendarViewController: UIViewController {
 
     private func densityViewState() -> DensityViewState {
         let day = selectedDate ?? Date()
-        return NowerDensity.viewState(todos: viewModel.todos(for: day), day: day)
+        let reflections = DependencyContainer.shared.reflectionStore.all()
+        return NowerDensity.calibratedViewState(todos: viewModel.todos(for: day), day: day, reflections: reflections)
     }
 
     /// 오늘 "다음 시간 일정"으로 Live Activity Companion을 동기화. 없으면 종료.
@@ -887,16 +888,86 @@ final class CalendarViewController: UIViewController {
         densityBandHexByDate = map
     }
 
-    /// 칩 탭 → 상세 밀도 카드를 바텀 시트로 표시
+    /// 칩 탭 → 상세 밀도 카드 + 체감 캡처 + 월간 리포트 진입 바텀 시트
     private func presentDensityDetail() {
-        let card = DensityCardView(state: densityViewState())
-            .padding(16)
-        let host = UIHostingController(rootView: card)
-        if let sheet = host.sheetPresentationController {
-            sheet.detents = [.medium()]
-            sheet.prefersGrabberVisible = true
+        let day = selectedDate ?? Date()
+        let todos = viewModel.todos(for: day)
+        let store = DependencyContainer.shared.reflectionStore
+        let reflections = store.all()
+
+        let state = NowerDensity.calibratedViewState(todos: todos, day: day, reflections: reflections)
+        // 보정 전(raw) 예측 — 체감 기록의 기준값
+        let base = NowerDensity.report(todos: todos, day: day)
+
+        let cal = Calendar.current
+        let canReflect = cal.startOfDay(for: day) <= cal.startOfDay(for: Date()) && !todos.isEmpty
+        let existing = store.reflection(for: day)?.feltBand
+
+        let sheet = DensityDetailSheet(
+            densityState: state,
+            dayTitle: reflectionDayTitle(for: day),
+            canReflect: canReflect,
+            existingFelt: existing,
+            onSaveReflection: { [weak self] band, note in
+                self?.saveReflection(day: day, feltBand: band, note: note, predicted: base)
+            },
+            onOpenMonthlyReport: { [weak self] in
+                self?.presentMonthlyReport()
+            }
+        )
+        let host = UIHostingController(rootView: sheet)
+        if let sh = host.sheetPresentationController {
+            sh.detents = [.medium(), .large()]
+            sh.prefersGrabberVisible = true
         }
         present(host, animated: true)
+    }
+
+    /// 하루 끝 체감 1탭 저장 → 보정 루프 입력. 저장 후 칩/히트맵 갱신.
+    private func saveReflection(day: Date, feltBand: DensityBand, note: String?, predicted: DensityReport) {
+        let reflection = DayReflection(
+            date: Calendar.current.startOfDay(for: day),
+            feltBand: feltBand,
+            predictedScore: predicted.score,
+            predictedBand: predicted.band,
+            note: note,
+            createdAt: Date()
+        )
+        DependencyContainer.shared.reflectionStore.upsert(reflection)
+        updateDensityCard()
+    }
+
+    /// 월간 에너지 리포트 시트 표시 (현재 표시 월 기준)
+    private func presentMonthlyReport() {
+        var calendar = Calendar.current
+        calendar.firstWeekday = 1
+        let month = currentDate
+        let comps = calendar.dateComponents([.year, .month], from: month)
+        guard let first = calendar.date(from: comps),
+              let range = calendar.range(of: .day, in: .month, for: month) else { return }
+        let days: [Date] = range.compactMap { calendar.date(byAdding: .day, value: $0 - 1, to: first) }
+        let reflections = DependencyContainer.shared.reflectionStore.all()
+        let report = NowerDensity.monthlyEnergyReport(
+            month: month,
+            days: days,
+            todosProvider: { [weak self] date in self?.viewModel.todos(for: date) ?? [] },
+            reflections: reflections
+        )
+        let view = MonthlyEnergyReportView(report: report, monthTitle: month.formatted("yyyy년 M월"))
+        let host = UIHostingController(rootView: view)
+        if let sh = host.sheetPresentationController {
+            sh.detents = [.large()]
+            sh.prefersGrabberVisible = true
+        }
+        // 상세 시트 위에 올림
+        (presentedViewController ?? self).present(host, animated: true)
+    }
+
+    private func reflectionDayTitle(for date: Date) -> String {
+        let cal = Calendar.current
+        if cal.isDateInToday(date) { return "오늘" }
+        if cal.isDateInYesterday(date) { return "어제" }
+        return date.formatted("M월 d일")
     }
     #endif
 

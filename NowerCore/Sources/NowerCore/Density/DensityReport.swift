@@ -60,7 +60,7 @@ public struct SignalScore: Sendable, Equatable {
 }
 
 /// 밀도 밴드 (색상 매핑)
-public enum DensityBand: String, Sendable {
+public enum DensityBand: String, Sendable, Codable {
     case light      // 여유 (녹)
     case moderate   // 보통 (황)
     case heavy      // 과부하 (적)
