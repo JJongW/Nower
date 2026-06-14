@@ -159,7 +159,7 @@ public struct DensityCardView: View {
 
 extension Color {
     /// 카드 배경 (라이트/다크 자동)
-    static var densityCardBackground: Color {
+    public static var densityCardBackground: Color {
         #if os(iOS)
         return Color(.secondarySystemBackground)
         #elseif os(macOS)

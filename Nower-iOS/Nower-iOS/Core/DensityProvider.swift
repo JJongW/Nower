@@ -56,13 +56,26 @@ extension TodoItem {
 
 /// 밀도 리포트/표시상태 진입점
 enum NowerDensity {
+    /// 예측 밀도(보정 전).
     static func report(todos: [TodoItem], day: Date) -> DensityReport {
         let events = todos.compactMap { $0.toDensityEvent(on: day) }
         return DensityEngine.score(DensityInput(day: day, events: events))
     }
 
+    /// 개인 보정(회고 루프)을 반영한 밀도. reflections가 충분하면 점수·밴드가 보정된다.
+    static func calibratedReport(todos: [TodoItem], day: Date, reflections: [DayReflection]) -> DensityReport {
+        let base = report(todos: todos, day: day)
+        let calibration = DensityCalibrator.calibration(from: reflections, asOf: day)
+        return DensityCalibrator.apply(base, calibration: calibration)
+    }
+
     static func viewState(todos: [TodoItem], day: Date) -> DensityViewState {
         DensityViewState(report: report(todos: todos, day: day))
+    }
+
+    /// 보정 반영 표시상태.
+    static func calibratedViewState(todos: [TodoItem], day: Date, reflections: [DayReflection]) -> DensityViewState {
+        DensityViewState(report: calibratedReport(todos: todos, day: day, reflections: reflections))
     }
 
     /// 월별 밀도 집계. days = 그 달의 날짜들, todosProvider = 날짜별 일정 공급.
@@ -71,6 +84,23 @@ enum NowerDensity {
             DensityInput(day: day, events: todosProvider(day).compactMap { $0.toDensityEvent(on: day) })
         }
         return MonthDensityEngine.score(inputs)
+    }
+
+    /// 월간 에너지 리포트(예측 집계 + 체감 종합 + 처방).
+    static func monthlyEnergyReport(
+        month: Date,
+        days: [Date],
+        todosProvider: (Date) -> [TodoItem],
+        reflections: [DayReflection]
+    ) -> MonthlyEnergyReport {
+        let density = monthReport(days: days, todosProvider: todosProvider)
+        let calibration = DensityCalibrator.calibration(from: reflections, asOf: month)
+        return MonthlyEnergyReportEngine.make(
+            month: month,
+            density: density,
+            reflections: reflections,
+            calibration: calibration
+        )
     }
 }
 

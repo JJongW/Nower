@@ -17,6 +17,8 @@ public enum StorageKeys {
     public static let lastSyncDate = "LastSyncDate"
     public static let userPreferences = "UserPreferences"
     public static let eventTemplates = "EventTemplates"
+    /// 하루 체감 기록(DayReflection) 모음 — 온디바이스 보관
+    public static let dayReflections = "DayReflections"
 }
 
 /// 저장소 제공자 프로토콜
