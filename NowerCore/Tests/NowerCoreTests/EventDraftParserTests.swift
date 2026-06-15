@@ -132,4 +132,61 @@ final class EventDraftParserTests: XCTestCase {
     func test_deterministic() {
         XCTAssertEqual(parse("내일 3시 회의"), parse("내일 3시 회의"))
     }
+
+    // MARK: - 추가 시간 형식
+
+    func test_맨숫자_4자리() {
+        let d = parse("1100 파티")
+        XCTAssertEqual(d.title, "파티")
+        XCTAssertEqual(d.startTime, ParsedTime(hour: 11, minute: 0))
+        XCTAssertFalse(d.isAllDay)
+    }
+
+    func test_맨숫자_3자리() {
+        let d = parse("930 운동")
+        XCTAssertEqual(d.title, "운동")
+        XCTAssertEqual(d.startTime, ParsedTime(hour: 9, minute: 30))
+    }
+
+    func test_맨숫자_카운터는_시간으로_오인하지_않음() {
+        let d = parse("100명 회의")
+        XCTAssertNil(d.startTime)       // "100명"은 시간 아님
+        XCTAssertTrue(d.isAllDay)
+    }
+
+    func test_영문_am_pm() {
+        XCTAssertEqual(parse("11am 미팅").startTime, ParsedTime(hour: 11, minute: 0))
+        XCTAssertEqual(parse("2pm 미팅").startTime, ParsedTime(hour: 14, minute: 0))
+        XCTAssertEqual(parse("12pm 점심").startTime, ParsedTime(hour: 12, minute: 0))
+        XCTAssertEqual(parse("12am 알람").startTime, ParsedTime(hour: 0, minute: 0))
+    }
+
+    func test_콜론_am_pm() {
+        let d = parse("2:30pm 상담")
+        XCTAssertEqual(d.title, "상담")
+        XCTAssertEqual(d.startTime, ParsedTime(hour: 14, minute: 30))
+    }
+
+    func test_정오_자정() {
+        XCTAssertEqual(parse("정오 약속").startTime, ParsedTime(hour: 12, minute: 0))
+        XCTAssertEqual(parse("자정 마감").startTime, ParsedTime(hour: 0, minute: 0))
+    }
+
+    func test_콜론_범위() {
+        let d = parse("11:00-13:00 워크숍")
+        XCTAssertEqual(d.title, "워크숍")
+        XCTAssertEqual(d.startTime, ParsedTime(hour: 11, minute: 0))
+        XCTAssertEqual(d.endTime, ParsedTime(hour: 13, minute: 0))
+    }
+
+    func test_맨숫자_범위() {
+        let d = parse("1100~1300 행사")
+        XCTAssertEqual(d.startTime, ParsedTime(hour: 11, minute: 0))
+        XCTAssertEqual(d.endTime, ParsedTime(hour: 13, minute: 0))
+    }
+
+    func test_시분_붙여쓰기() {
+        let d = parse("11시30분 회의")
+        XCTAssertEqual(d.startTime, ParsedTime(hour: 11, minute: 30))
+    }
 }

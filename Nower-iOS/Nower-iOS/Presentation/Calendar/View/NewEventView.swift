@@ -92,17 +92,44 @@ final class NewEventView: UIView {
     /// 자동 저장하지 않고, 사용자가 탭해야 폼에 반영된다.
     let nlApplyButton: UIButton = {
         let b = UIButton(type: .system)
-        b.titleLabel?.font = .systemFont(ofSize: 13, weight: .medium)
-        b.setTitleColor(AppColors.textHighlighted, for: .normal)
         b.backgroundColor = AppColors.textFieldBackground
         b.layer.cornerRadius = 10
-        b.titleLabel?.numberOfLines = 1
-        b.titleLabel?.lineBreakMode = .byTruncatingTail
-        b.contentEdgeInsets = UIEdgeInsets(top: 6, left: 12, bottom: 6, right: 12)
         b.isHidden = true
         return b
     }()
+    /// pill 내부 — 화살표 아이콘
+    private let nlArrowIcon: UIImageView = {
+        let iv = UIImageView(image: UIImage(named: "ic_arrow_enter_right")?.withRenderingMode(.alwaysTemplate))
+        iv.tintColor = AppColors.textHighlighted
+        iv.contentMode = .scaleAspectFit
+        iv.setContentHuggingPriority(.required, for: .horizontal)
+        iv.setContentCompressionResistancePriority(.required, for: .horizontal)
+        return iv
+    }()
+    /// pill 내부 — 일정 텍스트(길면 가운데를 줄임)
+    private let nlDetailLabel: UILabel = {
+        let l = UILabel()
+        l.font = .systemFont(ofSize: 13, weight: .medium)
+        l.textColor = AppColors.textHighlighted
+        l.lineBreakMode = .byTruncatingMiddle
+        l.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        // 평소엔 전체 표시(폭 확보), 넘칠 때만 줄어듦 — apply(required)보다 낮아 detail이 먼저 양보
+        l.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
+        return l
+    }()
+    /// pill 내부 — "적용" (절대 잘리지 않음)
+    private let nlApplyLabel: UILabel = {
+        let l = UILabel()
+        l.font = .systemFont(ofSize: 13, weight: .semibold)
+        l.textColor = AppColors.textHighlighted
+        l.text = "적용"
+        l.setContentHuggingPriority(.required, for: .horizontal)
+        l.setContentCompressionResistancePriority(.required, for: .horizontal)
+        return l
+    }()
     private var nlHeightConstraint: Constraint?
+    /// 오전/오후 토글 폭 — 숨김 시 0으로 접어 pill이 한 줄을 다 쓰게 한다.
+    private var meridiemWidthConstraint: Constraint?
     private var currentDraft: ParsedEventDraft?
 
     /// 오전/오후가 모호한 시각("3시" 등)을 교정하는 토글. 모호할 때만 노출.
@@ -539,20 +566,47 @@ final class NewEventView: UIView {
         // 자연어 분석 제안 pill (초기 height=0, 감지 시 노출)
         #if canImport(NowerCore)
         contentView.addSubview(nlApplyButton)
+        contentView.addSubview(meridiemToggle)
+
+        // 토글: 우측 고정. 숨김 시 width=0으로 접어 pill에 공간을 넘긴다.
+        meridiemToggle.snp.makeConstraints {
+            $0.centerY.equalTo(nlApplyButton)
+            $0.trailing.equalToSuperview().inset(20)
+            meridiemWidthConstraint = $0.width.equalTo(0).constraint
+        }
+        meridiemWidthConstraint?.deactivate() // 기본: 토글 표시(자연 폭)
+        meridiemToggle.setContentHuggingPriority(.required, for: .horizontal)
+        // 숨김 시 width=0 제약이 이기도록 압축저항을 낮춘다.
+        meridiemToggle.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
+        // pill: 내부 서브뷰 체인이 폭을 결정 → 배경이 글자에 딱 맞음.
+        // 길면 토글 leading까지만 늘고(≤), 그 안에서 일정 텍스트만 가운데를 줄인다.
         nlApplyButton.snp.makeConstraints {
             $0.top.equalTo(saveTemplateButton.snp.bottom).offset(8)
             $0.leading.equalToSuperview().offset(20)
+            $0.trailing.lessThanOrEqualTo(meridiemToggle.snp.leading).offset(-8)
             nlHeightConstraint = $0.height.equalTo(0).constraint
         }
-        nlApplyButton.addTarget(self, action: #selector(applyNaturalLanguage), for: .touchUpInside)
-
-        contentView.addSubview(meridiemToggle)
-        meridiemToggle.snp.makeConstraints {
-            $0.centerY.equalTo(nlApplyButton)
-            $0.leading.equalTo(nlApplyButton.snp.trailing).offset(8)
-            $0.trailing.lessThanOrEqualToSuperview().inset(20)
+        nlApplyButton.addSubview(nlArrowIcon)
+        nlApplyButton.addSubview(nlDetailLabel)
+        nlApplyButton.addSubview(nlApplyLabel)
+        nlArrowIcon.snp.makeConstraints {
+            $0.leading.equalToSuperview().offset(12)
+            $0.centerY.equalToSuperview()
+            $0.width.height.equalTo(15)
         }
-        meridiemToggle.setContentHuggingPriority(.required, for: .horizontal)
+        nlDetailLabel.snp.makeConstraints {
+            $0.leading.equalTo(nlArrowIcon.snp.trailing).offset(6)
+            $0.centerY.equalToSuperview()
+        }
+        nlApplyLabel.snp.makeConstraints {
+            $0.leading.equalTo(nlDetailLabel.snp.trailing).offset(5)
+            $0.trailing.equalToSuperview().inset(12)
+            $0.centerY.equalToSuperview()
+        }
+        nlApplyButton.addTarget(self, action: #selector(applyNaturalLanguage), for: .touchUpInside)
+        // 숨김 시 width=0 제약이 이기도록 압축저항을 낮춘다(요소 자체 폭 < 0 제약).
+        meridiemToggle.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         meridiemToggle.addTarget(self, action: #selector(meridiemChanged), for: .valueChanged)
         #endif
 
@@ -1567,10 +1621,10 @@ final class NewEventView: UIView {
             nlBaseHour = s.hour > 11 ? s.hour - 12 : s.hour   // 1~11
             nlMinute = s.minute
             meridiemToggle.selectedSegmentIndex = s.hour >= 12 ? 1 : 0
-            meridiemToggle.isHidden = false
+            setMeridiemToggle(visible: true)
         } else {
             nlBaseHour = nil
-            meridiemToggle.isHidden = true
+            setMeridiemToggle(visible: false)
         }
 
         refreshNLPill()
@@ -1589,7 +1643,7 @@ final class NewEventView: UIView {
         if !draft.title.isEmpty {
             parts.append("“\(draft.title)”")
         }
-        nlApplyButton.setTitle("↳ " + parts.joined(separator: " · ") + " 적용", for: .normal)
+        nlDetailLabel.text = parts.joined(separator: " · ")
         nlApplyButton.isHidden = false
         nlHeightConstraint?.update(offset: 34)
         UIView.animate(withDuration: 0.15) { self.layoutIfNeeded() }
@@ -1603,8 +1657,15 @@ final class NewEventView: UIView {
         refreshNLPill()
     }
 
+    /// 오전/오후 토글 노출 + 폭 제약 동기화(숨김 시 0으로 접어 pill에 공간 반환).
+    private func setMeridiemToggle(visible: Bool) {
+        meridiemToggle.isHidden = !visible
+        if visible { meridiemWidthConstraint?.deactivate() }
+        else { meridiemWidthConstraint?.activate() }
+    }
+
     private func hideNLSuggestion() {
-        meridiemToggle.isHidden = true
+        setMeridiemToggle(visible: false)
         nlBaseHour = nil
         guard !nlApplyButton.isHidden else { return }
         nlApplyButton.isHidden = true
