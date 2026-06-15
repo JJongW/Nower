@@ -298,7 +298,7 @@
 				CODE_SIGN_ENTITLEMENTS = NowerTodayWidgetExtensionExtension.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = 39MK2JX9R4;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NowerTodayWidgetExtension/Info.plist;
@@ -310,7 +310,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = pr.jongwon.Nower.NowerTodayWidgetExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -331,7 +331,7 @@
 				CODE_SIGN_ENTITLEMENTS = NowerTodayWidgetExtensionExtension.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = 39MK2JX9R4;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NowerTodayWidgetExtension/Info.plist;
@@ -343,7 +343,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = pr.jongwon.Nower.NowerTodayWidgetExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -365,7 +365,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Nower-iOS/Nower-iOS.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = 39MK2JX9R4;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Nower-iOS/Info.plist";
@@ -380,7 +380,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = pr.jongwon.Nower;
 				PRODUCT_NAME = Nower;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -399,7 +399,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Nower-iOS/Nower-iOS.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = 39MK2JX9R4;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Nower-iOS/Info.plist";
@@ -414,7 +414,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = pr.jongwon.Nower;
 				PRODUCT_NAME = Nower;
 				PROVISIONING_PROFILE_SPECIFIER = "";

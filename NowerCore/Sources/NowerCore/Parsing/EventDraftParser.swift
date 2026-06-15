@@ -6,8 +6,9 @@
 //  바로 일정으로 만들지 않고 초안만 반환한다 — 확정은 사용자 몫.
 //
 //  지원: 상대 날짜(오늘/내일/모레/글피), 요일(이번주/다음주 X요일),
-//        시각("3시","오후 3시","15:00","3시 반","3시 30분"),
-//        시간 범위("3시부터 5시까지","2시~4시"), 반복(매일/매주/매주 X요일/매월/매년).
+//        시각("3시","오후 3시","15:00","3시 반","3시 30분","1100","930","11am","2pm","정오","자정"),
+//        시간 범위("3시부터 5시까지","2시~4시","11:00-13:00","1100~1300"),
+//        반복(매일/매주/매주 X요일/매월/매년).
 //
 
 import Foundation
@@ -49,9 +50,12 @@ public enum EventDraftParser {
             working.removeSubrange(range)
         }
 
-        // 3) 시간 (범위 우선 → 단일)
+        // 3) 시간 (시 범위 → 숫자/콜론 범위 → 단일)
         if let (s, e, range, amb) = matchTimeRange(in: working) {
             start = s; end = e; ambiguousMeridiem = amb
+            working.removeSubrange(range)
+        } else if let (s, e, range) = matchNumericRange(in: working) {
+            start = s; end = e; ambiguousMeridiem = false
             working.removeSubrange(range)
         } else if let (s, range, amb) = matchSingleTime(in: working) {
             start = s; ambiguousMeridiem = amb
@@ -176,20 +180,81 @@ public enum EventDraftParser {
     }
 
     private static func matchSingleTime(in text: String) -> (ParsedTime, Range<String.Index>, Bool)? {
-        // HH:mm — 24시간 명시이므로 모호하지 않음
-        if let r = firstMatch(text, pattern: "(\\d{1,2}):(\\d{2})") {
-            let h = Int(text[r.groups[1]!]) ?? 0
+        // 1) HH:mm (+ 선택적 am/pm) — 24시간/명시이므로 모호하지 않음
+        if let r = firstMatch(text, pattern: "(\\d{1,2}):(\\d{2})\\s*([aApP][mM])?") {
+            let h0 = Int(text[r.groups[1]!]) ?? 0
             let m = Int(text[r.groups[2]!]) ?? 0
-            if h < 24 && m < 60 { return (ParsedTime(hour: h, minute: m), r.full, false) }
+            if h0 < 24 && m < 60 {
+                let h = r.groups[3].map { applyAmPm(hour: h0, ampm: String(text[$0])) } ?? h0
+                return (ParsedTime(hour: h % 24, minute: m), r.full, false)
+            }
         }
-        // (period)? H시 (M분|반)?
+        // 2) 정오 / 자정
+        if let r = firstMatch(text, pattern: "(정오|자정)") {
+            let isNoon = String(text[r.groups[1]!]) == "정오"
+            return (ParsedTime(hour: isNoon ? 12 : 0, minute: 0), r.full, false)
+        }
+        // 3) 콜론 없는 영문 am/pm — "11am", "2 pm"
+        if let r = firstMatch(text, pattern: "(\\d{1,2})\\s*([aApP][mM])") {
+            let h0 = Int(text[r.groups[1]!]) ?? 0
+            if h0 >= 1 && h0 <= 12 {
+                let h = applyAmPm(hour: h0, ampm: String(text[r.groups[2]!]))
+                return (ParsedTime(hour: h % 24, minute: 0), r.full, false)
+            }
+        }
+        // 4) (period)? H시 (M분|반)?
         if let r = firstMatch(text, pattern: "(오전|오후|아침|점심|저녁|밤|새벽)?\\s*(\\d{1,2})\\s*시\\s*(\\d{1,2})?\\s*(분|반)?") {
             if let t = makeTime(text, hourGroup: r.groups[2], minGroup: r.groups[3], banGroup: r.groups[4], periodGroup: r.groups[1]) {
                 let ambiguous = isMeridiemAmbiguous(text, hourGroup: r.groups[2], periodGroup: r.groups[1])
                 return (t, r.full, ambiguous)
             }
         }
+        // 5) 맨숫자 3~4자리 (HHMM / HMM) — "1100"→11:00, "930"→9:30.
+        //    오인식 방지: 앞뒤가 공백/문자열 경계인 독립 토큰만.
+        if let r = firstMatch(text, pattern: "(?:^|\\s)(\\d{3,4})(?=\\s|$)"),
+           let g = r.groups[1], let t = parseBareDigits(String(text[g])) {
+            return (t, r.full, false)
+        }
         return nil
+    }
+
+    /// "HHMM"/"HMM" 맨숫자 → ParsedTime (유효 시각일 때만)
+    private static func parseBareDigits(_ s: String) -> ParsedTime? {
+        let h: Int, m: Int
+        switch s.count {
+        case 4: h = Int(s.prefix(2)) ?? -1; m = Int(s.suffix(2)) ?? -1
+        case 3: h = Int(s.prefix(1)) ?? -1; m = Int(s.suffix(2)) ?? -1
+        default: return nil
+        }
+        guard h >= 0, h < 24, m >= 0, m < 60 else { return nil }
+        return ParsedTime(hour: h, minute: m)
+    }
+
+    /// am/pm 보정. 12am→0, 12pm→12, 그 외 pm은 +12.
+    private static func applyAmPm(hour: Int, ampm: String) -> Int {
+        let isPM = ampm.lowercased().hasPrefix("p")
+        if isPM { return hour == 12 ? 12 : hour + 12 }
+        return hour == 12 ? 0 : hour
+    }
+
+    /// 콜론/맨숫자 시간 범위 — "11:00-13:00", "1100~1300", "9:00부터 18:00까지"
+    private static func matchNumericRange(in text: String) -> (ParsedTime, ParsedTime, Range<String.Index>)? {
+        let pattern = "(\\d{1,2}:\\d{2}|\\d{3,4})\\s*(?:부터|~|-|–)\\s*(\\d{1,2}:\\d{2}|\\d{3,4})\\s*(?:까지)?"
+        guard let r = firstMatch(text, pattern: pattern),
+              let s = parseNumericToken(String(text[r.groups[1]!])),
+              let e = parseNumericToken(String(text[r.groups[2]!])) else { return nil }
+        return (s, e, r.full)
+    }
+
+    /// "HH:mm" 또는 맨숫자 토큰 → ParsedTime
+    private static func parseNumericToken(_ token: String) -> ParsedTime? {
+        if token.contains(":") {
+            let parts = token.split(separator: ":")
+            guard parts.count == 2, let h = Int(parts[0]), let m = Int(parts[1]),
+                  h < 24, m < 60 else { return nil }
+            return ParsedTime(hour: h, minute: m)
+        }
+        return parseBareDigits(token)
     }
 
     /// 오전/오후 미명시 + 시각이 1~11시라 추정이 들어간 경우 true.
