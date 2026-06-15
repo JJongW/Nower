@@ -33,6 +33,9 @@ public final class DependencyContainer {
     /// 템플릿 저장소
     public lazy var templateRepository: NowerCore.TemplateRepository = TemplateRepositoryImpl(storage: storageProvider)
 
+    /// 하루 체감 기록 저장소
+    lazy var reflectionStore: ReflectionStore = ReflectionStore(storage: storageProvider)
+
     // MARK: - Migration
 
     /// 마이그레이션 관리자
