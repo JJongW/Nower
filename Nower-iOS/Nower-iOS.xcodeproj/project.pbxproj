@@ -298,7 +298,7 @@
 				CODE_SIGN_ENTITLEMENTS = NowerTodayWidgetExtensionExtension.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 39MK2JX9R4;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NowerTodayWidgetExtension/Info.plist;
@@ -331,7 +331,7 @@
 				CODE_SIGN_ENTITLEMENTS = NowerTodayWidgetExtensionExtension.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 39MK2JX9R4;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NowerTodayWidgetExtension/Info.plist;
@@ -365,7 +365,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Nower-iOS/Nower-iOS.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 39MK2JX9R4;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Nower-iOS/Info.plist";
@@ -399,7 +399,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Nower-iOS/Nower-iOS.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 39MK2JX9R4;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Nower-iOS/Info.plist";
