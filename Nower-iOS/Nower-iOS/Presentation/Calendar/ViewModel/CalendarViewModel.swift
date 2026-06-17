@@ -55,6 +55,7 @@ final class CalendarViewModel: ObservableObject {
 
         loadAllTodos()
         setupNotificationObserver()
+        refreshDepartureNudges() // 앱 시작 시 출발 알림 재동기화
     }
 
     func loadAllTodos() {
@@ -151,6 +152,7 @@ final class CalendarViewModel: ObservableObject {
         } else {
             LocalNotificationManager.shared.scheduleNotification(for: newTodo)
         }
+        scheduleDepartureNudge(for: newTodo)
     }
     
     /// 기간별 일정을 추가합니다.
@@ -169,11 +171,13 @@ final class CalendarViewModel: ObservableObject {
                               reminderMinutesBefore: selectedReminderMinutesBefore)
         addTodoUseCase.execute(todo: newTodo)
         LocalNotificationManager.shared.scheduleNotification(for: newTodo)
+        scheduleDepartureNudge(for: newTodo)
     }
 
     func deleteTodo(_ todo: TodoItem) {
         LocalNotificationManager.shared.cancelNotification(for: todo.id)
         LocalNotificationManager.shared.cancelSeriesNotifications(for: todo.id)
+        DepartureNudgeManager.shared.cancel(for: todo.id)
         deleteTodoUseCase.execute(todo: todo)
     }
 
@@ -289,8 +293,10 @@ final class CalendarViewModel: ObservableObject {
                 recurrenceSeriesId: source.recurrenceSeriesId
             )
             LocalNotificationManager.shared.cancelSeriesNotifications(for: source.id)
+            DepartureNudgeManager.shared.cancel(for: source.id)
             updateTodoUseCase.execute(original: source, updated: updatedAll)
             LocalNotificationManager.shared.scheduleRecurringNotifications(for: updatedAll)
+            scheduleDepartureNudge(for: updatedAll)
         }
 
         loadAllTodos()
@@ -306,10 +312,12 @@ final class CalendarViewModel: ObservableObject {
         let dateString = targetDate.toDateString()
         let updatedTodo = TodoItem(text: updatedText, isRepeating: isRepeating, date: dateString, colorName: updatedColor, scheduledTime: scheduledTime, reminderMinutesBefore: reminderMinutesBefore)
         LocalNotificationManager.shared.cancelNotification(for: original.id)
+        DepartureNudgeManager.shared.cancel(for: original.id)
         updateTodoUseCase.execute(original: original, updated: updatedTodo)
         LocalNotificationManager.shared.scheduleNotification(for: updatedTodo)
+        scheduleDepartureNudge(for: updatedTodo)
     }
-    
+
     /// 기간별 일정을 수정합니다.
     func updatePeriodTodo(original: TodoItem, updatedText: String, updatedColor: String, startDate: Date, endDate: Date, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
         let updatedTodo = TodoItem(text: updatedText,
@@ -321,8 +329,29 @@ final class CalendarViewModel: ObservableObject {
                                   endScheduledTime: endScheduledTime,
                                   reminderMinutesBefore: reminderMinutesBefore)
         LocalNotificationManager.shared.cancelNotification(for: original.id)
+        DepartureNudgeManager.shared.cancel(for: original.id)
         updateTodoUseCase.execute(original: original, updated: updatedTodo)
         LocalNotificationManager.shared.scheduleNotification(for: updatedTodo)
+        scheduleDepartureNudge(for: updatedTodo)
+    }
+
+    // MARK: - 출발 알림 (Departure Nudge)
+
+    /// 단일 일정의 출발 알림을 백그라운드로 예약합니다.
+    /// 매칭/좌표 조건을 못 맞추면 매니저가 조용히 건너뜁니다.
+    private func scheduleDepartureNudge(for todo: TodoItem) {
+        Task { await DepartureNudgeManager.shared.scheduleNudge(for: todo) }
+    }
+
+    /// 저장된 모든 일정의 출발 알림을 다시 계산·예약합니다.
+    /// 앱 시작 시, 또는 저장 장소 설정이 바뀌었을 때 호출합니다.
+    func refreshDepartureNudges() {
+        let todos = loadAllTodosUseCase.execute()
+        Task { await DepartureNudgeManager.shared.refreshAll(todos: todos) }
+    }
+
+    @objc private func savedPlacesDidUpdate() {
+        refreshDepartureNudges()
     }
 
     // MARK: - Private Methods
@@ -333,6 +362,12 @@ final class CalendarViewModel: ObservableObject {
             self,
             selector: #selector(todosDidUpdate),
             name: Notification.Name("CloudSyncManager.todosDidUpdate"),
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(savedPlacesDidUpdate),
+            name: SavedPlacesManager.didUpdateNotification,
             object: nil
         )
     }

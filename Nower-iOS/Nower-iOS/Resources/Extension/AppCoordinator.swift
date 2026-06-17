@@ -32,6 +32,42 @@ final class AppCoordinator {
         navigationController.viewControllers = [calendarVC]
         window.rootViewController = navigationController
         window.makeKeyAndVisible()
+
+        checkForUpdate()
+    }
+
+    /// App Store 최신 버전과 비교해 강제/권장 업데이트를 안내한다.
+    /// 네트워크 실패 시에는 아무것도 막지 않는다(fail-open).
+    private func checkForUpdate() {
+        Task { @MainActor in
+            let status = await AppUpdateChecker().check()
+            switch status {
+            case .upToDate:
+                break
+            case let .optional(storeVersion, url):
+                presentOptionalUpdate(storeVersion: storeVersion, appStoreURL: url)
+            case let .required(_, url):
+                presentForceUpdate(appStoreURL: url)
+            }
+        }
+    }
+
+    private func presentForceUpdate(appStoreURL: URL) {
+        let updateVC = ForceUpdateViewController(appStoreURL: appStoreURL)
+        navigationController.present(updateVC, animated: true)
+    }
+
+    private func presentOptionalUpdate(storeVersion: String, appStoreURL: URL) {
+        let alert = UIAlertController(
+            title: "새 버전이 있어요",
+            message: "버전 \(storeVersion)으로 업데이트하면 더 좋아져요.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "나중에", style: .cancel))
+        alert.addAction(UIAlertAction(title: "업데이트", style: .default) { _ in
+            UIApplication.shared.open(appStoreURL)
+        })
+        navigationController.present(alert, animated: true)
     }
 
     private func makeCalendarViewController() -> CalendarViewController {
@@ -91,6 +127,18 @@ final class AppCoordinator {
             sheet.prefersGrabberVisible = true
         }
         navigationController.topViewController?.present(editVC, animated: true)
+    }
+
+    /// 출발 알림 설정(집·회사 위치, 버퍼)을 띄운다.
+    func presentDepartureSettings() {
+        let settingsVC = DepartureSettingsViewController()
+        let nav = UINavigationController(rootViewController: settingsVC)
+        nav.modalPresentationStyle = .pageSheet
+        if let sheet = nav.sheetPresentationController {
+            sheet.detents = [.large()]
+            sheet.prefersGrabberVisible = true
+        }
+        navigationController.present(nav, animated: true)
     }
 
     func returnToBack() {

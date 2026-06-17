@@ -101,8 +101,13 @@ final class CalendarViewController: UIViewController {
 
         calendarView.previousButton.addTarget(self, action: #selector(didTapPreviousMonth), for: .touchUpInside)
         calendarView.nextButton.addTarget(self, action: #selector(didTapNextMonth), for: .touchUpInside)
+        calendarView.settingsButton.addTarget(self, action: #selector(didTapSettings), for: .touchUpInside)
 
         setupSyncStatus()
+    }
+
+    @objc private func didTapSettings() {
+        coordinator?.presentDepartureSettings()
     }
 
     // MARK: - Sync Status

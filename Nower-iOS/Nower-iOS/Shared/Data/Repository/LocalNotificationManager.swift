@@ -62,6 +62,44 @@ final class LocalNotificationManager: NSObject {
         center.add(request)
     }
 
+    // MARK: - Departure Nudge Notifications
+
+    /// 출발 알림 ID 접두사. 일반 알림과 구분합니다.
+    private static let departurePrefix = "departure-"
+
+    /// 출발 알림을 지정 시각에 예약합니다.
+    /// - Parameters:
+    ///   - todoId: 대상 일정 ID
+    ///   - body: 알림 본문 (소요시간·기상 안내 문구)
+    ///   - fireDate: 알림 발송 시각 (= 출발 준비 시작 시각)
+    func scheduleDepartureNotification(todoId: UUID, body: String, fireDate: Date) {
+        guard fireDate > Date() else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Nower"
+        content.body = body
+        content.sound = .default
+
+        let components = Calendar.current.dateComponents(
+            [.year, .month, .day, .hour, .minute],
+            from: fireDate
+        )
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: Self.departurePrefix + todoId.uuidString,
+            content: content,
+            trigger: trigger
+        )
+        center.add(request)
+    }
+
+    /// 특정 일정의 출발 알림을 취소합니다.
+    func cancelDepartureNotification(for todoId: UUID) {
+        center.removePendingNotificationRequests(
+            withIdentifiers: [Self.departurePrefix + todoId.uuidString]
+        )
+    }
+
     // MARK: - Recurring Event Notifications
 
     /// 반복 일정의 향후 10개 인스턴스에 대해 알림을 스케줄링합니다.

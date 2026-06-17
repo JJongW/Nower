@@ -45,6 +45,14 @@ final class CalendarView: UIView {
 
     let syncStatusView = SyncStatusBarView()
 
+    /// 출발 알림 설정 진입 버튼 (헤더 좌측 상단).
+    let settingsButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: "gearshape"), for: .normal)
+        button.tintColor = AppColors.coralred
+        return button
+    }()
+
     private let weekdayStackView: UIStackView = {
         let stack = UIStackView()
         stack.axis = .horizontal
@@ -107,6 +115,7 @@ final class CalendarView: UIView {
         addSubview(previousButton)
         addSubview(nextButton)
         addSubview(syncStatusView)
+        addSubview(settingsButton)
         addSubview(textLabel)
         addSubview(weekdayStackView)
         addSubview(densityChipContainer)
@@ -168,6 +177,12 @@ final class CalendarView: UIView {
         syncStatusView.snp.makeConstraints {
             $0.centerY.equalTo(monthLabel)
             $0.trailing.equalToSuperview().inset(16)
+        }
+
+        settingsButton.snp.makeConstraints {
+            $0.centerY.equalTo(monthLabel)
+            $0.leading.equalToSuperview().inset(16)
+            $0.size.equalTo(24)
         }
 
         textLabel.snp.makeConstraints {
