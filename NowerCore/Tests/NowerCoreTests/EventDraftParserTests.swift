@@ -189,4 +189,32 @@ final class EventDraftParserTests: XCTestCase {
         let d = parse("11시30분 회의")
         XCTAssertEqual(d.startTime, ParsedTime(hour: 11, minute: 30))
     }
+
+    // MARK: - 2자리 시(時) 범위
+
+    func test_시범위_틸드() {
+        let d = parse("11~18 근무")
+        XCTAssertEqual(d.title, "근무")
+        XCTAssertEqual(d.startTime, ParsedTime(hour: 11, minute: 0))
+        XCTAssertEqual(d.endTime, ParsedTime(hour: 18, minute: 0))
+        XCTAssertFalse(d.isAllDay)
+    }
+
+    func test_시범위_부터_까지_시없이() {
+        let d = parse("9부터 18까지 부스")
+        XCTAssertEqual(d.startTime, ParsedTime(hour: 9, minute: 0))
+        XCTAssertEqual(d.endTime, ParsedTime(hour: 18, minute: 0))
+    }
+
+    func test_시범위_개수는_시간으로_오인하지_않음() {
+        let d = parse("2~3개 준비")   // "개"가 붙으면 범위 아님
+        XCTAssertNil(d.startTime)
+        XCTAssertTrue(d.isAllDay)
+    }
+
+    func test_시범위_하이픈은_제외() {
+        // 2자리 시 범위에서 "-"는 방번호/전화 오인 방지를 위해 제외한다.
+        let d = parse("11-18 회의실")
+        XCTAssertNil(d.startTime)
+    }
 }

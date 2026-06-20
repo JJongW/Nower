@@ -1677,8 +1677,9 @@ final class NewEventView: UIView {
     @objc private func applyNaturalLanguage() {
         guard let d = currentDraft else { return }
         if let s = d.startTime { selectedScheduledTime = s.hhmm }
-        // 종료 시간은 기간 모드에서만 의미가 있으므로 그 때만 적용 (단일 일정엔 종료 시간 행이 없음)
-        if let e = d.endTime, isPeriodMode { selectedEndScheduledTime = e.hhmm }
+        // 시간 범위("11:00~18:00")는 같은 날 단일 일정에도 종료 시각을 적용한다.
+        // 종료 시각까지 기록해야 빈도/밀도 측정이 실제 점유 시간을 반영한다.
+        if let e = d.endTime { selectedEndScheduledTime = e.hhmm }
         if let r = d.recurrenceRule { selectedRecurrenceInfo = RecurrenceInfo.from(r) }
         if !d.title.isEmpty { textField.text = d.title }
         hideNLSuggestion()
