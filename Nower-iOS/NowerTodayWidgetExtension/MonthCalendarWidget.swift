@@ -172,7 +172,7 @@ struct MediumCalendarView: View {
 
     private var monthYearString: String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy.MM"
+        formatter.dateFormat = "yyyy년 M월"
         return formatter.string(from: entry.currentMonth)
     }
 }
@@ -185,15 +185,13 @@ struct LargeCalendarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 40)
-
             HStack {
-                Spacer()
                 Text(monthYearString)
                     .font(.system(size: 15, weight: .bold))
                     .foregroundColor(WidgetAppColors.textPrimary(colorScheme))
                 Spacer()
             }
+            .padding(.horizontal, 4)
             .padding(.bottom, 10)
 
             HStack(spacing: 2) {
@@ -228,7 +226,7 @@ struct LargeCalendarView: View {
 
     private var monthYearString: String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy년 MM월"
+        formatter.dateFormat = "yyyy년 M월"
         return formatter.string(from: entry.currentMonth)
     }
 }
