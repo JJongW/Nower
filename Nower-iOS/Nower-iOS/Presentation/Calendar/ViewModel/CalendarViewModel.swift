@@ -145,7 +145,7 @@ final class CalendarViewModel: ObservableObject {
     func addTodo() {
         guard let date = selectedDate, !todoText.isEmpty else { return }
         let hasRecurrence = selectedRecurrenceInfo != nil
-        let newTodo = TodoItem(text: todoText, isRepeating: hasRecurrence || isRepeating, date: date.toDateString(), colorName: selectedColorName, scheduledTime: selectedScheduledTime, reminderMinutesBefore: selectedReminderMinutesBefore, recurrenceInfo: selectedRecurrenceInfo)
+        let newTodo = TodoItem(text: todoText, isRepeating: hasRecurrence || isRepeating, date: date.toDateString(), colorName: selectedColorName, scheduledTime: selectedScheduledTime, endScheduledTime: selectedEndScheduledTime, reminderMinutesBefore: selectedReminderMinutesBefore, recurrenceInfo: selectedRecurrenceInfo)
         addTodoUseCase.execute(todo: newTodo)
         if newTodo.isRecurringEvent {
             LocalNotificationManager.shared.scheduleRecurringNotifications(for: newTodo)

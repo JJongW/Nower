@@ -7,7 +7,7 @@
 //
 //  지원: 상대 날짜(오늘/내일/모레/글피), 요일(이번주/다음주 X요일),
 //        시각("3시","오후 3시","15:00","3시 반","3시 30분","1100","930","11am","2pm","정오","자정"),
-//        시간 범위("3시부터 5시까지","2시~4시","11:00-13:00","1100~1300"),
+//        시간 범위("3시부터 5시까지","2시~4시","11:00-13:00","1100~1300","11~18","9부터 18까지"),
 //        반복(매일/매주/매주 X요일/매월/매년).
 //
 
@@ -55,6 +55,9 @@ public enum EventDraftParser {
             start = s; end = e; ambiguousMeridiem = amb
             working.removeSubrange(range)
         } else if let (s, e, range) = matchNumericRange(in: working) {
+            start = s; end = e; ambiguousMeridiem = false
+            working.removeSubrange(range)
+        } else if let (s, e, range) = matchHourOnlyRange(in: working) {
             start = s; end = e; ambiguousMeridiem = false
             working.removeSubrange(range)
         } else if let (s, range, amb) = matchSingleTime(in: working) {
@@ -244,6 +247,18 @@ public enum EventDraftParser {
               let s = parseNumericToken(String(text[r.groups[1]!])),
               let e = parseNumericToken(String(text[r.groups[2]!])) else { return nil }
         return (s, e, r.full)
+    }
+
+    /// 2자리 시(時)만의 범위 — "11~18", "9~18", "11부터 18까지" → 11:00~18:00 (24시간 해석).
+    /// 오인식 방지: 독립 토큰 + 강한 범위 표식(~/–/부터)만 허용("-"는 방번호·전화 오인 탓 제외),
+    /// 양쪽 모두 0~23시일 때만. ":분"·3~4자리는 앞 단계(matchNumericRange)가 이미 처리한다.
+    private static func matchHourOnlyRange(in text: String) -> (ParsedTime, ParsedTime, Range<String.Index>)? {
+        let pattern = "(?:^|\\s)(\\d{1,2})\\s*(?:~|–|부터)\\s*(\\d{1,2})\\s*시?\\s*(?:까지)?(?=\\s|$)"
+        guard let r = firstMatch(text, pattern: pattern),
+              let g1 = r.groups[1], let g2 = r.groups[2],
+              let h1 = Int(text[g1]), let h2 = Int(text[g2]),
+              h1 >= 0, h1 < 24, h2 >= 0, h2 < 24, h1 != h2 else { return nil }
+        return (ParsedTime(hour: h1, minute: 0), ParsedTime(hour: h2, minute: 0), r.full)
     }
 
     /// "HH:mm" 또는 맨숫자 토큰 → ParsedTime
