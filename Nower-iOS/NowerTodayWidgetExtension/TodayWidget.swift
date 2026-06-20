@@ -519,7 +519,7 @@ struct TodayWidgetEntryView: View {
             HStack(spacing: 7) {
                 Circle().fill(i.color).frame(width: 9, height: 9)
                 Text(i.bandLabel)
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .font(.system(size: 26, weight: .bold))
                     .foregroundColor(WidgetAppColors.textPrimary(colorScheme))
             }
             Text(i.phrase)
@@ -556,7 +556,7 @@ struct TodayWidgetEntryView: View {
                 HStack(spacing: 7) {
                     Circle().fill(i.color).frame(width: 10, height: 10)
                     Text(i.bandLabel)
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .font(.system(size: 28, weight: .bold))
                         .foregroundColor(WidgetAppColors.textPrimary(colorScheme))
                 }
                 Text(i.phrase)
@@ -569,15 +569,13 @@ struct TodayWidgetEntryView: View {
                     .foregroundColor(WidgetAppColors.textFieldPlaceholder(colorScheme))
             }
 
-            Divider()
-
             VStack(alignment: .leading, spacing: 4) {
                 Text("다음 일정")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(WidgetAppColors.textFieldPlaceholder(colorScheme))
                 if let time = i.nextTime, let title = i.nextTitle {
                     Text(time)
-                        .font(.system(size: 22, weight: .bold, design: .rounded).monospacedDigit())
+                        .font(.system(size: 22, weight: .bold).monospacedDigit())
                         .foregroundColor(i.color)
                     Text(title)
                         .font(.system(size: 14, weight: .medium))
