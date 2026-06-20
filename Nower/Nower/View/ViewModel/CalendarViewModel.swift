@@ -39,6 +39,7 @@ class CalendarViewModel: ObservableObject {
 
     // 시간/알림 프로퍼티 (iOS 버전과 호환)
     @Published var selectedScheduledTime: String?      // "HH:mm" or nil
+    @Published var selectedEndScheduledTime: String?   // "HH:mm" or nil (종료 시각)
     @Published var selectedReminderMinutesBefore: Int?  // minutes or nil
 
     // 반복 일정 프로퍼티
@@ -261,6 +262,7 @@ class CalendarViewModel: ObservableObject {
             date: date.toDateString(),
             colorName: selectedColorName,
             scheduledTime: selectedScheduledTime,
+            endScheduledTime: selectedEndScheduledTime,
             reminderMinutesBefore: selectedReminderMinutesBefore,
             recurrenceInfo: selectedRecurrenceInfo
         )
@@ -282,6 +284,7 @@ class CalendarViewModel: ObservableObject {
             endDate: endDate,
             colorName: selectedColorName,
             scheduledTime: selectedScheduledTime,
+            endScheduledTime: selectedEndScheduledTime,
             reminderMinutesBefore: selectedReminderMinutesBefore
         )
         addTodoUseCase.execute(todo: newTodo)

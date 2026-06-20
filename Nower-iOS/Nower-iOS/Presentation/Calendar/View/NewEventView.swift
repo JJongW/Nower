@@ -427,7 +427,10 @@ final class NewEventView: UIView {
     // MARK: - 시간/알림 프로퍼티
 
     var selectedScheduledTime: String? {
-        didSet { updateTimeDisplay() }
+        didSet {
+            updateTimeDisplay()
+            updateEndTimeRowVisibility()
+        }
     }
 
     var selectedEndScheduledTime: String? {
@@ -1046,16 +1049,11 @@ final class NewEventView: UIView {
     
     private func updateDateSelectionVisibility() {
         if isPeriodMode {
-            // 펼치기
+            // 펼치기 (기간 날짜 선택)
             dateSelectionContainer.isHidden = false
             dateSelectionContainer.alpha = 0
             dateContainerHeightConstraint?.constant = 100
             dateContainerTopConstraint?.constant = 12
-
-            endTimeSettingContainer.isHidden = false
-            endTimeSettingContainer.alpha = 0
-            endTimeContainerHeightConstraint?.constant = 52
-            endTimeContainerTopConstraint?.constant = 8
 
             UIView.animate(
                 withDuration: 0.35,
@@ -1065,8 +1063,6 @@ final class NewEventView: UIView {
                 options: [.curveEaseOut]
             ) {
                 self.dateSelectionContainer.alpha = 1
-                self.endTimeSettingContainer.alpha = 1
-                self.timeTitleLabel.text = "시작 시간"
                 self.layoutIfNeeded()
             }
         } else {
@@ -1081,15 +1077,41 @@ final class NewEventView: UIView {
                 self.dateSelectionContainer.alpha = 0
                 self.dateContainerHeightConstraint?.constant = 0
                 self.dateContainerTopConstraint?.constant = 0
-                self.endTimeSettingContainer.alpha = 0
-                self.endTimeContainerHeightConstraint?.constant = 0
-                self.endTimeContainerTopConstraint?.constant = 0
-                self.timeTitleLabel.text = "시간"
                 self.layoutIfNeeded()
             } completion: { _ in
                 self.dateSelectionContainer.isHidden = true
-                self.endTimeSettingContainer.isHidden = true
             }
+        }
+        // 종료 시간 행은 기간 모드뿐 아니라 "시작 시간이 있는 단일 일정"에도 노출한다.
+        updateEndTimeRowVisibility()
+    }
+
+    /// 종료 시간 행 노출 갱신.
+    /// - 기간 모드: 항상 노출(시작·종료 구간 필요)
+    /// - 단일 일정: 시작 시각이 있으면 노출(같은 날 종료 시각 직접 편집)
+    private func updateEndTimeRowVisibility() {
+        let shouldShow = isPeriodMode || (selectedScheduledTime != nil)
+
+        // 단일 일정에서 시작 시각을 지우면 종료 시각도 의미가 없으므로 함께 비운다.
+        if !shouldShow && selectedEndScheduledTime != nil {
+            selectedEndScheduledTime = nil
+        }
+
+        if shouldShow { endTimeSettingContainer.isHidden = false }
+        UIView.animate(
+            withDuration: 0.3,
+            delay: 0,
+            usingSpringWithDamping: 0.9,
+            initialSpringVelocity: 0,
+            options: [.curveEaseInOut]
+        ) {
+            self.endTimeSettingContainer.alpha = shouldShow ? 1 : 0
+            self.endTimeContainerHeightConstraint?.constant = shouldShow ? 52 : 0
+            self.endTimeContainerTopConstraint?.constant = shouldShow ? 8 : 0
+            self.timeTitleLabel.text = shouldShow ? "시작 시간" : "시간"
+            self.layoutIfNeeded()
+        } completion: { _ in
+            if !shouldShow { self.endTimeSettingContainer.isHidden = true }
         }
     }
     
@@ -1282,7 +1304,7 @@ final class NewEventView: UIView {
                 endTimeValueButton.setTitle(time, for: .normal)
             }
         } else {
-            endTimeValueButton.setTitle("하루 종일", for: .normal)
+            endTimeValueButton.setTitle(isPeriodMode ? "하루 종일" : "미설정", for: .normal)
         }
     }
 
@@ -1553,11 +1575,13 @@ final class NewEventView: UIView {
             dateSelectionContainer.alpha = 0
             dateContainerHeightConstraint?.constant = 0
             dateContainerTopConstraint?.constant = 0
-            endTimeSettingContainer.isHidden = true
-            endTimeSettingContainer.alpha = 0
-            endTimeContainerHeightConstraint?.constant = 0
-            endTimeContainerTopConstraint?.constant = 0
-            timeTitleLabel.text = "시간"
+            // 단일 일정도 시작 시각이 있으면 종료 시간 행을 유지한다(편집 진입 등).
+            let showEnd = selectedScheduledTime != nil
+            endTimeSettingContainer.isHidden = !showEnd
+            endTimeSettingContainer.alpha = showEnd ? 1 : 0
+            endTimeContainerHeightConstraint?.constant = showEnd ? 52 : 0
+            endTimeContainerTopConstraint?.constant = showEnd ? 8 : 0
+            timeTitleLabel.text = showEnd ? "시작 시간" : "시간"
         }
         periodModeSwitch.isOn = enabled
         isPeriodMode = enabled

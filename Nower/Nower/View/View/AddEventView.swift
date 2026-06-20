@@ -34,6 +34,10 @@ struct AddEventView: View {
     @State private var hasTime: Bool = false
     @State private var selectedTime: Date = Date()
 
+    // 종료 시간 설정 (단일 일정도 같은 날 종료 시각을 직접 편집)
+    @State private var hasEndTime: Bool = false
+    @State private var selectedEndTime: Date = Date()
+
     // 알림 설정 (nil = 없음)
     @State private var hasReminder: Bool = false
     @State private var reminderMinutes: Int = 0
@@ -229,6 +233,43 @@ struct AddEventView: View {
                             menuButton(title: "하루 종일") {
                                 hasTime = true
                             }
+                        }
+                    }
+
+                    // 종료 시간 — 시작 시각이 있을 때만. 같은 날 종료 시각을 직접 편집.
+                    if hasTime {
+                        formRow(label: "종료 시간") {
+                            if hasEndTime {
+                                HStack(spacing: 8) {
+                                    DatePicker("", selection: $selectedEndTime, displayedComponents: .hourAndMinute)
+                                        .datePickerStyle(.compact)
+                                        .labelsHidden()
+                                        .frame(width: 90)
+                                    Button(action: { hasEndTime = false }) {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(AppColors.textFieldPlaceholder)
+                                    }
+                                    .buttonStyle(.borderless)
+                                    .help("종료 시간 없음")
+                                }
+                            } else {
+                                menuButton(title: "미설정") {
+                                    selectedEndTime = Calendar.current.date(byAdding: .hour, value: 1, to: selectedTime) ?? selectedTime
+                                    hasEndTime = true
+                                }
+                            }
+                        }
+                        if hasEndTime && selectedEndTime <= selectedTime {
+                            HStack(spacing: 4) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(AppColors.coralred)
+                                    .font(.system(size: 11))
+                                Text("종료 시간은 시작 시간보다 뒤여야 합니다")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(AppColors.coralred)
+                            }
+                            .padding(.leading, 92)
                         }
                     }
 
@@ -502,6 +543,12 @@ struct AddEventView: View {
                 selectedTime = combined
             }
         }
+        if let e = d.endTime {
+            hasEndTime = true
+            if let combinedEnd = Calendar.current.date(bySettingHour: e.hour, minute: e.minute, second: 0, of: selectedDate) {
+                selectedEndTime = combinedEnd
+            }
+        }
         if let r = d.recurrenceRule { selectedRecurrence = RecurrenceInfo.from(r) }
         if !d.title.isEmpty { eventText = d.title }
         nlDraft = nil
@@ -562,6 +609,8 @@ struct AddEventView: View {
         guard !trimmedText.isEmpty else { return }
 
         let scheduledTime: String? = hasTime ? formatTime(selectedTime) : nil
+        // 종료 시각은 시작 시각이 있고, 시작보다 뒤일 때만 유효.
+        let endScheduledTime: String? = (hasTime && hasEndTime && selectedEndTime > selectedTime) ? formatTime(selectedEndTime) : nil
         let reminderMinutesBefore: Int? = hasReminder ? reminderMinutes : nil
 
         if isPeriodMode {
@@ -572,6 +621,7 @@ struct AddEventView: View {
             viewModel.selectedColorName = selectedColor
             viewModel.isRepeating = false
             viewModel.selectedScheduledTime = scheduledTime
+            viewModel.selectedEndScheduledTime = endScheduledTime
             viewModel.selectedReminderMinutesBefore = reminderMinutesBefore
             viewModel.selectedRecurrenceInfo = nil
             viewModel.addPeriodTodo()
@@ -581,6 +631,7 @@ struct AddEventView: View {
             viewModel.selectedColorName = selectedColor
             viewModel.isRepeating = selectedRecurrence != nil
             viewModel.selectedScheduledTime = scheduledTime
+            viewModel.selectedEndScheduledTime = endScheduledTime
             viewModel.selectedReminderMinutesBefore = reminderMinutesBefore
             viewModel.selectedRecurrenceInfo = selectedRecurrence
             viewModel.addTodo()
