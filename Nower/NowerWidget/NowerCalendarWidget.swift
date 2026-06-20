@@ -384,16 +384,14 @@ struct LargeCalendarView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 40)
-            
-            // 년도/월 표시 (중앙 정렬)
+            // 년도/월 표시 (좌측 정렬)
             HStack {
-                Spacer()
                 Text(monthYearString)
                     .font(.system(size: 15, weight: .bold))
                     .foregroundColor(WidgetAppColors.textPrimary(colorScheme))
                 Spacer()
             }
+            .padding(.horizontal, 4)
             .padding(.bottom, 10)
             
             // 요일 헤더
