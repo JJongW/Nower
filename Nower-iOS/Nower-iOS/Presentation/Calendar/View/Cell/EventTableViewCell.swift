@@ -137,13 +137,11 @@ class EventTableViewCell: UITableViewCell {
             }
         } else {
             if let time = todo.scheduledTime {
-                let parts = time.split(separator: ":")
-                if parts.count == 2, let hour = Int(parts[0]), let minute = Int(parts[1]) {
-                    let period = hour < 12 ? "오전" : "오후"
-                    let displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour)
-                    subtitleParts.append(String(format: "%@ %d:%02d", period, displayHour, minute))
+                // 종료 시각이 있으면 "오전 11:00 ~ 오후 6:00" 범위로 표시
+                if let endTime = todo.endScheduledTime {
+                    subtitleParts.append("\(Self.koreanTime(time)) ~ \(Self.koreanTime(endTime))")
                 } else {
-                    subtitleParts.append(time)
+                    subtitleParts.append(Self.koreanTime(time))
                 }
             } else {
                 subtitleParts.append("종일")
@@ -151,5 +149,14 @@ class EventTableViewCell: UITableViewCell {
         }
 
         eventSubtitleLabel.text = subtitleParts.joined(separator: " · ")
+    }
+
+    /// "HH:mm" → "오전/오후 h:mm". 형식이 어긋나면 원본 반환.
+    private static func koreanTime(_ time: String) -> String {
+        let parts = time.split(separator: ":")
+        guard parts.count == 2, let hour = Int(parts[0]), let minute = Int(parts[1]) else { return time }
+        let period = hour < 12 ? "오전" : "오후"
+        let displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour)
+        return String(format: "%@ %d:%02d", period, displayHour, minute)
     }
 }

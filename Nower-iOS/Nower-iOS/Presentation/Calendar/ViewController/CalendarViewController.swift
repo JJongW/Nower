@@ -852,35 +852,52 @@ final class CalendarViewController: UIViewController {
         let today = Calendar.current.startOfDay(for: now)
         let todos = viewModel.todos(for: today)
 
-        // 시간이 있고 아직 시작 전인 일정 중 가장 이른 것
-        let next = todos
-            .compactMap { todo -> (TodoItem, Date)? in
-                guard let t = todo.scheduledTime,
-                      let start = TodoItem.combineTime(t, with: today),
-                      start > now else { return nil }
-                return (todo, start)
-            }
-            .min { $0.1 < $1.1 }
+        // 시간 일정의 (todo, 시작, 종료) — 종료는 실제 값(없으면 +1시간)
+        let timed = todos.compactMap { todo -> (todo: TodoItem, start: Date, end: Date)? in
+            guard let t = todo.scheduledTime, let start = TodoItem.combineTime(t, with: today) else { return nil }
+            return (todo, start, Self.liveActivityEnd(of: todo, start: start, today: today))
+        }
+
+        // 진행 중(지금 구간 안)을 다음 예정보다 우선한다. 진행 중이 여러 개면 먼저 끝나는 것.
+        let ongoing = timed.filter { $0.start <= now && now < $0.end }.min { $0.end < $1.end }
+        let next = timed.filter { $0.start > now }.min { $0.start < $1.start }
 
         let densityLabel = NowerDensity.report(todos: todos, day: today).band.label
 
-        #if DEBUG
-        print("[LiveActivity] refresh — 오늘 일정 \(todos.count)개, 다음 시간일정: \(next?.0.text ?? "없음")")
-        #endif
-
-        guard let (todo, start) = next else {
-            NowerLiveActivityManager.shared.sync(densityLabel: densityLabel, state: nil)
-            scheduleBoundaryRefresh(todos: todos, now: now, today: today)
-            return
+        let state: NowerLiveActivityAttributes.ContentState?
+        if let o = ongoing {
+            state = NowerLiveActivityAttributes.ContentState(
+                eventTitle: o.todo.text,
+                eventDate: o.end,                       // 종료까지 카운트다운
+                startTime: o.todo.scheduledTime ?? "",
+                mode: .inProgress,
+                detail: "~\(o.todo.endScheduledTime ?? Self.hhmm(o.end)) 종료"
+            )
+        } else if let n = next {
+            state = NowerLiveActivityAttributes.ContentState(
+                eventTitle: n.todo.text,
+                eventDate: n.start,
+                startTime: n.todo.scheduledTime ?? "",
+                mode: .upcoming
+            )
+        } else {
+            state = nil
         }
-        let state = NowerLiveActivityAttributes.ContentState(
-            eventTitle: todo.text,
-            eventDate: start,
-            startTime: todo.scheduledTime ?? "",
-            mode: .upcoming
-        )
+
         NowerLiveActivityManager.shared.sync(densityLabel: densityLabel, state: state)
         scheduleBoundaryRefresh(todos: todos, now: now, today: today)
+    }
+
+    /// 시간 일정의 종료 Date — 실제 종료 시각(있으면) / 없으면 시작 +1시간.
+    private static func liveActivityEnd(of todo: TodoItem, start: Date, today: Date) -> Date {
+        if let e = todo.endScheduledTime, let end = TodoItem.combineTime(e, with: today), end > start { return end }
+        return start.addingTimeInterval(3600)
+    }
+
+    /// Date → "HH:mm"
+    private static func hhmm(_ date: Date) -> String {
+        let c = Calendar.current.dateComponents([.hour, .minute], from: date)
+        return String(format: "%02d:%02d", c.hour ?? 0, c.minute ?? 0)
     }
 
     /// 다음 일정 경계(시작/끝)가 도래하면 Live Activity·위젯을 다시 동기화한다.
@@ -896,7 +913,7 @@ final class CalendarViewController: UIViewController {
             guard let t = todo.scheduledTime,
                   let start = TodoItem.combineTime(t, with: today) else { continue }
             if start > now { boundaries.append(start) }
-            let end = start.addingTimeInterval(3600)
+            let end = Self.liveActivityEnd(of: todo, start: start, today: today)
             if end > now { boundaries.append(end) }
         }
         guard let next = boundaries.min() else { return }

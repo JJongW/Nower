@@ -287,7 +287,7 @@ final class NewEventView: UIView {
 
     let endTimeValueButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("하루 종일", for: .normal)
+        button.setTitle("종료 시간 없음", for: .normal)
         button.setTitleColor(AppColors.textFieldPlaceholder, for: .normal)
         button.titleLabel?.font = UIFont.systemFont(ofSize: 15, weight: .medium)
         return button
@@ -435,8 +435,13 @@ final class NewEventView: UIView {
 
     var selectedScheduledTime: String? {
         didSet {
+            // 시작 시간이 없으면 종료 시간도 의미가 없으므로 함께 비운다 (기간 모드 포함).
+            if selectedScheduledTime == nil, selectedEndScheduledTime != nil {
+                selectedEndScheduledTime = nil
+            }
             updateTimeDisplay()
             updateEndTimeRowVisibility()
+            updateEndTimeEnabled()
         }
     }
 
@@ -777,6 +782,8 @@ final class NewEventView: UIView {
 
         // 시간 미설정 시 알림 행 비활성화
         updateReminderEnabled()
+        // 시작 시간 미설정 시 종료 시간 행 비활성화
+        updateEndTimeEnabled()
 
         // 반복 설정 행
         contentView.addSubview(recurrenceSettingContainer)
@@ -1129,6 +1136,7 @@ final class NewEventView: UIView {
         } completion: { _ in
             if !shouldShow { self.endTimeSettingContainer.isHidden = true }
         }
+        updateEndTimeEnabled()
     }
     
     private enum DatePickerType {
@@ -1265,6 +1273,11 @@ final class NewEventView: UIView {
 
     @objc private func endTimeValueButtonTapped() {
         endEditing(true)
+        // 종료 시간은 시작 시간이 있어야 의미가 있다.
+        guard selectedScheduledTime != nil else {
+            findViewController()?.showToast(message: "시작 시간을 먼저 설정해 주세요")
+            return
+        }
         guard let parentView = findViewController()?.view else { return }
         // 종료 시간 피커: 빈 값이면 휠을 바로 노출(시작 시각으로 시드)하고, 토글은 "종료 시간 없음".
         let picker = TimePickerView(
@@ -1326,8 +1339,10 @@ final class NewEventView: UIView {
             } else {
                 endTimeValueButton.setTitle(time, for: .normal)
             }
+            endTimeValueButton.setTitleColor(AppColors.textHighlighted, for: .normal)
         } else {
-            endTimeValueButton.setTitle(isPeriodMode ? "하루 종일" : "미설정", for: .normal)
+            endTimeValueButton.setTitle("종료 시간 없음", for: .normal)
+            endTimeValueButton.setTitleColor(AppColors.textFieldPlaceholder, for: .normal)
         }
     }
 
@@ -1353,6 +1368,15 @@ final class NewEventView: UIView {
         let enabled = selectedScheduledTime != nil
         reminderSettingContainer.alpha = enabled ? 1.0 : 0.4
         reminderValueButton.isEnabled = enabled
+    }
+
+    /// 종료 시간 행은 시작 시간이 설정된 경우에만 활성화한다.
+    /// (행 표시/숨김은 updateEndTimeRowVisibility가 담당하므로 여기선 값/셰브론만 흐리게 처리.)
+    private func updateEndTimeEnabled() {
+        let enabled = selectedScheduledTime != nil
+        endTimeValueButton.isEnabled = enabled
+        endTimeValueButton.alpha = enabled ? 1.0 : 0.4
+        endTimeChevron.alpha = enabled ? 1.0 : 0.4
     }
 
     // MARK: - 반복 Actions & Display
