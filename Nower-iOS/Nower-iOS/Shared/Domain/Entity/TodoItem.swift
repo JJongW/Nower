@@ -102,7 +102,7 @@ struct TodoItem: Identifiable, Codable {
 
     // 시간대별 일정 및 알림을 위한 필드들
     let scheduledTime: String?       // "HH:mm" 형식, nil = 하루 종일
-    let endScheduledTime: String?    // "HH:mm" 형식, 기간별 일정의 종료 시간 (nil = 하루 종일)
+    let endScheduledTime: String?    // "HH:mm" 형식, 종료 시각. nil = 종료 시간 없음 → 밀도/위젯은 시작 +1시간으로 처리
     let reminderMinutesBefore: Int?  // nil = 알림 없음, 0 = 정시, 5/10/30/60/1440
 
     // 반복 일정을 위한 필드들

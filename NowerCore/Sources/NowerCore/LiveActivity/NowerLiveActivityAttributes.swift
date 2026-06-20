@@ -47,6 +47,7 @@ public struct NowerLiveActivityAttributes: ActivityAttributes {
 
     /// Companion 상태 종류
     public enum Mode: String, Codable, Hashable {
+        case inProgress   // 지금 진행 중인 일정 (종료까지 남은 시간)
         case upcoming     // 다음 일정까지 남은 시간
         case travelPrep   // 이동 준비 카운트다운
         case focusBlock   // 집중 블록 진행 중
@@ -56,6 +57,7 @@ public struct NowerLiveActivityAttributes: ActivityAttributes {
         /// 표시 라벨
         public var label: String {
             switch self {
+            case .inProgress: return "진행 중"
             case .upcoming: return "다음 일정"
             case .travelPrep: return "이동 준비"
             case .focusBlock: return "집중 중"
@@ -67,6 +69,7 @@ public struct NowerLiveActivityAttributes: ActivityAttributes {
         /// SF Symbol 이름
         public var symbol: String {
             switch self {
+            case .inProgress: return "hourglass"
             case .upcoming: return "calendar"
             case .travelPrep: return "figure.walk"
             case .focusBlock: return "brain.head.profile"
