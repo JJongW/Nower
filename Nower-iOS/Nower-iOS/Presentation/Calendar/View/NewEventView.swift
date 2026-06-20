@@ -1250,7 +1250,14 @@ final class NewEventView: UIView {
     @objc private func endTimeValueButtonTapped() {
         endEditing(true)
         guard let parentView = findViewController()?.view else { return }
-        let picker = TimePickerView(currentTime: selectedEndScheduledTime, contextText: timePickerContextText())
+        // 종료 시간 피커: 빈 값이면 휠을 바로 노출(시작 시각으로 시드)하고, 토글은 "종료 시간 없음".
+        let picker = TimePickerView(
+            currentTime: selectedEndScheduledTime,
+            contextText: timePickerContextText(),
+            allDayTitle: "종료 시간 없음",
+            allDayWhenEmpty: false,
+            seedTime: selectedScheduledTime
+        )
         picker.onTimeSelected = { [weak self] time in
             self?.selectedEndScheduledTime = time
         }
