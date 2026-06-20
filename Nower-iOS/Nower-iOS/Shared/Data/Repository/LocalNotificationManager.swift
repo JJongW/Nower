@@ -8,6 +8,7 @@
 
 import Foundation
 import UserNotifications
+import UIKit
 
 final class LocalNotificationManager: NSObject {
     static let shared = LocalNotificationManager()
@@ -17,6 +18,7 @@ final class LocalNotificationManager: NSObject {
     private override init() {
         super.init()
         center.delegate = self
+        registerDepartureCategory()
     }
 
     // MARK: - Permission
@@ -60,6 +62,101 @@ final class LocalNotificationManager: NSObject {
         )
 
         center.add(request)
+    }
+
+    // MARK: - Departure Nudge Notifications
+
+    /// 출발 알림 ID 접두사. 일반 알림과 구분합니다.
+    private static let departurePrefix = "departure-"
+
+    /// 출발 알림 카테고리·액션 식별자.
+    private enum DepartureAction {
+        static let category = "DEPARTURE_NUDGE"
+        static let openMap = "DEPARTURE_OPEN_MAP"
+        static let snooze = "DEPARTURE_SNOOZE_10"
+    }
+
+    /// 출발 알림 userInfo 키.
+    private enum DepartureKey {
+        static let body = "body"
+        static let originLat = "oLat"
+        static let originLng = "oLng"
+        static let destLat = "dLat"
+        static let destLng = "dLng"
+        static let destName = "destName"
+    }
+
+    /// "지도 열기"/"10분 미루기" 액션이 달린 출발 알림 카테고리를 등록합니다.
+    private func registerDepartureCategory() {
+        let openMap = UNNotificationAction(
+            identifier: DepartureAction.openMap,
+            title: "지도 열기",
+            options: [.foreground]
+        )
+        let snooze = UNNotificationAction(
+            identifier: DepartureAction.snooze,
+            title: "10분 미루기",
+            options: []
+        )
+        let category = UNNotificationCategory(
+            identifier: DepartureAction.category,
+            actions: [openMap, snooze],
+            intentIdentifiers: [],
+            options: []
+        )
+        center.setNotificationCategories([category])
+    }
+
+    /// 출발 알림을 지정 시각에 예약합니다.
+    /// - Parameters:
+    ///   - todoId: 대상 일정 ID
+    ///   - body: 알림 본문 (소요시간·기상 안내 문구)
+    ///   - fireDate: 알림 발송 시각 (= 출발 준비 시작 시각)
+    ///   - origin: 출발지 좌표 (지도 열기 길찾기 출발점)
+    ///   - destination: 목적지 좌표 (지도 열기 길찾기 도착점)
+    ///   - destinationName: 목적지 이름 (지도 마커 라벨)
+    func scheduleDepartureNotification(
+        todoId: UUID,
+        body: String,
+        fireDate: Date,
+        origin: (lat: Double, lng: Double),
+        destination: (lat: Double, lng: Double),
+        destinationName: String
+    ) {
+        guard fireDate > Date() else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Nower"
+        content.body = body
+        content.sound = .default
+        content.categoryIdentifier = DepartureAction.category
+        content.userInfo = [
+            DepartureKey.body: body,
+            DepartureKey.originLat: origin.lat,
+            DepartureKey.originLng: origin.lng,
+            DepartureKey.destLat: destination.lat,
+            DepartureKey.destLng: destination.lng,
+            DepartureKey.destName: destinationName
+        ]
+
+        let components = Calendar.current.dateComponents(
+            [.year, .month, .day, .hour, .minute],
+            from: fireDate
+        )
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: Self.departurePrefix + todoId.uuidString,
+            content: content,
+            trigger: trigger
+        )
+        center.add(request)
+    }
+
+    /// 특정 일정의 출발 알림을 취소합니다.
+    func cancelDepartureNotification(for todoId: UUID) {
+        center.removePendingNotificationRequests(
+            withIdentifiers: [Self.departurePrefix + todoId.uuidString]
+        )
     }
 
     // MARK: - Recurring Event Notifications
@@ -141,5 +238,65 @@ extension LocalNotificationManager: UNUserNotificationCenterDelegate {
     ) {
         // 앱이 포그라운드일 때도 알림 표시
         completionHandler([.banner, .sound])
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        defer { completionHandler() }
+        let info = response.notification.request.content.userInfo
+        switch response.actionIdentifier {
+        case DepartureAction.openMap, UNNotificationDefaultActionIdentifier:
+            openDirections(from: info)
+        case DepartureAction.snooze:
+            snoozeDeparture(response.notification.request, by: 10 * 60)
+        default:
+            break
+        }
+    }
+
+    // MARK: - Departure Actions
+
+    /// 출발지·목적지가 채워진 길찾기를 외부 지도앱으로 엽니다.
+    /// 카카오맵 → (실패 시) Apple 지도 순으로 폴백합니다.
+    private func openDirections(from info: [AnyHashable: Any]) {
+        guard let oLat = info[DepartureKey.originLat] as? Double,
+              let oLng = info[DepartureKey.originLng] as? Double,
+              let dLat = info[DepartureKey.destLat] as? Double,
+              let dLng = info[DepartureKey.destLng] as? Double else { return }
+        let destName = (info[DepartureKey.destName] as? String) ?? ""
+
+        let kakao = URL(string: "kakaomap://route?sp=\(oLat),\(oLng)&ep=\(dLat),\(dLng)&by=CAR")
+        let appleName = destName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let apple = URL(string: "http://maps.apple.com/?saddr=\(oLat),\(oLng)&daddr=\(dLat),\(dLng)&dirflg=d&q=\(appleName)")
+
+        DispatchQueue.main.async {
+            let app = UIApplication.shared
+            if let kakao = kakao, app.canOpenURL(kakao) {
+                app.open(kakao)
+            } else if let apple = apple {
+                app.open(apple)
+            }
+        }
+    }
+
+    /// 출발 알림을 지정 간격만큼 뒤로 다시 예약합니다("10분 미루기").
+    private func snoozeDeparture(_ request: UNNotificationRequest, by seconds: TimeInterval) {
+        let content = UNMutableNotificationContent()
+        content.title = request.content.title
+        content.body = request.content.body
+        content.sound = request.content.sound
+        content.categoryIdentifier = request.content.categoryIdentifier
+        content.userInfo = request.content.userInfo
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: seconds, repeats: false)
+        let snoozed = UNNotificationRequest(
+            identifier: request.identifier,
+            content: content,
+            trigger: trigger
+        )
+        center.add(snoozed)
     }
 }

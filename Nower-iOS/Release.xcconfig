@@ -6,3 +6,7 @@
 //
 
 KASI_API_KEY = ea233ba6cdc3fe286fd33c568452ca9dd4f0251a6a8d5afd0699c9c13078f85b
+
+// 카카오모빌리티 길찾기 REST API 키. 비어 있으면 출발 알림 ETA가 Mock(근사치)로 동작.
+// Kakao Developers > 내 애플리케이션 > REST API 키 값을 넣으세요.
+KAKAO_REST_API_KEY =
