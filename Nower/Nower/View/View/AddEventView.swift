@@ -533,24 +533,26 @@ struct AddEventView: View {
         return parts.joined(separator: " · ") + " 적용"
     }
 
-    /// 분석 결과를 폼 상태에 채움 (저장은 Command+Return / 저장 버튼)
+    /// 분석 결과를 폼 상태에 채움 (저장은 Command+Return / 저장 버튼).
+    /// 정규화(역전 보정·시작 없는 종료 제거)는 공유 EventFormInput이 담당.
     private func applyNLDraft() {
         guard let d = nlDraft else { return }
-        if let date = d.date { selectedDate = date }
-        if let s = d.startTime {
+        let input = EventFormInput.from(draft: d)
+        if let date = input.date { selectedDate = date }
+        if let s = input.startHHmm.flatMap(EventTimeFormatting.parse(hhmm:)) {
             hasTime = true
             if let combined = Calendar.current.date(bySettingHour: s.hour, minute: s.minute, second: 0, of: selectedDate) {
                 selectedTime = combined
             }
         }
-        if let e = d.endTime {
+        if let e = input.endHHmm.flatMap(EventTimeFormatting.parse(hhmm:)) {
             hasEndTime = true
             if let combinedEnd = Calendar.current.date(bySettingHour: e.hour, minute: e.minute, second: 0, of: selectedDate) {
                 selectedEndTime = combinedEnd
             }
         }
-        if let r = d.recurrenceRule { selectedRecurrence = RecurrenceInfo.from(r) }
-        if !d.title.isEmpty { eventText = d.title }
+        if let r = input.recurrenceRule { selectedRecurrence = RecurrenceInfo.from(r) }
+        if !input.title.isEmpty { eventText = input.title }
         nlDraft = nil
     }
 
