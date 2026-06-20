@@ -32,6 +32,9 @@ struct WidgetTodoItem: Identifiable, Codable {
 
     /// 시작 시각 "HH:mm" (앱의 TodoItem 데이터에서 함께 읽힘, 없으면 종일)
     var scheduledTime: String? = nil
+
+    /// 종료 시각 "HH:mm" (없으면 시작+1시간으로 가정)
+    var endScheduledTime: String? = nil
     
     /// 단일 날짜 WidgetTodoItem 생성자
     init(text: String, isRepeating: Bool, date: String, colorName: String) {
@@ -343,7 +346,8 @@ struct TodayProvider: TimelineProvider {
         for todo in todos {
             guard let t = todo.scheduledTime, let start = WidgetTodayInsight.combine(t, today) else { continue }
             if start > now { boundaries.insert(start) }
-            let end = start.addingTimeInterval(3600) // 인사이트와 동일한 1시간 길이 가정
+            // 실제 종료 시각 경계 — 일정이 끝나는 바로 그 순간 위젯이 다음 상태로 전환된다.
+            let end = WidgetTodayInsight.endOf(todo, start: start, day: today)
             if end > now { boundaries.insert(end) }
         }
 
@@ -425,6 +429,9 @@ struct WidgetTodayInsight {
     let bandHex: String
     let nextTime: String?
     let nextTitle: String?
+    /// 지금 진행 중인 시간 일정 (start ≤ now < end)
+    let ongoingTitle: String?
+    let ongoingEndTime: String?
     let phrase: String
     let count: Int
 
@@ -434,13 +441,13 @@ struct WidgetTodayInsight {
         let todays = todos.filter { $0.includesDate(today) }
         count = todays.count
 
-        // 앱과 같은 밀도 엔진 사용 (의미 일치)
+        // 앱과 같은 밀도 엔진 사용 (의미 일치). 종료 시각은 실제 값(없으면 +1시간).
         var events: [NowerCore.Event] = []
         for t in todays {
             if let timeStr = t.scheduledTime, let start = Self.combine(timeStr, today) {
                 events.append(NowerCore.Event(
                     title: t.text, startDateTime: start,
-                    endDateTime: start.addingTimeInterval(3600), isAllDay: false))
+                    endDateTime: Self.endOf(t, start: start, day: today), isAllDay: false))
             } else {
                 events.append(NowerCore.Event(
                     title: t.text, startDateTime: today,
@@ -451,13 +458,21 @@ struct WidgetTodayInsight {
         bandLabel = report.band.label
         bandHex = report.band.colorHex
 
-        // 다음 시간 일정
-        let upcoming = todays.compactMap { t -> (Date, WidgetTodoItem)? in
-            guard let s = t.scheduledTime, let d = Self.combine(s, today), d > now else { return nil }
-            return (d, t)
-        }.min { $0.0 < $1.0 }
-        nextTime = upcoming?.1.scheduledTime
-        nextTitle = upcoming?.1.text
+        // 시간 일정의 (시작, 끝)을 모은다.
+        let timed = todays.compactMap { t -> (start: Date, end: Date, item: WidgetTodoItem)? in
+            guard let s = t.scheduledTime, let start = Self.combine(s, today) else { return nil }
+            return (start, Self.endOf(t, start: start, day: today), t)
+        }
+
+        // 진행 중: 지금 시점이 구간 안. 가장 먼저 끝나는 것 우선.
+        let ongoing = timed.filter { $0.start <= now && now < $0.end }.min { $0.end < $1.end }
+        ongoingTitle = ongoing?.item.text
+        ongoingEndTime = ongoing.map { $0.item.endScheduledTime ?? Self.hhmm($0.end) }
+
+        // 다음 시간 일정 (아직 시작 전)
+        let upcoming = timed.filter { $0.start > now }.min { $0.start < $1.start }
+        nextTime = upcoming?.item.scheduledTime
+        nextTitle = upcoming?.item.text
 
         switch report.band {
         case .light:
@@ -476,10 +491,28 @@ struct WidgetTodayInsight {
         return "\(t) \(title)"
     }
 
+    /// 진행 중 일정 한 줄 ("병원 ~15:00") — 없으면 nil
+    var ongoingLine: String? {
+        guard let title = ongoingTitle, let end = ongoingEndTime else { return nil }
+        return "\(title) ~\(end)"
+    }
+
     static func combine(_ hhmm: String, _ day: Date) -> Date? {
         let p = hhmm.split(separator: ":")
         guard p.count == 2, let h = Int(p[0]), let m = Int(p[1]) else { return nil }
         return Calendar.current.date(bySettingHour: h, minute: m, second: 0, of: day)
+    }
+
+    /// 시간 일정의 종료 Date — 실제 종료 시각(있으면) / 없으면 시작 +1시간.
+    static func endOf(_ t: WidgetTodoItem, start: Date, day: Date) -> Date {
+        if let e = t.endScheduledTime, let end = combine(e, day), end > start { return end }
+        return start.addingTimeInterval(3600)
+    }
+
+    /// Date → "HH:mm"
+    static func hhmm(_ date: Date) -> String {
+        let c = Calendar.current.dateComponents([.hour, .minute], from: date)
+        return String(format: "%02d:%02d", c.hour ?? 0, c.minute ?? 0)
     }
 }
 
@@ -529,7 +562,12 @@ struct TodayWidgetEntryView: View {
 
             Spacer(minLength: 6)
 
-            if let next = i.nextLine {
+            if let ongoing = i.ongoingLine {
+                Text("지금 · \(ongoing)")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(i.color)
+                    .lineLimit(1)
+            } else if let next = i.nextLine {
                 Text("다음 · \(next)")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(WidgetAppColors.textPrimary(colorScheme))
@@ -570,10 +608,21 @@ struct TodayWidgetEntryView: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("다음 일정")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(WidgetAppColors.textFieldPlaceholder(colorScheme))
-                if let time = i.nextTime, let title = i.nextTitle {
+                if let title = i.ongoingTitle, let end = i.ongoingEndTime {
+                    Text("진행 중")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(i.color)
+                    Text("~\(end)")
+                        .font(.system(size: 22, weight: .bold).monospacedDigit())
+                        .foregroundColor(i.color)
+                    Text(title)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(WidgetAppColors.textPrimary(colorScheme))
+                        .lineLimit(2)
+                } else if let time = i.nextTime, let title = i.nextTitle {
+                    Text("다음 일정")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(WidgetAppColors.textFieldPlaceholder(colorScheme))
                     Text(time)
                         .font(.system(size: 22, weight: .bold).monospacedDigit())
                         .foregroundColor(i.color)
@@ -582,6 +631,9 @@ struct TodayWidgetEntryView: View {
                         .foregroundColor(WidgetAppColors.textPrimary(colorScheme))
                         .lineLimit(2)
                 } else {
+                    Text("다음 일정")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(WidgetAppColors.textFieldPlaceholder(colorScheme))
                     Text("남은 일정이 없어요")
                         .font(.system(size: 13))
                         .foregroundColor(WidgetAppColors.textFieldPlaceholder(colorScheme))
