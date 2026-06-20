@@ -19,8 +19,9 @@ import NowerCore
 struct NowerLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: NowerLiveActivityAttributes.self) { context in
+            // 배경 틴트를 시스템에 맡긴다. 커스텀 흰색 틴트는 라이트모드 잠금화면에서
+            // 시스템이 흰 글자를 강제할 때 "흰 배경 + 흰 글자"로 글자가 사라지는 문제가 있었다.
             LockScreenView(state: context.state, density: context.attributes.densityLabel)
-                .activityBackgroundTint(Color(.systemBackground).opacity(0.88))
                 .activitySystemActionForegroundColor(.primary)
         } dynamicIsland: { context in
             let accent = densityColor(context.attributes.densityLabel)
@@ -120,7 +121,7 @@ private struct LockScreenView: View {
 @available(iOS 16.1, *)
 private func countdown(_ date: Date, size: CGFloat) -> some View {
     Text(date, style: .timer)
-        .font(.system(size: size, weight: .bold, design: .rounded).monospacedDigit())
+        .font(.system(size: size, weight: .bold).monospacedDigit())
         .multilineTextAlignment(.trailing)
         .lineLimit(1)
         .minimumScaleFactor(0.7)
