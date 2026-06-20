@@ -288,9 +288,16 @@ final class NewEventView: UIView {
     let endTimeValueButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("하루 종일", for: .normal)
-        button.setTitleColor(AppColors.textHighlighted, for: .normal)
+        button.setTitleColor(AppColors.textFieldPlaceholder, for: .normal)
         button.titleLabel?.font = UIFont.systemFont(ofSize: 15, weight: .medium)
         return button
+    }()
+
+    private let endTimeChevron: UIImageView = {
+        let iv = UIImageView(image: UIImage(systemName: "chevron.right"))
+        iv.tintColor = AppColors.textFieldPlaceholder
+        iv.contentMode = .scaleAspectFit
+        return iv
     }()
 
     let reminderSettingContainer: UIView = {
@@ -549,7 +556,8 @@ final class NewEventView: UIView {
         contentView.addSubview(autocompleteView)
         autocompleteView.snp.makeConstraints {
             $0.top.equalTo(textFieldBackgroundView.snp.bottom)
-            $0.leading.trailing.equalToSuperview().inset(20)
+            // 초기 레이아웃에서 컨테이너 width==0과 충돌하는 일시 경고 방지 (required→999)
+            $0.leading.trailing.equalToSuperview().inset(20).priority(999)
             autocompleteHeightConstraint = $0.height.equalTo(0).constraint
         }
         #endif
@@ -695,6 +703,7 @@ final class NewEventView: UIView {
         endTimeSettingContainer.addSubview(endTimeIconView)
         endTimeSettingContainer.addSubview(endTimeTitleLabel)
         endTimeSettingContainer.addSubview(endTimeValueButton)
+        endTimeSettingContainer.addSubview(endTimeChevron)
 
         endTimeSettingContainer.translatesAutoresizingMaskIntoConstraints = false
         let endTimeTopC = endTimeSettingContainer.topAnchor.constraint(equalTo: timeSettingContainer.bottomAnchor, constant: 0)
@@ -718,8 +727,15 @@ final class NewEventView: UIView {
             $0.centerY.equalToSuperview()
         }
 
-        endTimeValueButton.snp.makeConstraints {
+        endTimeChevron.snp.makeConstraints {
             $0.trailing.equalToSuperview().offset(-16)
+            $0.centerY.equalToSuperview()
+            $0.width.equalTo(8)
+            $0.height.equalTo(13)
+        }
+
+        endTimeValueButton.snp.makeConstraints {
+            $0.trailing.equalTo(endTimeChevron.snp.leading).offset(-8)
             $0.centerY.equalToSuperview()
         }
 

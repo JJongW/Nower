@@ -126,6 +126,7 @@ final class EditEventBottomSheetViewController: UIViewController {
                     date: self.todo.date,
                     colorName: updatedColor,
                     scheduledTime: updatedTime,
+                    endScheduledTime: updatedEndTime,
                     reminderMinutesBefore: updatedReminder,
                     recurrenceInfo: updatedRecurrence
                 )
@@ -157,7 +158,7 @@ final class EditEventBottomSheetViewController: UIViewController {
             viewModel.updatePeriodTodo(original: todo, updatedText: updatedText, updatedColor: updatedColor, startDate: startDate, endDate: endDate, scheduledTime: updatedTime, endScheduledTime: updatedEndTime, reminderMinutesBefore: updatedReminder)
         } else {
             // 단일 날짜 일정으로 변경
-            viewModel.updateTodo(original: todo, updatedText: updatedText, updatedColor: updatedColor, date: selectedDate, scheduledTime: updatedTime, reminderMinutesBefore: updatedReminder)
+            viewModel.updateTodo(original: todo, updatedText: updatedText, updatedColor: updatedColor, date: selectedDate, scheduledTime: updatedTime, endScheduledTime: updatedEndTime, reminderMinutesBefore: updatedReminder)
         }
 
         // 성공 햅틱 피드백

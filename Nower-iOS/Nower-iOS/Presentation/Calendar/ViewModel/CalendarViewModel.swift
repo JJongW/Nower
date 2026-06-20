@@ -307,10 +307,10 @@ final class CalendarViewModel: ObservableObject {
         return allRecurringTodos.first { $0.id == todo.id }
     }
 
-    func updateTodo(original: TodoItem, updatedText: String, updatedColor: String, date: Date? = nil, scheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
+    func updateTodo(original: TodoItem, updatedText: String, updatedColor: String, date: Date? = nil, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil) {
         let targetDate = date ?? original.dateObject ?? Date()
         let dateString = targetDate.toDateString()
-        let updatedTodo = TodoItem(text: updatedText, isRepeating: isRepeating, date: dateString, colorName: updatedColor, scheduledTime: scheduledTime, reminderMinutesBefore: reminderMinutesBefore)
+        let updatedTodo = TodoItem(text: updatedText, isRepeating: isRepeating, date: dateString, colorName: updatedColor, scheduledTime: scheduledTime, endScheduledTime: endScheduledTime, reminderMinutesBefore: reminderMinutesBefore)
         LocalNotificationManager.shared.cancelNotification(for: original.id)
         DepartureNudgeManager.shared.cancel(for: original.id)
         updateTodoUseCase.execute(original: original, updated: updatedTodo)
