@@ -15,6 +15,11 @@
 	</dict>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>kakaomap</string>
+		<string>nmap</string>
+	</array>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>KASI_API_KEY</key>

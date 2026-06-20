@@ -21,7 +21,13 @@ final class DepartureSettingsViewController: UIViewController {
 
     private enum Section: Int, CaseIterable {
         case places
+        case customPlaces
         case timing
+    }
+
+    /// 현재 저장된 자유 장소 목록.
+    private var customPlaces: [SavedPlace] {
+        settings.places.filter { $0.kind == .custom }
     }
 
     private enum TimingRow: Int, CaseIterable {
@@ -102,8 +108,100 @@ final class DepartureSettingsViewController: UIViewController {
         sheet.addAction(UIAlertAction(title: "위치 변경", style: .default) { [weak self] _ in
             self?.openSearch(for: kind)
         })
+        sheet.addAction(UIAlertAction(title: "별칭 편집", style: .default) { [weak self] _ in
+            self?.editAliases(for: place)
+        })
         sheet.addAction(UIAlertAction(title: "위치 삭제", style: .destructive) { [weak self] _ in
             self?.manager.clearFixedCoordinate(kind)
+            self?.settings = self?.manager.currentSettings() ?? .initial
+            self?.tableView.reloadData()
+        })
+        sheet.addAction(UIAlertAction(title: "취소", style: .cancel))
+        present(sheet, animated: true)
+    }
+
+    // MARK: - Aliases (US-A2)
+
+    /// 쉼표로 구분된 별칭을 편집합니다. 충돌 시 안내합니다.
+    private func editAliases(for place: SavedPlace) {
+        let alert = UIAlertController(
+            title: "\(place.name) 별칭",
+            message: "일정 제목에 이 단어가 들어가면 ‘\(place.name)’로 인식해요. 쉼표(,)로 구분하세요.",
+            preferredStyle: .alert
+        )
+        alert.addTextField { tf in
+            tf.text = place.aliases.joined(separator: ", ")
+            tf.placeholder = "예: 회사, 사무실, 출근"
+            tf.autocorrectionType = .no
+        }
+        alert.addAction(UIAlertAction(title: "저장", style: .default) { [weak self, weak alert] _ in
+            let raw = alert?.textFields?.first?.text ?? ""
+            let aliases = raw
+                .split(separator: ",")
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+            self?.saveAliases(aliases, for: place)
+        })
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+        present(alert, animated: true)
+    }
+
+    private func saveAliases(_ aliases: [String], for place: SavedPlace) {
+        let result = manager.setAliases(aliases, for: place.id)
+        if case .conflict(let owner) = result {
+            presentConflict(owner: owner)
+            return
+        }
+        settings = manager.currentSettings()
+        tableView.reloadData()
+    }
+
+    private func presentConflict(owner: String) {
+        let alert = UIAlertController(
+            title: "별칭 충돌",
+            message: "이 별칭은 이미 ‘\(owner)’에서 쓰고 있어요. 다른 단어를 써 주세요.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "확인", style: .default))
+        present(alert, animated: true)
+    }
+
+    // MARK: - Custom places (US-A3)
+
+    /// 자유 장소 추가: 이름 입력 → 지도 검색으로 좌표 저장.
+    private func addCustomPlaceFlow() {
+        let alert = UIAlertController(title: "장소 추가", message: "장소 이름을 입력하세요.", preferredStyle: .alert)
+        alert.addTextField { tf in
+            tf.placeholder = "예: 헬스장, 본가"
+            tf.autocorrectionType = .no
+        }
+        alert.addAction(UIAlertAction(title: "다음", style: .default) { [weak self, weak alert] _ in
+            let name = (alert?.textFields?.first?.text ?? "").trimmingCharacters(in: .whitespaces)
+            guard !name.isEmpty else { return }
+            self?.searchCustomLocation(name: name)
+        })
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+        present(alert, animated: true)
+    }
+
+    private func searchCustomLocation(name: String) {
+        let searchVC = PlaceSearchViewController(placeTitle: name)
+        searchVC.onPick = { [weak self] lat, lng, address in
+            guard let self = self else { return }
+            self.manager.addCustomPlace(name: name, latitude: lat, longitude: lng, address: address, aliases: [])
+            self.settings = self.manager.currentSettings()
+            self.tableView.reloadData()
+        }
+        navigationController?.pushViewController(searchVC, animated: true)
+    }
+
+    private func handleCustomPlaceTap(_ place: SavedPlace) {
+        let sheet = UIAlertController(title: place.name, message: place.address, preferredStyle: .actionSheet)
+        sheet.addAction(UIAlertAction(title: "별칭 편집", style: .default) { [weak self] _ in
+            self?.editAliases(for: place)
+        })
+        sheet.addAction(UIAlertAction(title: "삭제", style: .destructive) { [weak self] _ in
+            self?.manager.removeCustomPlace(place.id)
             self?.settings = self?.manager.currentSettings() ?? .initial
             self?.tableView.reloadData()
         })
@@ -144,6 +242,7 @@ extension DepartureSettingsViewController: UITableViewDataSource, UITableViewDel
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch Section(rawValue: section) {
         case .places: return 2 // 집, 회사
+        case .customPlaces: return customPlaces.count + 1 // 자유 장소 + "장소 추가"
         case .timing: return TimingRow.allCases.count
         case .none: return 0
         }
@@ -152,6 +251,7 @@ extension DepartureSettingsViewController: UITableViewDataSource, UITableViewDel
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
         switch Section(rawValue: section) {
         case .places: return "저장 장소"
+        case .customPlaces: return "자유 장소"
         case .timing: return "출발 알림 설정"
         case .none: return nil
         }
@@ -161,6 +261,8 @@ extension DepartureSettingsViewController: UITableViewDataSource, UITableViewDel
         switch Section(rawValue: section) {
         case .places:
             return "집·회사 위치를 넣으면 ‘회사 미팅’ 같은 일정에 맞춰 출발 시각을 알려드려요."
+        case .customPlaces:
+            return "자유 장소는 저장만 돼요. 출발 알림은 집·회사에서만 보내드려요."
         case .timing:
             return "출발 알림 = 약속시간 − 이동시간 − 준비 버퍼 − 안전 여유"
         case .none: return nil
@@ -183,12 +285,35 @@ extension DepartureSettingsViewController: UITableViewDataSource, UITableViewDel
             cell.accessoryType = .disclosureIndicator
             return cell
 
+        case .customPlaces:
+            return customPlaceCell(for: indexPath.row)
+
         case .timing:
             return timingCell(for: indexPath.row)
 
         case .none:
             return UITableViewCell()
         }
+    }
+
+    private func customPlaceCell(for row: Int) -> UITableViewCell {
+        let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
+        var config = cell.defaultContentConfiguration()
+
+        if row < customPlaces.count {
+            let place = customPlaces[row]
+            config.text = place.name
+            config.secondaryText = place.address ?? "위치 설정됨"
+            config.textProperties.color = AppColors.textPrimary
+            config.secondaryTextProperties.color = AppColors.textFieldPlaceholder
+            cell.accessoryType = .disclosureIndicator
+        } else {
+            config.text = "장소 추가"
+            config.textProperties.color = AppColors.coralred
+            cell.accessoryType = .none
+        }
+        cell.contentConfiguration = config
+        return cell
     }
 
     private func timingCell(for row: Int) -> UITableViewCell {
@@ -239,7 +364,17 @@ extension DepartureSettingsViewController: UITableViewDataSource, UITableViewDel
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        guard Section(rawValue: indexPath.section) == .places else { return }
-        handlePlaceTap(indexPath.row == 0 ? .home : .work)
+        switch Section(rawValue: indexPath.section) {
+        case .places:
+            handlePlaceTap(indexPath.row == 0 ? .home : .work)
+        case .customPlaces:
+            if indexPath.row < customPlaces.count {
+                handleCustomPlaceTap(customPlaces[indexPath.row])
+            } else {
+                addCustomPlaceFlow()
+            }
+        case .timing, .none:
+            break
+        }
     }
 }

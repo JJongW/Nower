@@ -337,10 +337,38 @@ final class CalendarViewModel: ObservableObject {
 
     // MARK: - 출발 알림 (Departure Nudge)
 
+    /// 빈 고정 슬롯(집/회사) 관련 일정을 만났을 때 1회만 호출됩니다. 위치 설정 권유 UI를 띄우는 용도.
+    var onSuggestDepartureSetup: ((PlaceKind) -> Void)?
+
+    /// 첫 출발 알림이 잡혔는데 준비 버퍼를 아직 안 물어봤을 때 1회만 호출됩니다. 버퍼 질문 UI를 띄우는 용도.
+    var onAskBufferSeed: (() -> Void)?
+
     /// 단일 일정의 출발 알림을 백그라운드로 예약합니다.
     /// 매칭/좌표 조건을 못 맞추면 매니저가 조용히 건너뜁니다.
     private func scheduleDepartureNudge(for todo: TodoItem) {
-        Task { await DepartureNudgeManager.shared.scheduleNudge(for: todo) }
+        Task { [weak self] in
+            let scheduled = await DepartureNudgeManager.shared.scheduleNudge(for: todo)
+            if scheduled {
+                await MainActor.run { self?.maybeAskBufferSeed() }
+            }
+        }
+        maybeSuggestDepartureSetup(for: todo)
+    }
+
+    /// 첫 출발 알림이 실제로 잡혔을 때, 준비 버퍼를 1회 물어봅니다. (US-E1)
+    private func maybeAskBufferSeed() {
+        guard !DepartureNudgeManager.shared.hasSeededBuffer else { return }
+        DepartureNudgeManager.shared.markBufferSeeded()
+        onAskBufferSeed?()
+    }
+
+    /// 집/회사 위치가 비어 있는데 관련 일정을 만들면 "위치 넣으면 알려줄게요"를 1회 권유합니다.
+    private func maybeSuggestDepartureSetup(for todo: TodoItem) {
+        guard let kind = DepartureNudgeManager.shared.setupSuggestion(for: todo) else { return }
+        DepartureNudgeManager.shared.markSetupSuggested()
+        DispatchQueue.main.async { [weak self] in
+            self?.onSuggestDepartureSetup?(kind)
+        }
     }
 
     /// 저장된 모든 일정의 출발 알림을 다시 계산·예약합니다.

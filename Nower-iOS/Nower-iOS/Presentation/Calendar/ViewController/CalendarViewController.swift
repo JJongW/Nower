@@ -104,10 +104,53 @@ final class CalendarViewController: UIViewController {
         calendarView.settingsButton.addTarget(self, action: #selector(didTapSettings), for: .touchUpInside)
 
         setupSyncStatus()
+
+        viewModel.onSuggestDepartureSetup = { [weak self] kind in
+            self?.presentDepartureSetupSuggestion(for: kind)
+        }
+
+        viewModel.onAskBufferSeed = { [weak self] in
+            self?.presentBufferSeedPrompt()
+        }
     }
 
     @objc private func didTapSettings() {
         coordinator?.presentDepartureSettings()
+    }
+
+    /// 집/회사 위치가 비어 있는데 관련 일정을 만들면 1회만 위치 설정을 권유합니다. (US-B2)
+    private func presentDepartureSetupSuggestion(for kind: PlaceKind) {
+        let place = kind.fixedName ?? "장소"
+        let alert = UIAlertController(
+            title: "출발 시각 알려드릴까요?",
+            message: "\(place) 위치를 넣어두면 늦지 않게 출발할 시각을 미리 알려드려요.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "위치 넣기", style: .default) { [weak self] _ in
+            self?.coordinator?.presentDepartureSettings()
+        })
+        alert.addAction(UIAlertAction(title: "괜찮아요", style: .cancel))
+        present(alert, animated: true)
+    }
+
+    /// 첫 출발 알림이 잡혔을 때 준비 시간을 1회 물어, 전역 준비 버퍼에 반영합니다. (US-E1)
+    private func presentBufferSeedPrompt() {
+        let alert = UIAlertController(
+            title: "준비 시간 알려주세요",
+            message: "약속까지 보통 준비하는 데 얼마나 걸려요? (분)",
+            preferredStyle: .alert
+        )
+        alert.addTextField { tf in
+            tf.keyboardType = .numberPad
+            tf.placeholder = "예: 30"
+        }
+        alert.addAction(UIAlertAction(title: "저장", style: .default) { [weak alert] _ in
+            let raw = alert?.textFields?.first?.text ?? ""
+            guard let minutes = Int(raw.trimmingCharacters(in: .whitespaces)), minutes >= 0 else { return }
+            SavedPlacesManager.shared.setDefaultBuffer(minutes: minutes)
+        })
+        alert.addAction(UIAlertAction(title: "나중에", style: .cancel))
+        present(alert, animated: true)
     }
 
     // MARK: - Sync Status

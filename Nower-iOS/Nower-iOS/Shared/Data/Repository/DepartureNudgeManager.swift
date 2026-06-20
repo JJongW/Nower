@@ -71,13 +71,69 @@ final class DepartureNudgeManager {
         guard fireDate > Date() else { return false }
 
         let body = makeBody(destination: destination, eta: eta, fireDate: fireDate)
-        notifications.scheduleDepartureNotification(todoId: todo.id, body: body, fireDate: fireDate)
+        notifications.scheduleDepartureNotification(
+            todoId: todo.id,
+            body: body,
+            fireDate: fireDate,
+            origin: (lat: oLat, lng: oLng),
+            destination: (lat: dLat, lng: dLng),
+            destinationName: destination.name
+        )
         return true
     }
 
     /// 일정의 출발 알림을 취소합니다.
     func cancel(for todoId: UUID) {
         notifications.cancelDepartureNotification(for: todoId)
+    }
+
+    // MARK: - 미매칭 1회 권유 (US-B2)
+
+    private static let didSuggestSetupKey = "DepartureNudge.didSuggestSetup"
+
+    /// 위치 설정 권유를 이미 한 번 띄웠는지.
+    var hasSuggestedSetup: Bool {
+        UserDefaults.standard.bool(forKey: Self.didSuggestSetupKey)
+    }
+
+    /// 권유를 띄웠다고 표시합니다. 이후 다시 권유하지 않습니다(무시/수락 무관).
+    func markSetupSuggested() {
+        UserDefaults.standard.set(true, forKey: Self.didSuggestSetupKey)
+    }
+
+    // MARK: - 준비 버퍼 시드 (US-E1)
+
+    private static let didSeedBufferKey = "DepartureNudge.didSeedBuffer"
+
+    /// 준비 버퍼를 한 번이라도 대화로 물어봤는지.
+    var hasSeededBuffer: Bool {
+        UserDefaults.standard.bool(forKey: Self.didSeedBufferKey)
+    }
+
+    /// 버퍼를 물어봤다고 표시합니다. 이후 다시 묻지 않습니다(응답/스킵 무관).
+    func markBufferSeeded() {
+        UserDefaults.standard.set(true, forKey: Self.didSeedBufferKey)
+    }
+
+    /// 이 일정이 "위치를 넣으면 출발 알림을 받을 수 있는데 슬롯이 비어 있는" 경우인지 판단합니다.
+    /// 권유가 필요하면 비어 있는 고정 슬롯 종류를, 아니면 nil을 반환합니다.
+    /// - 이미 한 번 권유했거나, 이미 알림이 잡히는 일정이면 nil.
+    func setupSuggestion(for todo: TodoItem) -> PlaceKind? {
+        guard !hasSuggestedSetup else { return nil }
+        guard let arrival = todo.scheduledDateTime, arrival > Date() else { return nil }
+
+        let settings = places.currentSettings()
+        // 이미 매칭되는(좌표 있는) 장소가 있으면 알림이 잡히므로 권유 불필요.
+        if settings.matchPlace(for: todo.text) != nil { return nil }
+
+        // 회사를 집보다 우선해, 텍스트가 빈 고정 슬롯의 별칭과 맞는 첫 슬롯을 찾는다.
+        for kind in [PlaceKind.work, .home] {
+            guard let slot = settings.fixedPlace(kind),
+                  !slot.hasCoordinate,
+                  slot.matches(eventText: todo.text) else { continue }
+            return kind
+        }
+        return nil
     }
 
     // MARK: - Private
