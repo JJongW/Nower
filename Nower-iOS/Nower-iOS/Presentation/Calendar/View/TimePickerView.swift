@@ -101,23 +101,43 @@ final class TimePickerView: UIView {
 
     // MARK: - Init
 
-    init(currentTime: String? = nil, contextText: String? = nil) {
+    /// - Parameters:
+    ///   - currentTime: 기존 값("HH:mm"). 있으면 휠을 그 값으로 연다.
+    ///   - allDayTitle: "하루 종일" 토글 라벨. 종료 시간 등에서는 "종료 시간 없음" 등으로 바꾼다.
+    ///   - allDayWhenEmpty: 기존 값이 없을 때 기본을 "종일(시간 없음)"으로 둘지. 종료 시간 피커는 false로 줘 휠을 바로 노출한다.
+    ///   - seedTime: 기존 값이 없을 때 휠을 미리 채울 기준값("HH:mm"). 예) 종료 시간은 시작 시간으로 시드.
+    init(
+        currentTime: String? = nil,
+        contextText: String? = nil,
+        allDayTitle: String = "하루 종일",
+        allDayWhenEmpty: Bool = true,
+        seedTime: String? = nil
+    ) {
         super.init(frame: .zero)
         contextLabel.text = contextText
+        allDayLabel.text = allDayTitle
         if let time = currentTime {
             isAllDay = false
             allDaySwitch.isOn = false
-            let parts = time.split(separator: ":")
-            if parts.count == 2, let hour = Int(parts[0]), let minute = Int(parts[1]) {
-                var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-                components.hour = hour
-                components.minute = minute
-                if let date = Calendar.current.date(from: components) {
-                    datePicker.date = date
-                }
-            }
+            seedPicker(with: time)
+        } else {
+            isAllDay = allDayWhenEmpty
+            allDaySwitch.isOn = allDayWhenEmpty
+            if let seed = seedTime { seedPicker(with: seed) }
         }
         setupUI()
+    }
+
+    /// "HH:mm" 문자열로 휠 날짜를 설정한다.
+    private func seedPicker(with time: String) {
+        let parts = time.split(separator: ":")
+        guard parts.count == 2, let hour = Int(parts[0]), let minute = Int(parts[1]) else { return }
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        components.hour = hour
+        components.minute = minute
+        if let date = Calendar.current.date(from: components) {
+            datePicker.date = date
+        }
     }
 
     required init?(coder: NSCoder) {
