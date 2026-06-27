@@ -38,8 +38,8 @@ struct DayCompanionPanel: View {
             header
 
             #if canImport(NowerCore)
-            DensityCardView(state: NowerDensity.calibratedViewState(
-                todos: viewModel.todos(for: day), day: day, reflections: reflections
+            DensityCardView(state: NowerDensity.relativeViewState(
+                todosProvider: { viewModel.todos(for: $0) }, day: day, reflections: reflections
             ))
 
             if canReflect {
