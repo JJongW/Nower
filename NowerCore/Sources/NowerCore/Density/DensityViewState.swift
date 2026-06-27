@@ -34,6 +34,8 @@ public struct DensityViewState: Sendable, Equatable {
     public let relativeMeaning: String?
     /// 체감 콜백 ("지난번 이런 날 버거웠다고 하셨죠"). 해당 기록 없으면 nil.
     public let reflectionCallback: String?
+    /// 마일스톤 한 줄 ("이제 너의 평소를 알게 됐어요"). 새로 도달한 게 없으면 nil.
+    public let milestone: String?
 
     /// 신호 분해 한 줄
     public struct SignalRow: Sendable, Equatable, Identifiable {
@@ -50,7 +52,7 @@ public struct DensityViewState: Sendable, Equatable {
         public let contributionPoints: Int
     }
 
-    public init(report: DensityReport, comparison: DensityComparison? = nil, reflectionCallback: String? = nil) {
+    public init(report: DensityReport, comparison: DensityComparison? = nil, reflectionCallback: String? = nil, milestone: String? = nil) {
         self.scoreText = "\(report.score)"
         self.bandLabel = report.band.label
         self.bandColorHex = Self.colorHex(for: report.band)
@@ -62,6 +64,7 @@ public struct DensityViewState: Sendable, Equatable {
         self.relativeChipLabel = comparison.map { RelativeDensityCopy.chipLabel($0) }
         self.relativeMeaning = comparison.map { RelativeDensityCopy.meaning($0) }
         self.reflectionCallback = reflectionCallback
+        self.milestone = milestone
         self.signalRows = report.signals.map { signal in
             SignalRow(
                 signalKey: signal.signal.rawValue,
