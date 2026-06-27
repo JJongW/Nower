@@ -32,6 +32,8 @@ public struct DensityViewState: Sendable, Equatable {
     public let relativeChipLabel: String?
     /// 자기상대 의미 한 줄 (카드 상단). 미제공이면 nil → 기존 meaning 사용.
     public let relativeMeaning: String?
+    /// 체감 콜백 ("지난번 이런 날 버거웠다고 하셨죠"). 해당 기록 없으면 nil.
+    public let reflectionCallback: String?
 
     /// 신호 분해 한 줄
     public struct SignalRow: Sendable, Equatable, Identifiable {
@@ -48,7 +50,7 @@ public struct DensityViewState: Sendable, Equatable {
         public let contributionPoints: Int
     }
 
-    public init(report: DensityReport, comparison: DensityComparison? = nil) {
+    public init(report: DensityReport, comparison: DensityComparison? = nil, reflectionCallback: String? = nil) {
         self.scoreText = "\(report.score)"
         self.bandLabel = report.band.label
         self.bandColorHex = Self.colorHex(for: report.band)
@@ -59,6 +61,7 @@ public struct DensityViewState: Sendable, Equatable {
         self.suggestion = report.suggestion?.message
         self.relativeChipLabel = comparison.map { RelativeDensityCopy.chipLabel($0) }
         self.relativeMeaning = comparison.map { RelativeDensityCopy.meaning($0) }
+        self.reflectionCallback = reflectionCallback
         self.signalRows = report.signals.map { signal in
             SignalRow(
                 signalKey: signal.signal.rawValue,

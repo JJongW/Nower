@@ -32,6 +32,10 @@ public struct DensityCardView: View {
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
+            if let callback = state.reflectionCallback {
+                callbackRow(callback)
+            }
+
             if let suggestion = state.suggestion {
                 suggestionRow(suggestion)
             }
@@ -77,6 +81,26 @@ public struct DensityCardView: View {
                 .foregroundColor(bandColor)
         }
         .frame(width: 56, height: 56)
+    }
+
+    // MARK: - 체감 콜백 (과거 기록 회상 — "나를 알아간다")
+
+    private func callbackRow(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "quote.bubble.fill")
+                .foregroundColor(bandColor)
+                .font(.caption)
+            Text(text)
+                .font(.footnote)
+                .foregroundColor(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(bandColor.opacity(0.10))
+        )
     }
 
     // MARK: - 제안
