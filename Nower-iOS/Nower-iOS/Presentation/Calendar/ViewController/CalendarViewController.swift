@@ -722,6 +722,11 @@ final class CalendarViewController: UIViewController {
 
     @objc private func forceSync() {
         NSUbiquitousKeyValueStore.default.synchronize()
+        // 앱 복귀 시 Live Activity를 다시 동기화한다. 백그라운드 동안 종료된 일정은
+        // 타이머가 멈춰 있어 '진행 중'으로 남아 있으므로, 여기서 종료/다음으로 전환한다.
+        #if canImport(NowerCore)
+        refreshLiveActivity()
+        #endif
     }
 
     private func preloadAdjacentMonths(baseDate: Date) {

@@ -21,21 +21,25 @@ struct NowerLiveActivity: Widget {
         ActivityConfiguration(for: NowerLiveActivityAttributes.self) { context in
             // 배경 틴트를 시스템에 맡긴다. 커스텀 흰색 틴트는 라이트모드 잠금화면에서
             // 시스템이 흰 글자를 강제할 때 "흰 배경 + 흰 글자"로 글자가 사라지는 문제가 있었다.
-            LockScreenView(state: context.state, density: context.attributes.densityLabel)
+            LockScreenView(state: context.state, density: context.attributes.densityLabel,
+                           isStale: context.isStale)
                 .activitySystemActionForegroundColor(.primary)
         } dynamicIsland: { context in
-            let accent = densityColor(context.attributes.densityLabel)
+            // stale(종료/시작 시각 지남)이면 강조색을 죽이고 카운트다운을 멈춘다.
+            let stale = context.isStale
+            let accent = stale ? Color.secondary : densityColor(context.attributes.densityLabel)
+            let symbol = displaySymbol(context.state.mode, isStale: stale)
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    modeBadge(context.state.mode, accent: accent)
+                    modeBadge(symbol, accent: accent)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    countdown(context.state.eventDate, size: 20)
+                    countdownOrEnded(context.state.eventDate, isStale: stale, size: 20)
                         .foregroundColor(accent)
                 }
                 DynamicIslandExpandedRegion(.center) {
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(context.state.mode.label)
+                        Text(displayLabel(context.state.mode, isStale: stale))
                             .font(.caption2.weight(.semibold)).foregroundColor(accent)
                         Text(context.state.eventTitle)
                             .font(.system(size: 15, weight: .semibold)).lineLimit(1)
@@ -51,14 +55,14 @@ struct NowerLiveActivity: Widget {
                     }
                 }
             } compactLeading: {
-                Image(systemName: context.state.mode.symbol)
+                Image(systemName: symbol)
                     .foregroundColor(accent)
             } compactTrailing: {
-                countdown(context.state.eventDate, size: 13)
+                countdownOrEnded(context.state.eventDate, isStale: stale, size: 13)
                     .foregroundColor(accent)
                     .frame(maxWidth: 56)
             } minimal: {
-                Image(systemName: context.state.mode.symbol)
+                Image(systemName: symbol)
                     .foregroundColor(accent)
             }
             .keylineTint(accent)
@@ -72,8 +76,9 @@ struct NowerLiveActivity: Widget {
 private struct LockScreenView: View {
     let state: NowerLiveActivityAttributes.ContentState
     let density: String
+    var isStale: Bool = false
 
-    private var accent: Color { densityColor(density) }
+    private var accent: Color { isStale ? .secondary : densityColor(density) }
 
     var body: some View {
         HStack(spacing: 13) {
@@ -81,7 +86,7 @@ private struct LockScreenView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 13, style: .continuous)
                     .fill(accent.opacity(0.15))
-                Image(systemName: state.mode.symbol)
+                Image(systemName: displaySymbol(state.mode, isStale: isStale))
                     .font(.system(size: 21, weight: .medium))
                     .foregroundColor(accent)
             }
@@ -89,14 +94,14 @@ private struct LockScreenView: View {
 
             // 제목 + 모드/보조
             VStack(alignment: .leading, spacing: 3) {
-                Text(state.mode.label)
+                Text(displayLabel(state.mode, isStale: isStale))
                     .font(.caption2.weight(.semibold))
                     .foregroundColor(accent)
                 Text(state.eventTitle)
                     .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(.primary)
+                    .foregroundColor(isStale ? .secondary : .primary)
                     .lineLimit(1)
-                Text(state.detail ?? "\(state.startTime) 시작")
+                Text(isStale ? "방금 마무리됐어요" : (state.detail ?? "\(state.startTime) 시작"))
                     .font(.caption2)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
@@ -106,8 +111,8 @@ private struct LockScreenView: View {
 
             // 카운트다운 + 밀도
             VStack(alignment: .trailing, spacing: 4) {
-                countdown(state.eventDate, size: 24)
-                    .foregroundColor(.primary)
+                countdownOrEnded(state.eventDate, isStale: isStale, size: 24)
+                    .foregroundColor(isStale ? .secondary : .primary)
                 densityPill(density, accent: accent)
             }
         }
@@ -127,11 +132,41 @@ private func countdown(_ date: Date, size: CGFloat) -> some View {
         .minimumScaleFactor(0.7)
 }
 
+/// stale이면 카운트다운 대신 "종료" 정적 텍스트(타이머가 음수로 흐르는 것 방지).
 @available(iOS 16.1, *)
-private func modeBadge(_ mode: NowerLiveActivityAttributes.Mode, accent: Color) -> some View {
+@ViewBuilder
+private func countdownOrEnded(_ date: Date, isStale: Bool, size: CGFloat) -> some View {
+    if isStale {
+        Text("종료")
+            .font(.system(size: size, weight: .bold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+    } else {
+        countdown(date, size: size)
+    }
+}
+
+/// 모드 라벨 — stale이면 '종료됨'(예정 일정은 '시작 시각 지남')으로 정직하게.
+@available(iOS 16.1, *)
+private func displayLabel(_ mode: NowerLiveActivityAttributes.Mode, isStale: Bool) -> String {
+    guard isStale else { return mode.label }
+    switch mode {
+    case .upcoming: return "시작 시각 지남"
+    default: return "종료됨"
+    }
+}
+
+/// 모드 심볼 — stale이면 완료 체크로.
+@available(iOS 16.1, *)
+private func displaySymbol(_ mode: NowerLiveActivityAttributes.Mode, isStale: Bool) -> String {
+    isStale ? "checkmark.circle" : mode.symbol
+}
+
+@available(iOS 16.1, *)
+private func modeBadge(_ symbol: String, accent: Color) -> some View {
     ZStack {
         Circle().fill(accent.opacity(0.15))
-        Image(systemName: mode.symbol).font(.system(size: 15, weight: .medium)).foregroundColor(accent)
+        Image(systemName: symbol).font(.system(size: 15, weight: .medium)).foregroundColor(accent)
     }
     .frame(width: 32, height: 32)
 }
