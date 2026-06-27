@@ -77,11 +77,12 @@ public enum DensityBand: String, Sendable, Codable {
         }
     }
 
+    /// 여유 게이지 어휘 — 넉넉(여유 많음) / 보통 / 빡빡(여유 적음).
     public var label: String {
         switch self {
-        case .light: return "여유"
+        case .light: return "넉넉"
         case .moderate: return "보통"
-        case .heavy: return "과부하"
+        case .heavy: return "빡빡"
         }
     }
 

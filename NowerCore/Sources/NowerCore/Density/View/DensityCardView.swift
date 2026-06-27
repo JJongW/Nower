@@ -61,7 +61,7 @@ public struct DensityCardView: View {
         HStack(spacing: 14) {
             scoreRing
             VStack(alignment: .leading, spacing: 2) {
-                Text("오늘의 밀도")
+                Text("오늘의 여유")
                     .font(.caption)
                     .foregroundColor(.secondary)
                 Text(state.bandLabel)
@@ -178,9 +178,9 @@ public struct DensityCardView: View {
     /// 밴드 경계 범례 — 점수가 어느 구간인지 한눈에(0–33 여유 / 34–66 보통 / 67–100 과부하)
     private var bandLegend: some View {
         HStack(spacing: 12) {
-            legendItem("여유", "0–33", "#34C759")
+            legendItem("넉넉", "0–33", "#34C759")
             legendItem("보통", "34–66", "#FF9500")
-            legendItem("과부하", "67–100", "#FF3B30")
+            legendItem("빡빡", "67–100", "#FF3B30")
         }
         .padding(.top, 2)
     }

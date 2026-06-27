@@ -147,7 +147,7 @@ public enum MonthDensityEngine {
 
         var parts: [String] = []
         if heavy > 0 {
-            parts.append("과부하 \(heavy)일")
+            parts.append("빡빡한 날 \(heavy)일")
         }
         if let wd = busiestWeekday, wd >= 1, wd <= 7 {
             parts.append("\(weekdayNames[wd - 1])요일이 가장 빡빡")

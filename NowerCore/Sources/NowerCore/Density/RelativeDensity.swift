@@ -157,36 +157,36 @@ public enum RelativeDensityEngine {
 /// 자기 상대 비교 → 사용자 카피. 원칙: 숫자는 비교 안에서만, 모르면 모른다고.
 public enum RelativeDensityCopy {
 
-    /// 칩용 짧은 라벨 ("평소보다 무거움" 등)
+    /// 칩용 짧은 라벨 ("평소보다 빡빡해요" 등) — 여유 어휘.
     public static func chipLabel(_ c: DensityComparison) -> String {
         switch (c.basis, c.relativeBand) {
         case (.coldStart, _):
             // 아직 '평소'를 모름 → 절대 밴드 라벨로 정직하게
             return DensityBand(score: c.todayScore).label
-        case (.weekday(let wd), .heavier): return "\(wd)요일치곤 무거움"
-        case (.weekday(let wd), .lighter): return "\(wd)요일치곤 가벼움"
+        case (.weekday(let wd), .heavier): return "\(wd)요일치곤 빡빡해요"
+        case (.weekday(let wd), .lighter): return "\(wd)요일치곤 넉넉해요"
         case (.weekday(let wd), .typical): return "여느 \(wd)요일만큼"
-        case (_, .heavier): return "평소보다 무거움"
-        case (_, .lighter): return "평소보다 가벼움"
+        case (_, .heavier): return "평소보다 빡빡해요"
+        case (_, .lighter): return "평소보다 넉넉해요"
         case (_, .typical): return "평소만큼"
         }
     }
 
-    /// 카드용 한 줄 의미. 콜드스타트는 정직한 안내.
+    /// 카드용 한 줄 의미. 여유 어휘. 콜드스타트는 정직한 안내.
     public static func meaning(_ c: DensityComparison) -> String {
         switch c.basis {
         case .coldStart:
             return "아직 ‘평소’를 가늠할 만큼 기록이 쌓이지 않았어요. 며칠 더 보면 너에게 맞게 짚어드릴게요."
         case .recent:
             switch c.relativeBand {
-            case .heavier: return "최근 \(c.sampleCount)일과 견주면 무거운 편인 하루예요."
+            case .heavier: return "최근 \(c.sampleCount)일과 견주면 여유가 빡빡한 하루예요."
             case .lighter: return "최근 \(c.sampleCount)일과 견주면 여유로운 하루예요."
             case .typical: return "최근 너의 흐름과 비슷한 하루예요."
             }
         case .weekday(let wd):
             switch c.relativeBand {
-            case .heavier: return "여느 \(wd)요일보다 묵직한 하루예요."
-            case .lighter: return "여느 \(wd)요일보다 가벼운 하루예요."
+            case .heavier: return "여느 \(wd)요일보다 여유가 빠듯한 하루예요."
+            case .lighter: return "여느 \(wd)요일보다 여유로운 하루예요."
             case .typical: return "딱 너의 \(wd)요일다운 하루예요."
             }
         }

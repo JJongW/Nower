@@ -18,11 +18,11 @@ enum NarrationBuilder {
     static func meaning(band: DensityBand, metrics: DensityMetrics) -> String {
         switch band {
         case .light:
-            return "여유로운 하루예요. 일정이 적고 집중할 시간이 충분해요."
+            return "여유가 넉넉한 하루예요. 일정이 적고 집중할 시간이 충분해요."
         case .moderate:
-            return "적당히 채워진 하루예요. 무리는 아니지만 틈이 빡빡해질 수 있어요."
+            return "여유가 적당한 하루예요. 무리는 아니지만 틈이 빡빡해질 수 있어요."
         case .heavy:
-            return "과부하 신호예요. 전환·이동·끊김이 겹쳐 쉽게 지칠 수 있는 하루예요."
+            return "여유가 빠듯한 하루예요. 전환·이동·끊김이 겹쳐 쉽게 지칠 수 있어요."
         }
     }
 
