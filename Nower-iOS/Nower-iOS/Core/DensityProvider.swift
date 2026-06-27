@@ -105,7 +105,9 @@ enum NowerDensity {
     ) -> DensityViewState {
         let report = calibratedReport(todos: todosProvider(day), day: day, reflections: reflections)
         let cmp = comparison(todosProvider: todosProvider, day: day, reflections: reflections)
-        return DensityViewState(report: report, comparison: cmp)
+        let callback = ReflectionCallbackEngine.callback(
+            todayBand: report.band, reflections: reflections, asOf: day)
+        return DensityViewState(report: report, comparison: cmp, reflectionCallback: callback)
     }
 
     /// 월별 밀도 집계. days = 그 달의 날짜들, todosProvider = 날짜별 일정 공급.
