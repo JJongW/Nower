@@ -140,9 +140,9 @@ public enum MonthlyEnergyReportEngine {
 
         // 부담의 결
         if density.heavyCount > 0 {
-            parts.append("과부하 \(density.heavyCount)일")
+            parts.append("빡빡한 날 \(density.heavyCount)일")
         } else {
-            parts.append("과부하 없이 지나간 달")
+            parts.append("빡빡한 날 없이 지나간 달")
         }
         if let wd = density.busiestWeekday, wd >= 1, wd <= 7 {
             parts.append("\(weekdayNames[wd - 1])요일이 가장 빡빡했어요")

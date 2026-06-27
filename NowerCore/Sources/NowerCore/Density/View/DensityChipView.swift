@@ -55,7 +55,7 @@ public struct DensityChipView: View {
             .fixedSize(horizontal: true, vertical: false) // 칩 내부 텍스트 잘림 방지
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("오늘의 밀도 \(state.scoreText)점, \(state.bandLabel)")
+        .accessibilityLabel("오늘의 여유, \(state.relativeChipLabel ?? state.bandLabel)")
     }
 
     private var bandColor: Color {
