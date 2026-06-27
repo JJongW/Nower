@@ -78,6 +78,35 @@ enum NowerDensity {
         DensityViewState(report: calibratedReport(todos: todos, day: day, reflections: reflections))
     }
 
+    /// 자기상대 비교: 오늘 점수를 지난 30일 개인 분포에 대고 본다.
+    static func comparison(
+        todosProvider: (Date) -> [TodoItem],
+        day: Date,
+        reflections: [DayReflection]
+    ) -> DensityComparison {
+        let today = calibratedReport(todos: todosProvider(day), day: day, reflections: reflections)
+        let cal = Calendar.current
+        let start = cal.startOfDay(for: day)
+        var history: [DailyScore] = []
+        for n in 1...RelativeDensityEngine.windowDays {
+            guard let d = cal.date(byAdding: .day, value: -n, to: start) else { continue }
+            let s = calibratedReport(todos: todosProvider(d), day: d, reflections: reflections).score
+            history.append(DailyScore(date: d, score: s))
+        }
+        return RelativeDensityEngine.compare(todayScore: today.score, history: history, asOf: day, calendar: cal)
+    }
+
+    /// 자기상대 표현이 반영된 표시상태(칩/카드 의미가 "평소 대비"로 바뀜).
+    static func relativeViewState(
+        todosProvider: (Date) -> [TodoItem],
+        day: Date,
+        reflections: [DayReflection]
+    ) -> DensityViewState {
+        let report = calibratedReport(todos: todosProvider(day), day: day, reflections: reflections)
+        let cmp = comparison(todosProvider: todosProvider, day: day, reflections: reflections)
+        return DensityViewState(report: report, comparison: cmp)
+    }
+
     /// 월별 밀도 집계. days = 그 달의 날짜들, todosProvider = 날짜별 일정 공급.
     static func monthReport(days: [Date], todosProvider: (Date) -> [TodoItem]) -> MonthDensityReport {
         let inputs = days.map { day in

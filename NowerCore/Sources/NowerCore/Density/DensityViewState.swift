@@ -28,6 +28,11 @@ public struct DensityViewState: Sendable, Equatable {
     /// 신호 분해 행 (기여 높은 순)
     public let signalRows: [SignalRow]
 
+    /// 자기상대 칩 라벨 ("평소보다 무거움" 등). 이력 부족/미제공이면 nil → 밴드 라벨 사용.
+    public let relativeChipLabel: String?
+    /// 자기상대 의미 한 줄 (카드 상단). 미제공이면 nil → 기존 meaning 사용.
+    public let relativeMeaning: String?
+
     /// 신호 분해 한 줄
     public struct SignalRow: Sendable, Equatable, Identifiable {
         public var id: String { signalKey }
@@ -43,14 +48,17 @@ public struct DensityViewState: Sendable, Equatable {
         public let contributionPoints: Int
     }
 
-    public init(report: DensityReport) {
+    public init(report: DensityReport, comparison: DensityComparison? = nil) {
         self.scoreText = "\(report.score)"
         self.bandLabel = report.band.label
         self.bandColorHex = Self.colorHex(for: report.band)
         self.progress = Double(report.score) / 100.0
-        self.meaning = report.meaning
+        // 자기상대 표현: 비교가 있으면 의미 한 줄을 그쪽으로 교체(절대점수 → 평소 대비)
+        self.meaning = comparison.map { RelativeDensityCopy.meaning($0) } ?? report.meaning
         self.narration = report.narration
         self.suggestion = report.suggestion?.message
+        self.relativeChipLabel = comparison.map { RelativeDensityCopy.chipLabel($0) }
+        self.relativeMeaning = comparison.map { RelativeDensityCopy.meaning($0) }
         self.signalRows = report.signals.map { signal in
             SignalRow(
                 signalKey: signal.signal.rawValue,

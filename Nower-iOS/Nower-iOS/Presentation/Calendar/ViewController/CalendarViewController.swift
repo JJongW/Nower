@@ -840,7 +840,12 @@ final class CalendarViewController: UIViewController {
     private func densityViewState() -> DensityViewState {
         let day = selectedDate ?? Date()
         let reflections = DependencyContainer.shared.reflectionStore.all()
-        return NowerDensity.calibratedViewState(todos: viewModel.todos(for: day), day: day, reflections: reflections)
+        // 자기상대 표현: 지난 30일 개인 분포 대비로 칩/카드 의미를 만든다.
+        return NowerDensity.relativeViewState(
+            todosProvider: { [weak self] in self?.viewModel.todos(for: $0) ?? [] },
+            day: day,
+            reflections: reflections
+        )
     }
 
     /// 오늘 "다음 시간 일정"으로 Live Activity Companion을 동기화. 없으면 종료.
@@ -960,7 +965,11 @@ final class CalendarViewController: UIViewController {
         let store = DependencyContainer.shared.reflectionStore
         let reflections = store.all()
 
-        let state = NowerDensity.calibratedViewState(todos: todos, day: day, reflections: reflections)
+        let state = NowerDensity.relativeViewState(
+            todosProvider: { [weak self] in self?.viewModel.todos(for: $0) ?? [] },
+            day: day,
+            reflections: reflections
+        )
         // 보정 전(raw) 예측 — 체감 기록의 기준값
         let base = NowerDensity.report(todos: todos, day: day)
 

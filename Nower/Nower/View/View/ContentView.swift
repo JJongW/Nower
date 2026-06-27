@@ -166,18 +166,20 @@ struct ContentView: View {
                     // 밀도 칩 — compact(좁은 창)에서만. 넓은 창은 Companion 패널이 대신.
                     if showDensityChip {
                         DensityChipView(
-                            state: NowerDensity.viewState(
-                                todos: viewModel.todos(for: viewModel.selectedDate ?? Date()),
-                                day: viewModel.selectedDate ?? Date()
+                            state: NowerDensity.relativeViewState(
+                                todosProvider: { viewModel.todos(for: $0) },
+                                day: viewModel.selectedDate ?? Date(),
+                                reflections: DependencyContainer.shared.reflectionStore.all()
                             )
                         ) {
                             showDensityDetail.toggle()
                         }
                         .popover(isPresented: $showDensityDetail, arrowEdge: .bottom) {
                             DensityCardView(
-                                state: NowerDensity.viewState(
-                                    todos: viewModel.todos(for: viewModel.selectedDate ?? Date()),
-                                    day: viewModel.selectedDate ?? Date()
+                                state: NowerDensity.relativeViewState(
+                                    todosProvider: { viewModel.todos(for: $0) },
+                                    day: viewModel.selectedDate ?? Date(),
+                                    reflections: DependencyContainer.shared.reflectionStore.all()
                                 )
                             )
                             .frame(width: 320)
