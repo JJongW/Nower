@@ -26,12 +26,19 @@ public struct DensityChipView: View {
                 Circle()
                     .fill(bandColor)
                     .frame(width: 7, height: 7)
-                Text(state.scoreText)
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
-                Text(state.bandLabel)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.secondary)
+                // 자기상대 표현 우선("평소보다 무거움"). 없으면 점수+밴드(콜드스타트/구버전).
+                if let rel = state.relativeChipLabel {
+                    Text(rel)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.primary)
+                } else {
+                    Text(state.scoreText)
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
+                    Text(state.bandLabel)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
                 Image(systemName: "chevron.right")
                     .font(.system(size: 8, weight: .bold))
                     .foregroundColor(.secondary.opacity(0.6))
