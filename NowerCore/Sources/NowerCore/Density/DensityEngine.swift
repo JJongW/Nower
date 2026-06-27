@@ -13,14 +13,16 @@ import Foundation
 
 public enum DensityEngine {
 
-    /// 신호별 기본 가중치 (제공된 신호끼리 정규화됨)
+    /// 신호별 기본 가중치 (제공된 신호끼리 정규화됨).
+    /// occupancy(점유)가 기둥 — 가장 큰 가중치. 나머지는 인지 부하 보조.
     private static let baseWeights: [DensitySignal: Double] = [
-        .transitions: 0.20,
-        .travelLoad: 0.25,
-        .socialLoad: 0.20,
-        .focusFragmentation: 0.20,
-        .sleepConflict: 0.15,
-        .commitmentLoad: 0.15
+        .occupancy: 0.35,
+        .travelLoad: 0.18,
+        .socialLoad: 0.12,
+        .commitmentLoad: 0.12,
+        .transitions: 0.10,
+        .focusFragmentation: 0.10,
+        .sleepConflict: 0.10
     ]
 
     /// 하루 밀도 리포트 산출
@@ -43,10 +45,13 @@ public enum DensityEngine {
 
         // 각 신호 측정 (제공 불가 신호는 nil)
         var raw: [(signal: DensitySignal, value: Double, detail: String)] = []
+        // 점유는 항상 포함 — 시간 일정이 없으면 value 0(종일-only 날에 commitment가 점수를 지배하지 않게 누름)
+        raw.append(occupancySignal(timed))
         if !timed.isEmpty {
             raw.append(transitionsSignal(timed))
             raw.append(focusSignal(timed, input: input))
-            raw.append(socialSignal(timed))
+            // 대면 데이터(위치) 없으면 제외 — travel/sleep과 동일한 graceful degrade
+            if let social = socialSignal(timed) { raw.append(social) }
             if let travel = travelSignal(input) { raw.append(travel) }
             if let sleep = sleepSignal(timed, input: input) { raw.append(sleep) }
         }
@@ -100,6 +105,7 @@ public enum DensityEngine {
 
         return DensityMetrics(
             eventCount: timed.count,
+            bookedMinutes: bookedMinutes(timed),
             allDayCount: allDay.count,
             largestFocusBlockMinutes: largestBlockMin,
             smallGapCount: smallGaps,
@@ -135,6 +141,16 @@ public enum DensityEngine {
 
     // MARK: - 신호 측정 (각 0...1)
 
+    /// 점유: 시간 일정이 하루를 묶은 총 시간(겹침은 병합). 6시간에서 포화.
+    /// 밀도의 기둥 — 일정이 없으면 0(반박 불가능한 "비어 있음").
+    static func occupancySignal(_ events: [Event]) -> (DensitySignal, Double, String) {
+        let mins = bookedMinutes(events)
+        let value = min(1.0, Double(mins) / Double(DensityAnchor.fullDayBookedMinutes))
+        let h = Double(mins) / 60.0
+        let detail = mins == 0 ? "묶인 시간 없음" : String(format: "일정 %.1f시간", h)
+        return (.occupancy, value, detail)
+    }
+
     /// 전환: 일정 개수가 많을수록 컨텍스트 스위치 증가. 8개에서 포화.
     static func transitionsSignal(_ events: [Event]) -> (DensitySignal, Double, String) {
         let count = events.count
@@ -161,8 +177,11 @@ public enum DensityEngine {
 
     /// 사회 부하: 대면(위치 있는) 일정 수 + 연속 대면.
     /// (Event에 참석자 필드가 없어 location 유무로 근사 — PRD 명시)
-    static func socialSignal(_ events: [Event]) -> (DensitySignal, Double, String) {
+    /// 위치 데이터가 하나도 없으면 nil → 신호 제외(graceful degrade).
+    /// 항상 0으로 포함되면 시간 일정 점수를 부당하게 깎으므로.
+    static func socialSignal(_ events: [Event]) -> (DensitySignal, Double, String)? {
         let inPerson = events.filter { $0.location != nil }
+        guard !inPerson.isEmpty else { return nil }
         let count = inPerson.count
         let streak = longestInPersonStreak(events)
         // 대면 5건에서 포화, 연속 3건 이상이면 가중
@@ -211,6 +230,26 @@ public enum DensityEngine {
     }
 
     // MARK: - 헬퍼
+
+    /// 시간 일정이 점유한 총 시간(분). 겹치는 구간은 union으로 병합해 이중 집계 방지.
+    static func bookedMinutes(_ events: [Event]) -> Int {
+        guard !events.isEmpty else { return 0 }
+        let sorted = events.sorted { $0.startDateTime < $1.startDateTime }
+        var total: TimeInterval = 0
+        var curStart = sorted[0].startDateTime
+        var curEnd = sorted[0].endDateTime
+        for e in sorted.dropFirst() {
+            if e.startDateTime > curEnd {
+                total += curEnd.timeIntervalSince(curStart)
+                curStart = e.startDateTime
+                curEnd = e.endDateTime
+            } else if e.endDateTime > curEnd {
+                curEnd = e.endDateTime
+            }
+        }
+        total += curEnd.timeIntervalSince(curStart)
+        return Int(total / 60)
+    }
 
     /// 인접 일정 사이의 빈 시간(초) 배열. 겹치면 0.
     static func freeGaps(_ events: [Event]) -> [TimeInterval] {

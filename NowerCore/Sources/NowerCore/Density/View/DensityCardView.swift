@@ -11,8 +11,8 @@ import SwiftUI
 /// 오늘의 밀도 카드. 점수 링 + 밴드 + narration + 제안 + 신호 분해.
 public struct DensityCardView: View {
     private let state: DensityViewState
-    /// 신호 분해 펼침 여부
-    @State private var expanded: Bool = false
+    /// 신호 분해 펼침 여부 — 기본 펼침(숫자 근거를 숨기지 않는다)
+    @State private var expanded: Bool = true
 
     public init(state: DensityViewState) {
         self.state = state
@@ -122,15 +122,37 @@ public struct DensityCardView: View {
                 ForEach(state.signalRows) { row in
                     signalRow(row)
                 }
+                bandLegend
             }
+        }
+    }
+
+    /// 밴드 경계 범례 — 점수가 어느 구간인지 한눈에(0–33 여유 / 34–66 보통 / 67–100 과부하)
+    private var bandLegend: some View {
+        HStack(spacing: 12) {
+            legendItem("여유", "0–33", "#34C759")
+            legendItem("보통", "34–66", "#FF9500")
+            legendItem("과부하", "67–100", "#FF3B30")
+        }
+        .padding(.top, 2)
+    }
+
+    private func legendItem(_ label: String, _ range: String, _ hex: String) -> some View {
+        HStack(spacing: 4) {
+            Circle().fill(Color(densityHex: hex)).frame(width: 6, height: 6)
+            Text(label).font(.caption2.weight(.medium)).foregroundColor(.primary)
+            Text(range).font(.caption2).foregroundColor(.secondary)
         }
     }
 
     private func signalRow(_ row: DensityViewState.SignalRow) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            HStack {
+            HStack(spacing: 6) {
                 Text(row.label)
                     .font(.caption.weight(.medium))
+                Text("+\(row.contributionPoints)점")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(bandColor)
                 Spacer()
                 Text(row.detail)
                     .font(.caption2)

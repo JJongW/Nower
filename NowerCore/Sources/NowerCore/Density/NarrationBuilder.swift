@@ -47,6 +47,13 @@ enum NarrationBuilder {
     /// 신호별 raw 근거 문장 (기준 대비 비교 포함)
     private static func evidence(for signal: DensitySignal, metrics: DensityMetrics) -> String {
         switch signal {
+        case .occupancy:
+            let h = Double(metrics.bookedMinutes) / 60.0
+            if metrics.bookedMinutes >= DensityAnchor.fullDayBookedMinutes {
+                return String(format: "시간 일정이 %.1f시간이라 하루가 꽉 차 있어요.", h)
+            }
+            return String(format: "시간 일정이 %.1f시간 잡혀 있어요.", h)
+
         case .transitions:
             let n = metrics.eventCount
             if n >= DensityAnchor.busyEventCount {
@@ -89,6 +96,13 @@ enum NarrationBuilder {
         guard let top = signals.first, top.value >= 0.4 else { return nil }
 
         switch top.signal {
+        case .occupancy:
+            // 점유 자체는 "줄이라"는 처방이 어색 — 2순위 인지부하 신호로 제안을 넘긴다.
+            let next = signals.dropFirst().first { $0.signal != .occupancy && $0.value >= 0.4 }
+            guard let next else { return nil }
+            return suggest(signals: [next] + signals.filter { $0.signal != next.signal && $0.signal != .occupancy },
+                           metrics: metrics, events: events, input: input)
+
         case .focusFragmentation:
             // 가장 짧은 빈틈을 만든 일정 시각을 짚어 "그 일정을 옮기면 블록이 생긴다"
             if let breaker = focusBreaker(events) {

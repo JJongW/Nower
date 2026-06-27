@@ -39,6 +39,8 @@ public struct DensityViewState: Sendable, Equatable {
         public let detail: String
         /// 0.0~1.0 강도 (바 길이)
         public let intensity: Double
+        /// 이 신호가 최종 점수에 더한 기여분(점, value×weight×100). "왜 이 점수인지" 투명화.
+        public let contributionPoints: Int
     }
 
     public init(report: DensityReport) {
@@ -54,7 +56,8 @@ public struct DensityViewState: Sendable, Equatable {
                 signalKey: signal.signal.rawValue,
                 label: signal.signal.label,
                 detail: signal.detail,
-                intensity: signal.value
+                intensity: signal.value,
+                contributionPoints: Int((signal.contribution * 100).rounded())
             )
         }
     }

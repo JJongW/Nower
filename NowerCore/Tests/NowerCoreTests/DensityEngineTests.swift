@@ -62,6 +62,48 @@ final class DensityEngineTests: XCTestCase {
         XCTAssertEqual(report.metrics.allDayCount, 1)
     }
 
+    // MARK: - 점유 기둥 / 역전 해소 (Phase 0)
+
+    /// 핵심 회귀: 종일 todo 1개 < 8시간 시간 일정.
+    /// (이전 채점식에선 종일 1개 27점 > 8시간 일정 8점으로 역전됐음)
+    func test_fullTimedDay_outscoresSingleAllDay() {
+        let allDayOnly = DensityEngine.score(input([Event.allDay(title: "운동하기", date: day)]))
+        let fullDay = DensityEngine.score(input([
+            timed("작업1", 10, 5 * 60),   // 10:00-15:00
+            timed("작업2", 15, 3 * 60)    // 15:00-18:00
+        ]))
+        XCTAssertGreaterThan(fullDay.score, allDayOnly.score)
+        XCTAssertEqual(allDayOnly.band, .light)        // 종일 1개는 여유
+        XCTAssertGreaterThanOrEqual(fullDay.score, 50) // 8시간은 무거움
+    }
+
+    /// 점유 신호는 항상 포함되고, booked 분으로 raw 근거를 남긴다.
+    func test_occupancySignal_alwaysPresent_andTracksBookedMinutes() {
+        let report = DensityEngine.score(input([timed("A", 9, 120), timed("B", 14, 60)]))
+        XCTAssertTrue(report.signals.contains { $0.signal == .occupancy })
+        XCTAssertEqual(report.metrics.bookedMinutes, 180)
+    }
+
+    /// 겹치는 일정은 union으로 병합 — 이중 집계 안 함.
+    func test_occupancy_mergesOverlap() {
+        let report = DensityEngine.score(input([timed("A", 10, 120), timed("B", 11, 120)])) // 10-12, 11-13 → 10-13
+        XCTAssertEqual(report.metrics.bookedMinutes, 180)
+    }
+
+    /// 위치 데이터가 전혀 없으면 사회 신호는 제외(graceful degrade) — 점수를 부당하게 깎지 않음.
+    func test_noLocation_excludesSocialSignal() {
+        let report = DensityEngine.score(input([timed("A", 10, 60), timed("B", 14, 60)]))
+        XCTAssertFalse(report.signals.contains { $0.signal == .socialLoad })
+    }
+
+    func test_withLocation_includesSocialSignal() {
+        let report = DensityEngine.score(input([
+            timed("A", 10, 60, location: Location(name: "office")),
+            timed("B", 14, 60)
+        ]))
+        XCTAssertTrue(report.signals.contains { $0.signal == .socialLoad })
+    }
+
     // MARK: - 점수 단조성
 
     func test_moreEvents_higherScore() {
