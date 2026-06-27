@@ -45,7 +45,7 @@ final class NowerLiveActivityManager {
             let attributes = NowerLiveActivityAttributes(densityLabel: densityLabel)
             let content = ActivityContent(
                 state: state,
-                staleDate: state.eventDate.addingTimeInterval(3600) // 1시간 뒤 stale
+                staleDate: state.eventDate // 기준 시각(진행 중=종료, 예정=시작)에 stale
             )
             do {
                 current = try Activity.request(attributes: attributes, content: content, pushType: nil)
@@ -61,13 +61,14 @@ final class NowerLiveActivityManager {
     }
 
     /// 상태 갱신. 중요한 변화는 alert로 보조 알림(선택).
-    /// staleDate를 일정 종료 시각(+1h)으로 박아, 백그라운드/잠금화면에서 push 없이도
-    /// 종료 후 시스템이 자동으로 흐림 처리하도록 한다(= '이미 한 일'로 보이게).
+    /// staleDate를 일정 종료 시각(진행 중) / 시작 시각(예정)에 정확히 박아, push 없이도
+    /// 종료 직후 시스템이 stale 처리 → 위젯이 '종료됨'으로 전환하도록 한다.
+    /// (백그라운드에선 update가 못 도므로, '진행 중'이 끝나도 stale로 정직하게 표시.)
     func update(_ state: NowerLiveActivityAttributes.ContentState, alert: AlertConfiguration? = nil) {
         Task {
             let content = ActivityContent(
                 state: state,
-                staleDate: state.eventDate.addingTimeInterval(3600)
+                staleDate: state.eventDate
             )
             await current?.update(content, alertConfiguration: alert)
         }
