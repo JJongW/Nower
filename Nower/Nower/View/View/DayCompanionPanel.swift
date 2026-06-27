@@ -203,6 +203,12 @@ struct DayCompanionPanel: View {
             createdAt: Date()
         )
         DependencyContainer.shared.reflectionStore.upsert(reflection)
+        // 체감을 남긴 시점에 도달 마일스톤을 '알림 완료' 처리(패널이 상시 노출이라 깜빡임 방지)
+        NowerDensity.acknowledgeMilestones(
+            todosProvider: { viewModel.todos(for: $0) },
+            day: day,
+            reflections: DependencyContainer.shared.reflectionStore.all()
+        )
         refreshToken += 1
     }
 

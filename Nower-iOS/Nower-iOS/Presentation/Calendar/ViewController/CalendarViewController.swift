@@ -995,6 +995,12 @@ final class CalendarViewController: UIViewController {
             sh.prefersGrabberVisible = true
         }
         present(host, animated: true)
+        // 카드를 열어 마일스톤을 봤으니 '알림 완료' 처리(다시 안 뜸)
+        NowerDensity.acknowledgeMilestones(
+            todosProvider: { [weak self] in self?.viewModel.todos(for: $0) ?? [] },
+            day: day,
+            reflections: reflections
+        )
     }
 
     /// 하루 끝 체감 1탭 저장 → 보정 루프 입력. 저장 후 칩/히트맵 갱신.

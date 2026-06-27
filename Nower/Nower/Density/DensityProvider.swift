@@ -106,7 +106,23 @@ enum NowerDensity {
         let cmp = comparison(todosProvider: todosProvider, day: day, reflections: reflections)
         let callback = ReflectionCallbackEngine.callback(
             todayBand: report.band, reflections: reflections, asOf: day)
-        return DensityViewState(report: report, comparison: cmp, reflectionCallback: callback)
+        let calibration = DensityCalibrator.calibration(from: reflections, asOf: day)
+        let milestone = MilestoneEngine.newlyReached(
+            comparison: cmp, calibration: calibration, shown: MilestoneStore.shownIDs()
+        ).map(MilestoneCopy.text)
+        return DensityViewState(report: report, comparison: cmp, reflectionCallback: callback, milestone: milestone)
+    }
+
+    /// 사용자가 상세 카드를 봤을 때 호출 — 현재 도달한 마일스톤을 '알림 완료'로 표시(다시 안 뜸).
+    static func acknowledgeMilestones(
+        todosProvider: (Date) -> [TodoItem],
+        day: Date,
+        reflections: [DayReflection]
+    ) {
+        let cmp = comparison(todosProvider: todosProvider, day: day, reflections: reflections)
+        let calibration = DensityCalibrator.calibration(from: reflections, asOf: day)
+        let reached = MilestoneEngine.allReached(comparison: cmp, calibration: calibration)
+        MilestoneStore.markShown(reached.map(\.id))
     }
 
     /// 월별 밀도 집계. days = 그 달의 날짜들, todosProvider = 날짜별 일정 공급.

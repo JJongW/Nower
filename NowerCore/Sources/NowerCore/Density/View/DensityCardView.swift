@@ -20,6 +20,10 @@ public struct DensityCardView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 14) {
+            if let milestone = state.milestone {
+                milestoneRow(milestone)
+            }
+
             header
 
             Text(state.meaning)
@@ -81,6 +85,26 @@ public struct DensityCardView: View {
                 .foregroundColor(bandColor)
         }
         .frame(width: 56, height: 56)
+    }
+
+    // MARK: - 마일스톤 (벌어낸 학습 순간 — "너에 대해 하나 알아냈어")
+
+    private func milestoneRow(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "sparkles")
+                .foregroundColor(bandColor)
+                .font(.caption)
+            Text(text)
+                .font(.footnote.weight(.medium))
+                .foregroundColor(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(bandColor.opacity(0.14))
+        )
     }
 
     // MARK: - 체감 콜백 (과거 기록 회상 — "나를 알아간다")
