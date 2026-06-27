@@ -8,8 +8,10 @@
 
 import Foundation
 
-/// 밀도를 구성하는 5개 신호
+/// 밀도를 구성하는 신호
 public enum DensitySignal: String, Sendable, CaseIterable {
+    /// 점유 — 시간 일정이 하루를 얼마나 묶었는지 (밀도의 기둥)
+    case occupancy
     /// 전환 — 컨텍스트 스위치 횟수 (일정 개수 기반)
     case transitions
     /// 이동 부하 — 일정 간 이동 시간
@@ -26,6 +28,7 @@ public enum DensitySignal: String, Sendable, CaseIterable {
     /// 사용자 표기용 라벨 (내부 분석어가 아니라 친화어 — UX 검토 반영)
     public var label: String {
         switch self {
+        case .occupancy: return "일정 시간"
         case .transitions: return "일정 전환"
         case .travelLoad: return "이동"
         case .socialLoad: return "사람 만나기"
@@ -96,6 +99,8 @@ public enum DensityBand: String, Sendable, Codable {
 public struct DensityMetrics: Sendable, Equatable {
     /// 시간 있는 일정 개수
     public let eventCount: Int
+    /// 시간 일정이 점유한 총 시간(분, 겹침은 병합). 점유 신호의 raw 근거
+    public let bookedMinutes: Int
     /// 종일/기간 일정 개수
     public let allDayCount: Int
     /// 가장 긴 무중단 집중 블록(분)
@@ -115,6 +120,7 @@ public struct DensityMetrics: Sendable, Equatable {
 
     public init(
         eventCount: Int,
+        bookedMinutes: Int,
         allDayCount: Int,
         largestFocusBlockMinutes: Int,
         smallGapCount: Int,
@@ -125,6 +131,7 @@ public struct DensityMetrics: Sendable, Equatable {
         sleepHours: Double?
     ) {
         self.eventCount = eventCount
+        self.bookedMinutes = bookedMinutes
         self.allDayCount = allDayCount
         self.largestFocusBlockMinutes = largestFocusBlockMinutes
         self.smallGapCount = smallGapCount
@@ -137,7 +144,7 @@ public struct DensityMetrics: Sendable, Equatable {
 
     /// 빈 하루
     public static let empty = DensityMetrics(
-        eventCount: 0, allDayCount: 0, largestFocusBlockMinutes: 0, smallGapCount: 0,
+        eventCount: 0, bookedMinutes: 0, allDayCount: 0, largestFocusBlockMinutes: 0, smallGapCount: 0,
         tightestGapMinutes: nil, inPersonCount: 0, firstEventHour: nil,
         travelMinutes: nil, sleepHours: nil
     )
@@ -146,6 +153,8 @@ public struct DensityMetrics: Sendable, Equatable {
 /// 채점 기준 앵커 — "보통 하루"를 정의하는 절대 기준치(v1).
 /// narration이 raw값을 이 앵커와 비교해 의미를 만든다.
 public enum DensityAnchor {
+    /// 점유 시간(분): 이 이상이면 "꽉 찬 하루"(점유 신호 포화 기준)
+    public static let fullDayBookedMinutes = 360
     /// 일정 개수: 이 이상이면 "많음"
     public static let busyEventCount = 5
     /// 권장 집중 블록(분)
