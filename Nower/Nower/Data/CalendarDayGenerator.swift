@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import NowerCore
 
 struct CalendarDayGenerator {
     /// iOS 버전과의 호환성을 위한 기존 메서드 (deprecated)

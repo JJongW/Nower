@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import NowerCore
 
 /// 한 주를 표시하는 뷰
 /// iOS 버전과 동일하게 7개의 날짜를 가로로 배치하고, 각 날짜의 일정들을 표시합니다.

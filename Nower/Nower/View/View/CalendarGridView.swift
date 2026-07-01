@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import NowerCore
 import SwiftUI
 
 struct CalendarGridView: View {

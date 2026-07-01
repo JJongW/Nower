@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import NowerCore
 
 /// TodoRepository의 구현체
 /// CloudSyncManager를 통해 실제 데이터 관리를 수행합니다.

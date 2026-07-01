@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import NowerCore
 import SnapKit
 
 /// 주 내의 단일 날짜를 표시하는 뷰

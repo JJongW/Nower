@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import NowerCore
 
 /// 선택된 날짜의 일정 리스트를 표시하는 뷰
 /// iOS 버전과 동일한 기능을 macOS에 맞게 SwiftUI로 구현

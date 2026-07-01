@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import NowerCore
 
 /// 출발 알림 오케스트레이터.
 /// 일정 텍스트 → 저장 장소 매칭 → 출발지 결정 → ETA 산출 → 출발 알림 시각 계산 → 예약을 묶습니다.

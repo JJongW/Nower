@@ -8,6 +8,7 @@
 //
 
 import UIKit
+import NowerCore
 import SnapKit
 
 final class CustomRecurrenceViewController: UIViewController {

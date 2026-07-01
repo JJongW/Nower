@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import NowerCore
 
 /// 일정을 캡슐 형태로 표시하는 뷰
 /// iOS 버전과 동일한 디자인을 SwiftUI로 구현합니다.

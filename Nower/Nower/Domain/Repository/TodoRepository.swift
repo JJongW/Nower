@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import NowerCore
 
 /// Todo 데이터 관리를 위한 Repository Protocol
 /// 데이터 소스에 대한 추상화를 제공하여 비즈니스 로직과 데이터 레이어를 분리합니다.

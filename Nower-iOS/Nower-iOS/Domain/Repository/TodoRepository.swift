@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import NowerCore
 
 protocol TodoRepository {
     func fetchTodos(on date: Date) -> [TodoItem]

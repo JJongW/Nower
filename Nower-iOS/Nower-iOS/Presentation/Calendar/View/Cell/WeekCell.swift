@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import NowerCore
 import SnapKit
 
 /// 주 단위 셀

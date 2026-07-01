@@ -5,6 +5,7 @@
 //  Created by 신종원 on 4/16/25.
 //
 import UIKit
+import NowerCore
 
 final class EditEventBottomSheetViewController: UIViewController {
     var coordinator: AppCoordinator?
