@@ -8,6 +8,7 @@
 import Foundation
 import NowerCore
 import Combine
+import UIKit
 
 final class CalendarViewModel: ObservableObject {
     private let addTodoUseCase: AddTodoUseCase
@@ -62,6 +63,7 @@ final class CalendarViewModel: ObservableObject {
         loadAllTodos()
         setupNotificationObserver()
         refreshDepartureNudges() // 앱 시작 시 출발 알림 재동기화
+        refreshExternalCalendars() // 앱 시작 시 외부 캘린더(Apple 등) 읽기
     }
 
     func loadAllTodos() {
@@ -82,6 +84,16 @@ final class CalendarViewModel: ObservableObject {
     /// Phase 1+ 에서 provider fetch 결과를 여기에 주입합니다.
     func setExternalTodos(_ items: [TodoItem]) {
         externalTodos = items
+    }
+
+    /// 외부 캘린더(Apple 등)를 다시 읽어 externalTodos를 갱신합니다.
+    /// 앱 시작·포그라운드 복귀 시 호출. 비활성/미허가면 빈 배열로 교체됩니다.
+    func refreshExternalCalendars(around date: Date? = nil) {
+        let base = date ?? selectedDate ?? Date()
+        Task { [weak self] in
+            let todos = await ExternalCalendarManager.shared.fetchExternalTodos(around: base)
+            await MainActor.run { self?.setExternalTodos(todos) }
+        }
     }
 
     func todos(for date: Date) -> [TodoItem] {
@@ -414,6 +426,17 @@ final class CalendarViewModel: ObservableObject {
             name: SavedPlacesManager.didUpdateNotification,
             object: nil
         )
+        // 포그라운드 복귀 시 외부 캘린더 재동기화 (외부에서 삭제/추가된 일정 반영)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidBecomeActive),
+            name: UIApplication.didBecomeActiveNotification,
+            object: nil
+        )
+    }
+
+    @objc private func appDidBecomeActive() {
+        refreshExternalCalendars()
     }
     
     /// Todo 업데이트 알림을 처리합니다.
