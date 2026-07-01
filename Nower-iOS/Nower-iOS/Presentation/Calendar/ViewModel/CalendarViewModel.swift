@@ -84,15 +84,17 @@ final class CalendarViewModel: ObservableObject {
     /// Phase 1+ 에서 provider fetch 결과를 여기에 주입합니다.
     func setExternalTodos(_ items: [TodoItem]) {
         externalTodos = items
+        // UIKit 화면은 @Published를 자동 관찰하지 않으므로 명시적으로 리로드를 알린다.
+        NotificationCenter.default.post(name: ExternalCalendarManager.externalTodosDidChangeNotification, object: nil)
     }
 
     /// 외부 캘린더(Apple 등)를 다시 읽어 externalTodos를 갱신합니다.
     /// 앱 시작·포그라운드 복귀 시 호출. 비활성/미허가면 빈 배열로 교체됩니다.
     func refreshExternalCalendars(around date: Date? = nil) {
         let base = date ?? selectedDate ?? Date()
-        Task { [weak self] in
+        Task {
             let todos = await ExternalCalendarManager.shared.fetchExternalTodos(around: base)
-            await MainActor.run { self?.setExternalTodos(todos) }
+            await MainActor.run { self.setExternalTodos(todos) }
         }
     }
 
@@ -433,9 +435,20 @@ final class CalendarViewModel: ObservableObject {
             name: UIApplication.didBecomeActiveNotification,
             object: nil
         )
+        // 설정에서 외부 캘린더 on/off가 바뀌면 즉시 재fetch
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(externalCalendarDidChange),
+            name: ExternalCalendarManager.didChangeNotification,
+            object: nil
+        )
     }
 
     @objc private func appDidBecomeActive() {
+        refreshExternalCalendars()
+    }
+
+    @objc private func externalCalendarDidChange() {
         refreshExternalCalendars()
     }
     

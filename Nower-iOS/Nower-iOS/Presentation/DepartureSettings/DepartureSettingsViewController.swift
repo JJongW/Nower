@@ -23,6 +23,7 @@ final class DepartureSettingsViewController: UIViewController {
         case places
         case customPlaces
         case timing
+        case externalCalendar
     }
 
     /// 현재 저장된 자유 장소 목록.
@@ -244,6 +245,7 @@ extension DepartureSettingsViewController: UITableViewDataSource, UITableViewDel
         case .places: return 2 // 집, 회사
         case .customPlaces: return customPlaces.count + 1 // 자유 장소 + "장소 추가"
         case .timing: return TimingRow.allCases.count
+        case .externalCalendar: return 1 // Apple 캘린더 연동 토글
         case .none: return 0
         }
     }
@@ -253,6 +255,7 @@ extension DepartureSettingsViewController: UITableViewDataSource, UITableViewDel
         case .places: return "저장 장소"
         case .customPlaces: return "자유 장소"
         case .timing: return "출발 알림 설정"
+        case .externalCalendar: return "외부 캘린더"
         case .none: return nil
         }
     }
@@ -265,6 +268,8 @@ extension DepartureSettingsViewController: UITableViewDataSource, UITableViewDel
             return "자유 장소는 저장만 돼요. 출발 알림은 집·회사에서만 보내드려요."
         case .timing:
             return "출발 알림 = 약속시간 − 이동시간 − 준비 버퍼 − 안전 여유"
+        case .externalCalendar:
+            return "켜면 기기의 Apple 캘린더 일정을 Nower 달력에 함께 보여줘요. 읽기 전용이라 Nower에서 수정·삭제는 안 돼요."
         case .none: return nil
         }
     }
@@ -291,9 +296,27 @@ extension DepartureSettingsViewController: UITableViewDataSource, UITableViewDel
         case .timing:
             return timingCell(for: indexPath.row)
 
+        case .externalCalendar:
+            return externalCalendarCell()
+
         case .none:
             return UITableViewCell()
         }
+    }
+
+    private func externalCalendarCell() -> UITableViewCell {
+        let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
+        cell.selectionStyle = .none
+        var config = cell.defaultContentConfiguration()
+        config.text = "Apple 캘린더 연동"
+        config.textProperties.color = AppColors.textPrimary
+        cell.contentConfiguration = config
+        let toggle = UISwitch()
+        toggle.isOn = ExternalCalendarManager.shared.isAppleEnabled
+        toggle.onTintColor = AppColors.coralred
+        toggle.addTarget(self, action: #selector(appleCalendarToggled(_:)), for: .valueChanged)
+        cell.accessoryView = toggle
+        return cell
     }
 
     private func customPlaceCell(for row: Int) -> UITableViewCell {
@@ -373,8 +396,41 @@ extension DepartureSettingsViewController: UITableViewDataSource, UITableViewDel
             } else {
                 addCustomPlaceFlow()
             }
-        case .timing, .none:
+        case .timing, .externalCalendar, .none:
             break
         }
+    }
+
+    // MARK: - 외부 캘린더 (Apple)
+
+    @objc private func appleCalendarToggled(_ toggle: UISwitch) {
+        if toggle.isOn {
+            Task { @MainActor in
+                let granted = await ExternalCalendarManager.shared.requestAppleAccess()
+                if granted {
+                    ExternalCalendarManager.shared.setAppleEnabled(true)
+                } else {
+                    toggle.setOn(false, animated: true)
+                    presentCalendarPermissionDenied()
+                }
+            }
+        } else {
+            ExternalCalendarManager.shared.setAppleEnabled(false)
+        }
+    }
+
+    private func presentCalendarPermissionDenied() {
+        let alert = UIAlertController(
+            title: "캘린더 접근이 필요해요",
+            message: "설정 > Nower 에서 캘린더 접근을 허용하면 일정을 함께 볼 수 있어요.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "설정 열기", style: .default) { _ in
+            if let url = URL(string: UIApplication.openSettingsURLString) {
+                UIApplication.shared.open(url)
+            }
+        })
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+        present(alert, animated: true)
     }
 }

@@ -13,6 +13,12 @@ import NowerCore
 final class ExternalCalendarManager {
     static let shared = ExternalCalendarManager()
 
+    /// 외부 캘린더 연동 상태(on/off·권한)가 바뀌었음을 알린다. 옵저버는 재fetch한다.
+    static let didChangeNotification = Notification.Name("ExternalCalendarManager.didChange")
+
+    /// externalTodos가 실제로 갱신됐음을 알린다(fetch 완료 후). UIKit 화면은 이때 리로드한다.
+    static let externalTodosDidChangeNotification = Notification.Name("ExternalCalendarManager.externalTodosDidChange")
+
     private let appleProvider = AppleCalendarProvider()
     private let appleEnabledKey = "external.apple.enabled"
 
@@ -23,6 +29,12 @@ final class ExternalCalendarManager {
     var isAppleEnabled: Bool {
         get { UserDefaults.standard.bool(forKey: appleEnabledKey) }
         set { UserDefaults.standard.set(newValue, forKey: appleEnabledKey) }
+    }
+
+    /// Apple 연동을 켜고/끄고 변경 알림을 발행한다(→ CalendarViewModel 재fetch).
+    func setAppleEnabled(_ enabled: Bool) {
+        isAppleEnabled = enabled
+        NotificationCenter.default.post(name: Self.didChangeNotification, object: nil)
     }
 
     /// Apple 캘린더 접근이 이미 허용된 상태인지.

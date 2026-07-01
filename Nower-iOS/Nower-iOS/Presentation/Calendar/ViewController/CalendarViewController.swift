@@ -98,6 +98,13 @@ final class CalendarViewController: UIViewController {
             name: Notification.Name("CloudSyncManager.todosDidUpdate"),
             object: nil
         )
+        // 외부 캘린더(Apple 등) 일정이 갱신되면 달력을 다시 그린다.
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(externalTodosUpdated),
+            name: ExternalCalendarManager.externalTodosDidChangeNotification,
+            object: nil
+        )
 
         calendarView.previousButton.addTarget(self, action: #selector(didTapPreviousMonth), for: .touchUpInside)
         calendarView.nextButton.addTarget(self, action: #selector(didTapNextMonth), for: .touchUpInside)
@@ -716,6 +723,15 @@ final class CalendarViewController: UIViewController {
         //viewModel.loadAllTodos()
         DispatchQueue.main.async {
             self.calendarView.collectionView.reloadData()
+            self.schedulePanelVC.refreshIfVisible()
+        }
+    }
+
+    /// 외부 캘린더 일정이 갱신되면 달력·패널을 다시 그린다.
+    /// weeks 데이터는 캐시이므로 reloadData만으로는 부족 — todos(for:)로 다시 생성해야 한다.
+    @objc private func externalTodosUpdated() {
+        DispatchQueue.main.async {
+            self.generateCalendar(updateHeader: false)
             self.schedulePanelVC.refreshIfVisible()
         }
     }

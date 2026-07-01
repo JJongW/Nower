@@ -26,7 +26,9 @@ public final class AppleCalendarProvider: CalendarProvider {
     public static var isAuthorized: Bool {
         let status = EKEventStore.authorizationStatus(for: .event)
         if #available(iOS 17.0, macOS 14.0, watchOS 10.0, *) {
-            return status == .fullAccess
+            // .authorized는 iOS17에서 deprecated지만 일부 상태(시뮬레이터 grant 등)에서
+            // 여전히 반환되므로 읽기 접근 가능으로 함께 인정한다.
+            return status == .fullAccess || status == .authorized
         } else {
             return status == .authorized
         }
