@@ -11,72 +11,8 @@
 import WidgetKit
 import SwiftUI
 import Foundation
+import NowerCore
 
-// MARK: - Widget Todo Item
-
-struct WidgetTodoItem: Identifiable, Codable {
-    var id = UUID()
-    var text: String
-    var isRepeating: Bool
-    var date: String // yyyy-MM-dd 형식
-    var colorName: String
-    var startDate: String?
-    var endDate: String?
-    
-    init(text: String, isRepeating: Bool, date: String, colorName: String) {
-        self.id = UUID()
-        self.text = text
-        self.isRepeating = isRepeating
-        self.date = date
-        self.colorName = colorName
-        self.startDate = nil
-        self.endDate = nil
-    }
-    
-    init(text: String, isRepeating: Bool, date: Date, colorName: String) {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        
-        self.id = UUID()
-        self.text = text
-        self.isRepeating = isRepeating
-        self.date = formatter.string(from: date)
-        self.colorName = colorName
-        self.startDate = nil
-        self.endDate = nil
-    }
-    
-    init(text: String, isRepeating: Bool, startDate: Date, endDate: Date, colorName: String) {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        
-        self.id = UUID()
-        self.text = text
-        self.isRepeating = isRepeating
-        self.date = formatter.string(from: startDate)
-        self.colorName = colorName
-        self.startDate = formatter.string(from: startDate)
-        self.endDate = formatter.string(from: endDate)
-    }
-    
-    var isPeriodEvent: Bool {
-        return startDate != nil && endDate != nil
-    }
-    
-    func includesDate(_ date: Date) -> Bool {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        let dateString = formatter.string(from: date)
-        
-        if isPeriodEvent {
-            guard let start = startDate, let end = endDate else { return false }
-            return dateString >= start && dateString <= end
-        } else {
-            return self.date == dateString
-        }
-    }
-}
 
 // MARK: - Calendar Day Info
 
@@ -87,7 +23,7 @@ struct CalendarDayInfo {
     let isSunday: Bool
     let isSaturday: Bool
     let holidayName: String?
-    let todos: [WidgetTodoItem]
+    let todos: [TodoItem]
 }
 
 // MARK: - Calendar Entry
@@ -96,9 +32,9 @@ struct CalendarEntry: TimelineEntry {
     let date: Date
     let currentMonth: Date
     let weeks: [[CalendarDayInfo]]
-    let allTodos: [WidgetTodoItem]
-    let periodEvents: [WidgetTodoItem]
-    let singleDayEvents: [WidgetTodoItem]
+    let allTodos: [TodoItem]
+    let periodEvents: [TodoItem]
+    let singleDayEvents: [TodoItem]
 }
 
 // MARK: - Widget App Colors
@@ -234,7 +170,7 @@ struct CalendarProvider: TimelineProvider {
         completion(timeline)
     }
     
-    func generateCalendarEntry(for month: Date, todos: [WidgetTodoItem]) -> CalendarEntry {
+    func generateCalendarEntry(for month: Date, todos: [TodoItem]) -> CalendarEntry {
         let calendar = Calendar.current
         let today = Date()
         
@@ -300,23 +236,20 @@ struct CalendarProvider: TimelineProvider {
         )
     }
     
-    private func loadTodosFromICloud() -> [WidgetTodoItem] {
-        // 위젯 확장에서는 안전하게 iCloud 접근
-        do {
-            let store = NSUbiquitousKeyValueStore.default
-            let todosKey = "SavedTodos"
-            
-            store.synchronize()
-            
-            guard let data = store.data(forKey: todosKey) else {
-                return []
-            }
-            
-            let todos = try JSONDecoder().decode([WidgetTodoItem].self, from: data)
-            return todos
-        } catch {
-            return []
+    private func loadTodosFromICloud() -> [TodoItem] {
+        let store = NSUbiquitousKeyValueStore.default
+        store.synchronize()
+
+        var todos: [TodoItem] = []
+        if let data = store.data(forKey: "SavedTodos") {
+            todos = (try? JSONDecoder().decode([TodoItem].self, from: data)) ?? []
         }
+        // 외부(Apple 등) 읽기 전용 일정 병합 (별도 KVS 키, 메인 앱이 replace-all로 갱신)
+        if let externalData = store.data(forKey: "SavedExternalTodos") {
+            let external = (try? JSONDecoder().decode([TodoItem].self, from: externalData)) ?? []
+            todos.append(contentsOf: external)
+        }
+        return todos
     }
 }
 
@@ -550,8 +483,8 @@ struct DayCellWithEventsView: View {
     }
     
     // 해당 날짜의 모든 일정 가져오기 (기간별 + 단일)
-    private func getAllEventsForDay() -> [WidgetTodoItem] {
-        var allEvents: [WidgetTodoItem] = []
+    private func getAllEventsForDay() -> [TodoItem] {
+        var allEvents: [TodoItem] = []
         
         // 1. 해당 날짜의 단일 일정
         let singleEvents = dayInfo.todos.filter { !$0.isPeriodEvent }
@@ -738,8 +671,8 @@ struct CalendarWidget_Previews: PreviewProvider {
         let month = calendar.dateInterval(of: .month, for: today)?.start ?? today
         
         let sampleTodos = [
-            WidgetTodoItem(text: "샘플 일정 1", isRepeating: false, date: today, colorName: "skyblue"),
-            WidgetTodoItem(text: "샘플 일정 2", isRepeating: false, date: today, colorName: "coralred")
+            TodoItem(text: "샘플 일정 1", isRepeating: false, date: today, colorName: "skyblue"),
+            TodoItem(text: "샘플 일정 2", isRepeating: false, date: today, colorName: "coralred")
         ]
         
         let provider = CalendarProvider()

@@ -66,6 +66,7 @@ final class ExternalCalendarManager {
             result.append(contentsOf: personal.map { $0.toTodoItem() })
         }
 
+        Self.persistForWidgets(result)
         return result
     }
 
@@ -73,5 +74,16 @@ final class ExternalCalendarManager {
     private static func isHolidayCalendar(_ title: String) -> Bool {
         let lower = title.lowercased()
         return title.contains("휴일") || lower.contains("holiday")
+    }
+
+    /// 위젯(별도 프로세스)이 외부 일정을 볼 수 있도록 iCloud KVS 별도 키에 replace-all로 저장한다.
+    /// 메인 앱은 이 키를 자기 할일로 다시 읽지 않는다(유령 방지). 비활성/미허가면 []로 덮어써 정리.
+    static let widgetExternalTodosKey = "SavedExternalTodos"
+    private static func persistForWidgets(_ todos: [TodoItem]) {
+        let store = NSUbiquitousKeyValueStore.default
+        if let data = try? JSONEncoder().encode(todos) {
+            store.set(data, forKey: widgetExternalTodosKey)
+            store.synchronize()
+        }
     }
 }

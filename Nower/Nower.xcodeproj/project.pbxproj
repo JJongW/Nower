@@ -11,6 +11,7 @@
 		C3D771482F26490B00398804 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C36B65922F262D2F00DEB2AF /* SwiftUI.framework */; };
 		C3D771572F26490C00398804 /* NowerWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C3D771462F26490B00398804 /* NowerWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C3D7779F2F3A386300398804 /* NowerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C3D7779E2F3A386300398804 /* NowerCore */; };
+		C3D7770000000000000000A2 /* NowerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C3D7770000000000000000A1 /* NowerCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -97,6 +98,7 @@
 			files = (
 				C3D771482F26490B00398804 /* SwiftUI.framework in Frameworks */,
 				C3D771472F26490B00398804 /* WidgetKit.framework in Frameworks */,
+				C3D7770000000000000000A2 /* NowerCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -178,6 +180,7 @@
 			);
 			name = NowerWidgetExtension;
 			packageProductDependencies = (
+				C3D7770000000000000000A1 /* NowerCore */,
 			);
 			productName = NowerWidgetExtension;
 			productReference = C3D771462F26490B00398804 /* NowerWidgetExtension.appex */;
@@ -551,6 +554,10 @@
 
 /* Begin XCSwiftPackageProductDependency section */
 		C3D7779E2F3A386300398804 /* NowerCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = NowerCore;
+		};
+		C3D7770000000000000000A1 /* NowerCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = NowerCore;
 		};
