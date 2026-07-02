@@ -10,6 +10,7 @@ import Foundation
 
 #if canImport(EventKit)
 import EventKit
+import CoreGraphics
 
 public final class AppleCalendarProvider: CalendarProvider {
     public let source: CalendarSource = .apple
@@ -91,11 +92,40 @@ public final class AppleCalendarProvider: CalendarProvider {
         store.calendars(for: .event).map { ($0.calendarIdentifier, $0.title) }
     }
 
-    /// EKCalendar 색을 Nower 5테마 중 하나로 매핑. 실패 시 기본값.
+    /// Nower 5테마 기준색(라이트 모드 RGB, AppColors와 동일). 최근접 매핑용.
+    private static let themeReferenceColors: [(name: String, r: Double, g: Double, b: Double)] = [
+        ("skyblue",   Double(0x73) / 255, Double(0xB3) / 255, Double(0xD9) / 255),
+        ("peach",     Double(0xF2) / 255, Double(0xBF) / 255, Double(0x8C) / 255),
+        ("lavender",  Double(0xB3) / 255, Double(0x99) / 255, Double(0xD9) / 255),
+        ("mintgreen", Double(0x66) / 255, Double(0xB3) / 255, Double(0x99) / 255),
+        ("coralred",  Double(0xF2) / 255, Double(0x8C) / 255, Double(0x80) / 255),
+    ]
+
+    /// EKCalendar 색을 Nower 5테마 중 최근접 색으로 매핑한다. 색을 못 읽으면 기본값(skyblue).
     private static func themeColorName(for calendar: EKCalendar?) -> String {
-        // Phase 1: 외부 일정 구분은 읽기전용 뱃지로 하므로 색은 단일 기본값.
-        // 추후 calendar.cgColor → 최근접 테마 매핑으로 개선 예정.
-        return "skyblue"
+        guard let rgb = sRGBComponents(of: calendar?.cgColor) else { return "skyblue" }
+        var best = "skyblue"
+        var bestDistance = Double.greatestFiniteMagnitude
+        for theme in themeReferenceColors {
+            // sRGB 유클리드 거리(간이). 5개 버킷 분류엔 충분.
+            let distance = pow(rgb.r - theme.r, 2) + pow(rgb.g - theme.g, 2) + pow(rgb.b - theme.b, 2)
+            if distance < bestDistance {
+                bestDistance = distance
+                best = theme.name
+            }
+        }
+        return best
+    }
+
+    /// CGColor를 sRGB 0...1 성분으로 변환. 색공간이 달라도 sRGB로 변환해 일관 비교.
+    private static func sRGBComponents(of cgColor: CGColor?) -> (r: Double, g: Double, b: Double)? {
+        guard let cgColor,
+              let srgb = CGColorSpace(name: CGColorSpace.sRGB),
+              let converted = cgColor.converted(to: srgb, intent: .defaultIntent, options: nil),
+              let comps = converted.components, comps.count >= 3 else {
+            return nil
+        }
+        return (Double(comps[0]), Double(comps[1]), Double(comps[2]))
     }
     #endif
 }
