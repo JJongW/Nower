@@ -102,8 +102,13 @@ final class CalendarViewModel: ObservableObject {
         let key = date.toDateString()
         let todosForDate = todosByDate[key] ?? []
 
-        // 외부 캘린더 일정(읽기 전용, 비영구) 중 이 날짜에 포함되는 것
-        let externalForDate = externalTodos.filter { $0.includesDate(date) }
+        // 외부 캘린더 일정(읽기 전용, 비영구) 중 이 날짜에 포함되는 것.
+        // 단, 같은 날 휴일 라벨과 이름이 같은 외부(Apple) 공휴일 캡슐은 제거한다.
+        // → 휴일은 라벨 하나로만 표시(중복 캡슐 흡수). 연동 OFF면 라벨 그대로 유지.
+        let holidayForDate = holidayName(for: date)
+        let externalForDate = externalTodos
+            .filter { $0.includesDate(date) }
+            .filter { holidayForDate == nil || $0.text != holidayForDate }
 
         // 해당 날짜의 단일 날짜 일정들만 필터링 (기간별 일정 및 반복 원본 제외) + 외부 단일 일정
         let singleDayTodos = todosForDate.filter { !$0.isPeriodEvent && !$0.isRecurringEvent }

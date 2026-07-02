@@ -58,9 +58,20 @@ final class ExternalCalendarManager {
             let end = calendar.date(byAdding: .month, value: 6, to: date) ?? date
             let range = DateInterval(start: start, end: max(end, start))
             let events = (try? await appleProvider.fetchEvents(in: range)) ?? []
-            result.append(contentsOf: events.map { $0.toTodoItem() })
+
+            // iOS 기본 "공휴일" 구독 캘린더에서 온 이벤트는 제외한다.
+            // 휴일(대체공휴일 포함)은 공공데이터포털 API 라벨이 단일 진실이므로,
+            // Apple 공휴일 캡슐은 이름이 달라도(예: "대체 공휴일") 통째로 흡수한다.
+            let personal = events.filter { !Self.isHolidayCalendar($0.calendarTitle) }
+            result.append(contentsOf: personal.map { $0.toTodoItem() })
         }
 
         return result
+    }
+
+    /// iOS 기본 공휴일/휴일 구독 캘린더 이름인지. 로케일 대비 한/영 키워드 모두 매칭.
+    private static func isHolidayCalendar(_ title: String) -> Bool {
+        let lower = title.lowercased()
+        return title.contains("휴일") || lower.contains("holiday")
     }
 }

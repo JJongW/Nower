@@ -41,6 +41,9 @@ final class CalendarViewController: UIViewController {
     private let holidayUseCase: HolidayUseCase
     private var syncStatusViewModel: SyncStatusViewModel?
 
+    /// 휴일 데이터가 이미 도착·반영된 월("yyyy-MM"). weeks 재생성 무한루프 방지용.
+    private var holidayAppliedMonths: Set<String> = []
+
     // MARK: - Interactive Swipe Properties
     private var panStartLocation: CGPoint = .zero
     private var snapshotView: UIView?
@@ -814,9 +817,20 @@ final class CalendarViewController: UIViewController {
         #endif
 
         if let year = components.year, let month = components.month {
-            holidayUseCase.fetchHolidays(for: year, month: month) { _ in
+            let monthKey = String(format: "%04d-%02d", year, month)
+            let alreadyApplied = holidayAppliedMonths.contains(monthKey)
+            holidayUseCase.fetchHolidays(for: year, month: month) { [weak self] _ in
                 DispatchQueue.main.async {
-                    self.calendarView.collectionView.reloadData()
+                    guard let self else { return }
+                    if alreadyApplied {
+                        // 이미 반영된 월: todos만 갱신하면 되므로 reloadData로 충분.
+                        self.calendarView.collectionView.reloadData()
+                    } else {
+                        // 휴일 데이터가 처음 도착 → weeks를 재생성해 라벨 표시 +
+                        // 휴일과 겹치는 외부(Apple) 캡슐 dedup을 반영한다.
+                        self.holidayAppliedMonths.insert(monthKey)
+                        self.generateCalendar(updateHeader: false)
+                    }
                 }
             }
         }
