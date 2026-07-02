@@ -1277,7 +1277,27 @@ extension CalendarViewController: UICollectionViewDataSource {
         formatter.dateFormat = "yyyy-MM-dd"
         guard let selectedDate = formatter.date(from: dateString) else { return }
 
+        if presentReadOnlyNoticeIfNeeded(for: todo) { return }
         coordinator?.presentEditEvent(todo: todo, date: selectedDate, viewModel: viewModel)
+    }
+
+    /// 외부(읽기 전용) 일정이면 편집 시트 대신 안내 토스트를 띄우고 true를 반환한다.
+    @discardableResult
+    private func presentReadOnlyNoticeIfNeeded(for todo: TodoItem) -> Bool {
+        guard todo.isReadOnly else { return false }
+        let source = externalSourceDisplayName(todo.externalSource)
+        showSyncToast("\(source) 일정은 읽기 전용이에요. Nower에서 수정·삭제는 안 돼요.")
+        return true
+    }
+
+    /// externalSource 코드("apple"/"google"/"naver")를 사용자용 이름으로 변환한다.
+    private func externalSourceDisplayName(_ source: String?) -> String {
+        switch source {
+        case "apple": return "Apple 캘린더"
+        case "google": return "Google 캘린더"
+        case "naver": return "네이버 캘린더"
+        default: return "외부 캘린더"
+        }
     }
 
     private func handleDaySelection(dateString: String) {
@@ -1352,6 +1372,7 @@ extension CalendarViewController: SchedulePanelDelegate {
     }
 
     func schedulePanel(_ panel: SchedulePanelViewController, didSelect todo: TodoItem, on date: Date) {
+        if presentReadOnlyNoticeIfNeeded(for: todo) { return }
         coordinator?.presentEditEvent(todo: todo, date: date, viewModel: viewModel)
     }
 }
