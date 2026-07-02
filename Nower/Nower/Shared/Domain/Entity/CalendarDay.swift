@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import NowerCore
 
 /// 달력의 하루를 나타내는 데이터 모델
 /// MacOS와 iOS에서 동일하게 사용되는 달력 뷰 엔티티입니다.

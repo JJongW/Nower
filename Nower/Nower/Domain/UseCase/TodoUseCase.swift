@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import NowerCore
 
 /// Todo 추가를 담당하는 UseCase
 protocol AddTodoUseCase {

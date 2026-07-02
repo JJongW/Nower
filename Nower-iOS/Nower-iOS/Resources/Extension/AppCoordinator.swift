@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import NowerCore
 // NOTE: Import NowerCore when package is linked
 // import NowerCore
 

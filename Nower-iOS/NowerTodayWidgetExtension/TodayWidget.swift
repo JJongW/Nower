@@ -14,117 +14,6 @@ import SwiftUI
 import Foundation
 import NowerCore
 
-// MARK: - Widget 전용 TodoItem 정의
-
-/// 위젯 전용 Todo 아이템 데이터 모델
-/// iOS 앱의 TodoItem과 동일한 구조이지만, 위젯 타겟에만 포함됩니다.
-/// UIKit 의존성 없이 순수 Foundation만 사용합니다.
-struct WidgetTodoItem: Identifiable, Codable {
-    var id = UUID()
-    let text: String
-    let isRepeating: Bool
-    let date: String // yyyy-MM-dd 형식
-    let colorName: String
-    
-    // 기간별 일정을 위한 필드들
-    let startDate: String? // yyyy-MM-dd 형식, nil이면 단일 날짜 일정
-    let endDate: String?   // yyyy-MM-dd 형식, nil이면 단일 날짜 일정
-
-    /// 시작 시각 "HH:mm" (앱의 TodoItem 데이터에서 함께 읽힘, 없으면 종일)
-    var scheduledTime: String? = nil
-
-    /// 종료 시각 "HH:mm" (없으면 시작+1시간으로 가정)
-    var endScheduledTime: String? = nil
-    
-    /// 단일 날짜 WidgetTodoItem 생성자
-    init(text: String, isRepeating: Bool, date: String, colorName: String) {
-        self.text = text
-        self.isRepeating = isRepeating
-        self.date = date
-        self.colorName = colorName
-        self.startDate = nil
-        self.endDate = nil
-    }
-    
-    /// Date 객체로부터 단일 날짜 WidgetTodoItem 생성
-    init(text: String, isRepeating: Bool, date: Date, colorName: String) {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        
-        self.text = text
-        self.isRepeating = isRepeating
-        self.date = formatter.string(from: date)
-        self.colorName = colorName
-        self.startDate = nil
-        self.endDate = nil
-    }
-    
-    /// 기간별 WidgetTodoItem 생성자
-    init(text: String, isRepeating: Bool, startDate: Date, endDate: Date, colorName: String) {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        
-        self.text = text
-        self.isRepeating = isRepeating
-        self.date = formatter.string(from: startDate)
-        self.colorName = colorName
-        self.startDate = formatter.string(from: startDate)
-        self.endDate = formatter.string(from: endDate)
-    }
-    
-    /// 기간별 일정인지 확인
-    var isPeriodEvent: Bool {
-        return startDate != nil && endDate != nil
-    }
-    
-    /// 시작 날짜를 Date 객체로 변환
-    var startDateObject: Date? {
-        guard let startDate = startDate else { return dateObject }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.date(from: startDate)
-    }
-    
-    /// 종료 날짜를 Date 객체로 변환
-    var endDateObject: Date? {
-        guard let endDate = endDate else { return dateObject }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.date(from: endDate)
-    }
-    
-    /// 날짜 문자열을 Date 객체로 변환
-    var dateObject: Date? {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.date(from: date)
-    }
-    
-    /// 특정 날짜가 이 일정의 기간에 포함되는지 확인
-    func includesDate(_ date: Date) -> Bool {
-        // 위젯에서 안정적인 날짜 파싱을 위해 로케일 설정
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.locale = Locale(identifier: "en_US_POSIX") // 위젯에서 안정적인 파싱을 위해
-        let dateString = formatter.string(from: date)
-        
-        if isPeriodEvent {
-            guard let start = startDate, let end = endDate else {
-                return false
-            }
-            // 문자열 비교로 날짜 범위 확인
-            let isIncluded = dateString >= start && dateString <= end
-            if isIncluded {
-            }
-            return isIncluded
-        } else {
-            let isIncluded = self.date == dateString
-            if isIncluded {
-            }
-            return isIncluded
-        }
-    }
-}
 
 // MARK: - Widget 전용 색상 정의 (SwiftUI Color 기반)
 
@@ -313,7 +202,7 @@ enum WidgetAppColors {
 
 struct TodayEntry: TimelineEntry {
     let date: Date
-    let todos: [WidgetTodoItem] // 위젯 전용 TodoItem 사용
+    let todos: [TodoItem] // 위젯 전용 TodoItem 사용
 }
 
 // MARK: - TimelineProvider
@@ -323,8 +212,8 @@ struct TodayProvider: TimelineProvider {
     // placeholder에서는 더미 데이터 사용
     func placeholder(in context: Context) -> TodayEntry {
         // 위젯 미리보기용 더미 데이터
-        let sample1 = WidgetTodoItem(text: "샘플 일정 1", isRepeating: false, date: Date(), colorName: "skyblue")
-        let sample2 = WidgetTodoItem(text: "샘플 일정 2", isRepeating: false, date: Date(), colorName: "coralred")
+        let sample1 = TodoItem(text: "샘플 일정 1", isRepeating: false, date: Date(), colorName: "skyblue")
+        let sample2 = TodoItem(text: "샘플 일정 2", isRepeating: false, date: Date(), colorName: "coralred")
         return TodayEntry(date: Date(), todos: [sample1, sample2])
     }
 
@@ -371,7 +260,7 @@ struct TodayProvider: TimelineProvider {
         let todayString = formatter.string(from: today)
         
         // 안전하게 iCloud 데이터 로드
-        let allTodos: [WidgetTodoItem]
+        let allTodos: [TodoItem]
         do {
             allTodos = try loadTodosFromICloud()
             
@@ -397,26 +286,21 @@ struct TodayProvider: TimelineProvider {
 
     /// CloudSyncManager와 동일한 키/포맷으로 NSUbiquitousKeyValueStore에서 Todo 목록 로딩
     /// - Throws: 디코딩 오류 시 에러를 던짐
-    private func loadTodosFromICloud() throws -> [WidgetTodoItem] {
+    private func loadTodosFromICloud() throws -> [TodoItem] {
         let store = NSUbiquitousKeyValueStore.default
-        let todosKey = "SavedTodos"
-        
-        // iCloud 동기화 강제 실행
         store.synchronize()
-        
-        // 디버깅: iCloud store의 모든 키 확인
-        let allKeys = store.dictionaryRepresentation.keys
-        
-        // iCloud 접근 권한 확인
-        guard let data = store.data(forKey: todosKey) else {
-            // 데이터가 없으면 빈 배열 반환 (에러 아님)
-            return []
-        }
-        
 
-        // iOS 앱의 TodoItem과 동일한 구조이므로 JSON 디코딩 가능
-        // 위젯에서는 WidgetTodoItem으로 디코딩
-        let todos = try JSONDecoder().decode([WidgetTodoItem].self, from: data)
+        // 로컬 저장 일정
+        var todos: [TodoItem] = []
+        if let data = store.data(forKey: "SavedTodos") {
+            todos = try JSONDecoder().decode([TodoItem].self, from: data)
+        }
+
+        // 외부(Apple 등) 읽기 전용 일정 병합 (별도 KVS 키, 메인 앱이 replace-all로 갱신)
+        if let externalData = store.data(forKey: "SavedExternalTodos") {
+            let external = (try? JSONDecoder().decode([TodoItem].self, from: externalData)) ?? []
+            todos.append(contentsOf: external)
+        }
         return todos
     }
 }
@@ -435,7 +319,7 @@ struct WidgetTodayInsight {
     let phrase: String
     let count: Int
 
-    init(todos: [WidgetTodoItem], now: Date) {
+    init(todos: [TodoItem], now: Date) {
         let cal = Calendar.current
         let today = cal.startOfDay(for: now)
         let todays = todos.filter { $0.includesDate(today) }
@@ -459,7 +343,7 @@ struct WidgetTodayInsight {
         bandHex = report.band.colorHex
 
         // 시간 일정의 (시작, 끝)을 모은다.
-        let timed = todays.compactMap { t -> (start: Date, end: Date, item: WidgetTodoItem)? in
+        let timed = todays.compactMap { t -> (start: Date, end: Date, item: TodoItem)? in
             guard let s = t.scheduledTime, let start = Self.combine(s, today) else { return nil }
             return (start, Self.endOf(t, start: start, day: today), t)
         }
@@ -504,7 +388,7 @@ struct WidgetTodayInsight {
     }
 
     /// 시간 일정의 종료 Date — 실제 종료 시각(있으면) / 없으면 시작 +1시간.
-    static func endOf(_ t: WidgetTodoItem, start: Date, day: Date) -> Date {
+    static func endOf(_ t: TodoItem, start: Date, day: Date) -> Date {
         if let e = t.endScheduledTime, let end = combine(e, day), end > start { return end }
         return start.addingTimeInterval(3600)
     }
@@ -649,7 +533,7 @@ struct TodayWidgetEntryView: View {
 
 /// 위젯에서 사용하는 캡슐형 일정 행
 private struct CapsuleRow: View {
-    let todo: WidgetTodoItem
+    let todo: TodoItem
     @Environment(\.colorScheme) private var colorScheme
 
     private var backgroundColor: Color {
@@ -795,8 +679,8 @@ struct TodayWidget_Previews: PreviewProvider {
             entry: TodayEntry(
                 date: Date(),
                 todos: [
-                    WidgetTodoItem(text: "회의 준비", isRepeating: false, date: Date(), colorName: "skyblue"),
-                    WidgetTodoItem(text: "헬스장 가기", isRepeating: false, date: Date(), colorName: "coralred")
+                    TodoItem(text: "회의 준비", isRepeating: false, date: Date(), colorName: "skyblue"),
+                    TodoItem(text: "헬스장 가기", isRepeating: false, date: Date(), colorName: "coralred")
                 ]
             )
         )

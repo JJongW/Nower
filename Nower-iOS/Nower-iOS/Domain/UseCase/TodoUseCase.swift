@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import NowerCore
 
 protocol AddTodoUseCase { func execute(todo: TodoItem) }
 protocol DeleteTodoUseCase { func execute(todo: TodoItem) }

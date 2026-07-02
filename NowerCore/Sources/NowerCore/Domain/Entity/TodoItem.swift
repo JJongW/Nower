@@ -1,8 +1,9 @@
 //
 //  TodoItem.swift
-//  Nower-Shared
+//  NowerCore
 //
-//  Created by AI Assistant on 5/12/25.
+//  iOS·macOS·위젯이 공유하는 단일 일정 도메인/영속 모델.
+//  (기존에 앱 타깃마다 이중 정의되던 것을 NowerCore 단일 정의로 승격.)
 //  Copyright © 2025 Nower. All rights reserved.
 //
 
@@ -11,15 +12,15 @@ import Foundation
 // MARK: - 반복 일정 규칙 정보
 
 /// 반복 일정의 규칙을 정의하는 구조체
-struct RecurrenceInfo: Codable, Hashable {
-    let frequency: String      // "daily", "weekly", "monthly", "yearly"
-    let interval: Int          // 매 N 단위
-    let endDate: String?       // "yyyy-MM-dd" or nil = 무한
-    let endAfterCount: Int?    // N회 후 종료 (endDate 대안)
-    let daysOfWeek: [Int]?     // 주간: 1=일..7=토
-    let dayOfMonth: Int?       // 월간: 1-31
+public struct RecurrenceInfo: Codable, Hashable {
+    public let frequency: String      // "daily", "weekly", "monthly", "yearly"
+    public let interval: Int          // 매 N 단위
+    public let endDate: String?       // "yyyy-MM-dd" or nil = 무한
+    public let endAfterCount: Int?    // N회 후 종료 (endDate 대안)
+    public let daysOfWeek: [Int]?     // 주간: 1=일..7=토
+    public let dayOfMonth: Int?       // 월간: 1-31
 
-    init(frequency: String, interval: Int = 1, endDate: String? = nil, endAfterCount: Int? = nil, daysOfWeek: [Int]? = nil, dayOfMonth: Int? = nil) {
+    public init(frequency: String, interval: Int = 1, endDate: String? = nil, endAfterCount: Int? = nil, daysOfWeek: [Int]? = nil, dayOfMonth: Int? = nil) {
         self.frequency = frequency
         self.interval = interval
         self.endDate = endDate
@@ -29,7 +30,7 @@ struct RecurrenceInfo: Codable, Hashable {
     }
 
     /// 사용자에게 표시할 요약 문자열
-    var displayString: String {
+    public var displayString: String {
         let weekdayNames = ["일", "월", "화", "수", "목", "금", "토"]
 
         if interval == 1 {
@@ -71,52 +72,57 @@ struct RecurrenceInfo: Codable, Hashable {
 }
 
 /// 반복 일정의 개별 인스턴스 예외를 정의하는 구조체
-struct RecurrenceException: Codable, Hashable {
-    let originalDate: String           // 해당 발생 날짜 "yyyy-MM-dd"
-    let isDeleted: Bool                // 이 인스턴스 삭제 여부
-    let overriddenTodo: TodoItem?      // 개별 수정된 데이터 (nil = 삭제만)
+public struct RecurrenceException: Codable, Hashable {
+    public let originalDate: String           // 해당 발생 날짜 "yyyy-MM-dd"
+    public let isDeleted: Bool                // 이 인스턴스 삭제 여부
+    public let overriddenTodo: TodoItem?      // 개별 수정된 데이터 (nil = 삭제만)
+
+    public init(originalDate: String, isDeleted: Bool, overriddenTodo: TodoItem?) {
+        self.originalDate = originalDate
+        self.isDeleted = isDeleted
+        self.overriddenTodo = overriddenTodo
+    }
 }
 
 // MARK: - 반복 일정 수정/삭제 범위
 
 /// 반복 일정 수정/삭제 시 적용 범위
-enum RecurrenceEditScope {
+public enum RecurrenceEditScope {
     case thisOnly       // 이 일정만
     case thisAndFuture  // 이 일정 및 향후 일정
     case all            // 모든 일정
 }
 
 /// 공통 Todo 아이템 데이터 모델
-/// MacOS와 iOS에서 동일하게 사용되는 핵심 엔티티입니다.
+/// macOS·iOS·위젯에서 동일하게 사용되는 핵심 엔티티입니다.
 /// 단일 날짜 및 기간별 일정을 모두 지원합니다.
-struct TodoItem: Identifiable, Codable {
-    var id = UUID()
-    let text: String
-    let isRepeating: Bool
-    let date: String // yyyy-MM-dd 형식 (기존 호환성을 위한 필드, 단일 날짜 또는 시작일)
-    let colorName: String
-    
-    // 기간별 일정을 위한 새로운 필드들
-    let startDate: String? // yyyy-MM-dd 형식, nil이면 단일 날짜 일정
-    let endDate: String?   // yyyy-MM-dd 형식, nil이면 단일 날짜 일정
+public struct TodoItem: Identifiable, Codable {
+    public var id = UUID()
+    public let text: String
+    public let isRepeating: Bool
+    public let date: String // yyyy-MM-dd 형식 (기존 호환성을 위한 필드, 단일 날짜 또는 시작일)
+    public let colorName: String
+
+    // 기간별 일정을 위한 필드들
+    public let startDate: String? // yyyy-MM-dd 형식, nil이면 단일 날짜 일정
+    public let endDate: String?   // yyyy-MM-dd 형식, nil이면 단일 날짜 일정
 
     // 시간대별 일정 및 알림을 위한 필드들
-    let scheduledTime: String?       // "HH:mm" 형식, nil = 하루 종일
-    let endScheduledTime: String?    // "HH:mm" 형식, 종료 시각. nil = 종료 시간 없음 → 밀도/위젯은 시작 +1시간으로 처리
-    let reminderMinutesBefore: Int?  // nil = 알림 없음, 0 = 정시, 5/10/30/60/1440
+    public let scheduledTime: String?       // "HH:mm" 형식, nil = 하루 종일
+    public let endScheduledTime: String?    // "HH:mm" 형식, 종료 시각. nil = 종료 시간 없음 → 밀도/위젯은 시작 +1시간으로 처리
+    public let reminderMinutesBefore: Int?  // nil = 알림 없음, 0 = 정시, 5/10/30/60/1440
 
     // 반복 일정을 위한 필드들
-    let recurrenceInfo: RecurrenceInfo?              // 반복 규칙 (nil = 비반복)
-    let recurrenceExceptions: [RecurrenceException]? // 예외 목록
-    let recurrenceSeriesId: UUID?                    // 분리된 시리즈 연결용
-    
+    public let recurrenceInfo: RecurrenceInfo?              // 반복 규칙 (nil = 비반복)
+    public let recurrenceExceptions: [RecurrenceException]? // 예외 목록
+    public let recurrenceSeriesId: UUID?                    // 분리된 시리즈 연결용
+
+    // 외부 캘린더 연동 필드 (읽기 전용 미러). 자체 일정은 nil.
+    public let externalSource: String?  // "apple" / "google" / "naver"
+    public let externalID: String?      // 외부 원본 식별자 (dedup·재fetch 교체용)
+
     /// 단일 날짜 TodoItem을 생성합니다. (기존 호환성 유지)
-    /// - Parameters:
-    ///   - text: Todo 내용
-    ///   - isRepeating: 반복 여부
-    ///   - date: 날짜 (yyyy-MM-dd 형식)
-    ///   - colorName: 색상 이름
-    init(text: String, isRepeating: Bool, date: String, colorName: String, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil, recurrenceInfo: RecurrenceInfo? = nil, recurrenceExceptions: [RecurrenceException]? = nil, recurrenceSeriesId: UUID? = nil) {
+    public init(text: String, isRepeating: Bool, date: String, colorName: String, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil, recurrenceInfo: RecurrenceInfo? = nil, recurrenceExceptions: [RecurrenceException]? = nil, recurrenceSeriesId: UUID? = nil, externalSource: String? = nil, externalID: String? = nil) {
         self.text = text
         self.isRepeating = isRepeating
         self.date = date
@@ -129,15 +135,12 @@ struct TodoItem: Identifiable, Codable {
         self.recurrenceInfo = recurrenceInfo
         self.recurrenceExceptions = recurrenceExceptions
         self.recurrenceSeriesId = recurrenceSeriesId
+        self.externalSource = externalSource
+        self.externalID = externalID
     }
-    
-    /// Date 객체로부터 단일 날짜 TodoItem을 생성하는 편의 생성자 (기존 호환성 유지)
-    /// - Parameters:
-    ///   - text: Todo 내용
-    ///   - isRepeating: 반복 여부
-    ///   - date: Date 객체
-    ///   - colorName: 색상 이름
-    init(text: String, isRepeating: Bool, date: Date, colorName: String, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil, recurrenceInfo: RecurrenceInfo? = nil, recurrenceExceptions: [RecurrenceException]? = nil, recurrenceSeriesId: UUID? = nil) {
+
+    /// Date 객체로부터 단일 날짜 TodoItem을 생성하는 편의 생성자
+    public init(text: String, isRepeating: Bool, date: Date, colorName: String, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil, recurrenceInfo: RecurrenceInfo? = nil, recurrenceExceptions: [RecurrenceException]? = nil, recurrenceSeriesId: UUID? = nil, externalSource: String? = nil, externalID: String? = nil) {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
 
@@ -153,16 +156,12 @@ struct TodoItem: Identifiable, Codable {
         self.recurrenceInfo = recurrenceInfo
         self.recurrenceExceptions = recurrenceExceptions
         self.recurrenceSeriesId = recurrenceSeriesId
+        self.externalSource = externalSource
+        self.externalID = externalID
     }
-    
+
     /// 기간별 TodoItem을 생성합니다.
-    /// - Parameters:
-    ///   - text: Todo 내용
-    ///   - isRepeating: 반복 여부
-    ///   - startDate: 시작 날짜
-    ///   - endDate: 종료 날짜
-    ///   - colorName: 색상 이름
-    init(text: String, isRepeating: Bool, startDate: Date, endDate: Date, colorName: String, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil, recurrenceInfo: RecurrenceInfo? = nil, recurrenceExceptions: [RecurrenceException]? = nil, recurrenceSeriesId: UUID? = nil) {
+    public init(text: String, isRepeating: Bool, startDate: Date, endDate: Date, colorName: String, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil, recurrenceInfo: RecurrenceInfo? = nil, recurrenceExceptions: [RecurrenceException]? = nil, recurrenceSeriesId: UUID? = nil, externalSource: String? = nil, externalID: String? = nil) {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
 
@@ -178,18 +177,12 @@ struct TodoItem: Identifiable, Codable {
         self.recurrenceInfo = recurrenceInfo
         self.recurrenceExceptions = recurrenceExceptions
         self.recurrenceSeriesId = recurrenceSeriesId
+        self.externalSource = externalSource
+        self.externalID = externalID
     }
 
-    /// 모든 필드를 직접 지정하는 이니셜라이저 (NowerCore 변환용)
-    /// - Parameters:
-    ///   - id: 고유 식별자
-    ///   - text: Todo 내용
-    ///   - isRepeating: 반복 여부
-    ///   - date: 날짜 문자열
-    ///   - colorName: 색상 이름
-    ///   - startDate: 시작 날짜 문자열 (기간별 일정용)
-    ///   - endDate: 종료 날짜 문자열 (기간별 일정용)
-    init(id: UUID, text: String, isRepeating: Bool, date: String, colorName: String, startDate: String? = nil, endDate: String? = nil, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil, recurrenceInfo: RecurrenceInfo? = nil, recurrenceExceptions: [RecurrenceException]? = nil, recurrenceSeriesId: UUID? = nil) {
+    /// 모든 필드를 직접 지정하는 이니셜라이저 (변환·가상 인스턴스용)
+    public init(id: UUID, text: String, isRepeating: Bool, date: String, colorName: String, startDate: String? = nil, endDate: String? = nil, scheduledTime: String? = nil, endScheduledTime: String? = nil, reminderMinutesBefore: Int? = nil, recurrenceInfo: RecurrenceInfo? = nil, recurrenceExceptions: [RecurrenceException]? = nil, recurrenceSeriesId: UUID? = nil, externalSource: String? = nil, externalID: String? = nil) {
         self.id = id
         self.text = text
         self.isRepeating = isRepeating
@@ -203,16 +196,18 @@ struct TodoItem: Identifiable, Codable {
         self.recurrenceInfo = recurrenceInfo
         self.recurrenceExceptions = recurrenceExceptions
         self.recurrenceSeriesId = recurrenceSeriesId
+        self.externalSource = externalSource
+        self.externalID = externalID
     }
 }
 
 // MARK: - Hashable
 extension TodoItem: Hashable {
-    static func == (lhs: TodoItem, rhs: TodoItem) -> Bool {
+    public static func == (lhs: TodoItem, rhs: TodoItem) -> Bool {
         lhs.id == rhs.id
     }
-    
-    func hash(into hasher: inout Hasher) {
+
+    public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
 }
@@ -220,65 +215,59 @@ extension TodoItem: Hashable {
 // MARK: - 편의 메서드
 extension TodoItem {
     /// 기간별 일정인지 확인합니다.
-    var isPeriodEvent: Bool {
+    public var isPeriodEvent: Bool {
         return startDate != nil && endDate != nil
     }
-    
+
     /// 단일 날짜 일정인지 확인합니다.
-    var isSingleDayEvent: Bool {
+    public var isSingleDayEvent: Bool {
         return !isPeriodEvent
     }
-    
+
     /// 날짜 문자열을 Date 객체로 변환합니다. (기존 date 필드)
-    var dateObject: Date? {
+    public var dateObject: Date? {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.date(from: date)
     }
-    
+
     /// 시작 날짜를 Date 객체로 변환합니다.
-    var startDateObject: Date? {
+    public var startDateObject: Date? {
         guard let startDate = startDate else { return dateObject } // 단일 날짜인 경우 date 반환
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.date(from: startDate)
     }
-    
+
     /// 종료 날짜를 Date 객체로 변환합니다.
-    var endDateObject: Date? {
+    public var endDateObject: Date? {
         guard let endDate = endDate else { return dateObject } // 단일 날짜인 경우 date 반환
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.date(from: endDate)
     }
-    
+
     /// 특정 날짜가 이 일정의 기간에 포함되는지 확인합니다.
-    /// - Parameter date: 확인할 날짜
-    /// - Returns: 기간에 포함되는지 여부
-    func includesDate(_ date: Date) -> Bool {
+    public func includesDate(_ date: Date) -> Bool {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         let dateString = formatter.string(from: date)
-        
+
         if isPeriodEvent {
-            // 기간별 일정인 경우
             guard let start = startDate, let end = endDate else { return false }
             return dateString >= start && dateString <= end
         } else {
-            // 단일 날짜 일정인 경우
             return self.date == dateString
         }
     }
-    
+
     /// 같은 날짜인지 확인합니다. (기존 호환성 유지)
-    /// - Parameter date: 비교할 Date 객체
-    /// - Returns: 같은 날짜인지 여부
-    func isOnSameDate(as date: Date) -> Bool {
+    public func isOnSameDate(as date: Date) -> Bool {
         return includesDate(date)
     }
-    
+
     /// 일정의 전체 기간을 일 단위로 반환합니다.
-    var durationInDays: Int {
+    public var durationInDays: Int {
         guard isPeriodEvent,
               let startDate = startDateObject,
               let endDate = endDateObject else { return 1 } // 단일 날짜는 1일
@@ -291,17 +280,17 @@ extension TodoItem {
     // MARK: - 시간/알림 관련 편의 프로퍼티
 
     /// 시간이 설정된 일정인지 확인합니다.
-    var hasScheduledTime: Bool {
+    public var hasScheduledTime: Bool {
         return scheduledTime != nil
     }
 
     /// 알림이 설정된 일정인지 확인합니다.
-    var hasReminder: Bool {
+    public var hasReminder: Bool {
         return reminderMinutesBefore != nil
     }
 
     /// 날짜 + scheduledTime을 결합하여 Date 객체를 반환합니다.
-    var scheduledDateTime: Date? {
+    public var scheduledDateTime: Date? {
         guard let timeString = scheduledTime,
               let baseDate = dateObject else { return nil }
         let parts = timeString.split(separator: ":")
@@ -312,7 +301,7 @@ extension TodoItem {
     }
 
     /// 알림 발송 시각을 반환합니다.
-    var reminderDate: Date? {
+    public var reminderDate: Date? {
         guard let scheduled = scheduledDateTime,
               let minutes = reminderMinutesBefore else { return nil }
         return scheduled.addingTimeInterval(-Double(minutes) * 60)
@@ -324,7 +313,7 @@ extension TodoItem {
     /// - 기간 일정: 종료일 끝(23:59:59)
     /// - 시간 일정: 종료 시각(있으면) / 없으면 시작 +1시간
     /// - 종일 단일 일정: 그날 끝
-    var endReference: Date? {
+    public var endReference: Date? {
         let calendar = Calendar.current
 
         if isPeriodEvent, let end = endDateObject {
@@ -350,22 +339,32 @@ extension TodoItem {
     }
 
     /// 종료 시각이 지나 '이미 지난 일정'인지 (시간 기반, 저장·동기화 없이 매번 계산).
-    var isPast: Bool {
+    public var isPast: Bool {
         guard let end = endReference else { return false }
         return end < Date()
+    }
+
+    // MARK: - 외부 캘린더 연동 편의 프로퍼티
+
+    /// 외부 캘린더에서 가져온 일정인지 여부.
+    public var isExternal: Bool {
+        return externalSource != nil
+    }
+
+    /// 읽기 전용(외부 미러) 일정인지 여부 — 편집/삭제 진입점 차단용.
+    public var isReadOnly: Bool {
+        return isExternal
     }
 
     // MARK: - 반복 일정 관련 편의 프로퍼티/메서드
 
     /// 반복 일정인지 확인합니다.
-    var isRecurringEvent: Bool {
+    public var isRecurringEvent: Bool {
         return recurrenceInfo != nil
     }
 
     /// 특정 날짜에 대한 가상 인스턴스를 생성합니다.
-    /// - Parameter date: 가상 인스턴스의 날짜
-    /// - Returns: 해당 날짜의 가상 인스턴스 TodoItem
-    func virtualInstance(for date: Date) -> TodoItem {
+    public func virtualInstance(for date: Date) -> TodoItem {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         let dateString = formatter.string(from: date)
@@ -382,12 +381,14 @@ extension TodoItem {
             reminderMinutesBefore: reminderMinutesBefore,
             recurrenceInfo: recurrenceInfo,
             recurrenceExceptions: recurrenceExceptions,
-            recurrenceSeriesId: recurrenceSeriesId
+            recurrenceSeriesId: recurrenceSeriesId,
+            externalSource: externalSource,
+            externalID: externalID
         )
     }
 
     /// 반복 규칙을 변경한 새 TodoItem을 반환합니다.
-    func withRecurrenceInfo(_ info: RecurrenceInfo?) -> TodoItem {
+    public func withRecurrenceInfo(_ info: RecurrenceInfo?) -> TodoItem {
         return TodoItem(
             id: id,
             text: text,
@@ -401,12 +402,14 @@ extension TodoItem {
             reminderMinutesBefore: reminderMinutesBefore,
             recurrenceInfo: info,
             recurrenceExceptions: recurrenceExceptions,
-            recurrenceSeriesId: recurrenceSeriesId
+            recurrenceSeriesId: recurrenceSeriesId,
+            externalSource: externalSource,
+            externalID: externalID
         )
     }
 
     /// 예외 목록을 변경한 새 TodoItem을 반환합니다.
-    func withExceptions(_ exceptions: [RecurrenceException]?) -> TodoItem {
+    public func withExceptions(_ exceptions: [RecurrenceException]?) -> TodoItem {
         return TodoItem(
             id: id,
             text: text,
@@ -420,7 +423,9 @@ extension TodoItem {
             reminderMinutesBefore: reminderMinutesBefore,
             recurrenceInfo: recurrenceInfo,
             recurrenceExceptions: exceptions,
-            recurrenceSeriesId: recurrenceSeriesId
+            recurrenceSeriesId: recurrenceSeriesId,
+            externalSource: externalSource,
+            externalID: externalID
         )
     }
 }

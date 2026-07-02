@@ -6,7 +6,9 @@
 //
 
 import Foundation
+import NowerCore
 import Combine
+import UIKit
 
 final class CalendarViewModel: ObservableObject {
     private let addTodoUseCase: AddTodoUseCase
@@ -38,6 +40,11 @@ final class CalendarViewModel: ObservableObject {
     /// 모든 반복 일정 캐시 (loadAllTodos에서 분리 저장)
     private(set) var allRecurringTodos: [TodoItem] = []
 
+    /// 외부 캘린더(Apple/Google/Naver)에서 가져온 읽기 전용 일정.
+    /// 비영구(iCloud 저장 안 함) — 매 fetch마다 replace-all로 갱신되어 유령 일정을 원천 차단합니다.
+    /// `allRecurringTodos`에 절대 넣지 않으므로 RecurringEventExpander를 타지 않습니다(이중전개 방지).
+    @Published private(set) var externalTodos: [TodoItem] = []
+
     init(
         addTodoUseCase: AddTodoUseCase,
         deleteTodoUseCase: DeleteTodoUseCase,
@@ -56,6 +63,7 @@ final class CalendarViewModel: ObservableObject {
         loadAllTodos()
         setupNotificationObserver()
         refreshDepartureNudges() // 앱 시작 시 출발 알림 재동기화
+        refreshExternalCalendars() // 앱 시작 시 외부 캘린더(Apple 등) 읽기
     }
 
     func loadAllTodos() {
@@ -72,12 +80,39 @@ final class CalendarViewModel: ObservableObject {
         }
     }
 
+    /// 외부 캘린더에서 가져온 읽기 전용 일정으로 교체합니다(비영구, replace-all).
+    /// Phase 1+ 에서 provider fetch 결과를 여기에 주입합니다.
+    func setExternalTodos(_ items: [TodoItem]) {
+        externalTodos = items
+        // UIKit 화면은 @Published를 자동 관찰하지 않으므로 명시적으로 리로드를 알린다.
+        NotificationCenter.default.post(name: ExternalCalendarManager.externalTodosDidChangeNotification, object: nil)
+    }
+
+    /// 외부 캘린더(Apple 등)를 다시 읽어 externalTodos를 갱신합니다.
+    /// 앱 시작·포그라운드 복귀 시 호출. 비활성/미허가면 빈 배열로 교체됩니다.
+    func refreshExternalCalendars(around date: Date? = nil) {
+        let base = date ?? selectedDate ?? Date()
+        Task {
+            let todos = await ExternalCalendarManager.shared.fetchExternalTodos(around: base)
+            await MainActor.run { self.setExternalTodos(todos) }
+        }
+    }
+
     func todos(for date: Date) -> [TodoItem] {
         let key = date.toDateString()
         let todosForDate = todosByDate[key] ?? []
 
-        // 해당 날짜의 단일 날짜 일정들만 필터링 (기간별 일정 및 반복 원본 제외)
+        // 외부 캘린더 일정(읽기 전용, 비영구) 중 이 날짜에 포함되는 것.
+        // 단, 같은 날 휴일 라벨과 이름이 같은 외부(Apple) 공휴일 캡슐은 제거한다.
+        // → 휴일은 라벨 하나로만 표시(중복 캡슐 흡수). 연동 OFF면 라벨 그대로 유지.
+        let holidayForDate = holidayName(for: date)
+        let externalForDate = externalTodos
+            .filter { $0.includesDate(date) }
+            .filter { holidayForDate == nil || $0.text != holidayForDate }
+
+        // 해당 날짜의 단일 날짜 일정들만 필터링 (기간별 일정 및 반복 원본 제외) + 외부 단일 일정
         let singleDayTodos = todosForDate.filter { !$0.isPeriodEvent && !$0.isRecurringEvent }
+            + externalForDate.filter { !$0.isPeriodEvent }
 
         // 단일 날짜 일정을 시간순으로 정렬: 시간이 있는 일정은 시간 순서대로, 하루 종일 일정은 맨 아래에 배치
         let sortedSingleDayTodos = singleDayTodos.sorted { todo1, todo2 in
@@ -97,8 +132,8 @@ final class CalendarViewModel: ObservableObject {
             return todo1.text < todo2.text
         }
 
-        // 모든 일정에서 기간별 일정을 찾되 중복 제거
-        let allTodos = todosByDate.values.flatMap { $0 }
+        // 모든 일정에서 기간별 일정을 찾되 중복 제거 (외부 기간 일정 포함)
+        let allTodos = todosByDate.values.flatMap { $0 } + externalForDate
         let uniquePeriodTodos = Array(Set(allTodos.filter { todo in
             todo.isPeriodEvent && todo.includesDate(date) && !todo.isRecurringEvent
         }))
@@ -398,6 +433,28 @@ final class CalendarViewModel: ObservableObject {
             name: SavedPlacesManager.didUpdateNotification,
             object: nil
         )
+        // 포그라운드 복귀 시 외부 캘린더 재동기화 (외부에서 삭제/추가된 일정 반영)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidBecomeActive),
+            name: UIApplication.didBecomeActiveNotification,
+            object: nil
+        )
+        // 설정에서 외부 캘린더 on/off가 바뀌면 즉시 재fetch
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(externalCalendarDidChange),
+            name: ExternalCalendarManager.didChangeNotification,
+            object: nil
+        )
+    }
+
+    @objc private func appDidBecomeActive() {
+        refreshExternalCalendars()
+    }
+
+    @objc private func externalCalendarDidChange() {
+        refreshExternalCalendars()
     }
     
     /// Todo 업데이트 알림을 처리합니다.

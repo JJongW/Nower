@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import NowerCore
 import SnapKit
 
 class EventCapsuleView: UIView {

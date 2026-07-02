@@ -41,6 +41,9 @@ final class CalendarViewController: UIViewController {
     private let holidayUseCase: HolidayUseCase
     private var syncStatusViewModel: SyncStatusViewModel?
 
+    /// 휴일 데이터가 이미 도착·반영된 월("yyyy-MM"). weeks 재생성 무한루프 방지용.
+    private var holidayAppliedMonths: Set<String> = []
+
     // MARK: - Interactive Swipe Properties
     private var panStartLocation: CGPoint = .zero
     private var snapshotView: UIView?
@@ -96,6 +99,13 @@ final class CalendarViewController: UIViewController {
             self,
             selector: #selector(todosUpdated),
             name: Notification.Name("CloudSyncManager.todosDidUpdate"),
+            object: nil
+        )
+        // 외부 캘린더(Apple 등) 일정이 갱신되면 달력을 다시 그린다.
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(externalTodosUpdated),
+            name: ExternalCalendarManager.externalTodosDidChangeNotification,
             object: nil
         )
 
@@ -720,6 +730,15 @@ final class CalendarViewController: UIViewController {
         }
     }
 
+    /// 외부 캘린더 일정이 갱신되면 달력·패널을 다시 그린다.
+    /// weeks 데이터는 캐시이므로 reloadData만으로는 부족 — todos(for:)로 다시 생성해야 한다.
+    @objc private func externalTodosUpdated() {
+        DispatchQueue.main.async {
+            self.generateCalendar(updateHeader: false)
+            self.schedulePanelVC.refreshIfVisible()
+        }
+    }
+
     @objc private func forceSync() {
         NSUbiquitousKeyValueStore.default.synchronize()
         // 앱 복귀 시 Live Activity를 다시 동기화한다. 백그라운드 동안 종료된 일정은
@@ -798,9 +817,20 @@ final class CalendarViewController: UIViewController {
         #endif
 
         if let year = components.year, let month = components.month {
-            holidayUseCase.fetchHolidays(for: year, month: month) { _ in
+            let monthKey = String(format: "%04d-%02d", year, month)
+            let alreadyApplied = holidayAppliedMonths.contains(monthKey)
+            holidayUseCase.fetchHolidays(for: year, month: month) { [weak self] _ in
                 DispatchQueue.main.async {
-                    self.calendarView.collectionView.reloadData()
+                    guard let self else { return }
+                    if alreadyApplied {
+                        // 이미 반영된 월: todos만 갱신하면 되므로 reloadData로 충분.
+                        self.calendarView.collectionView.reloadData()
+                    } else {
+                        // 휴일 데이터가 처음 도착 → weeks를 재생성해 라벨 표시 +
+                        // 휴일과 겹치는 외부(Apple) 캡슐 dedup을 반영한다.
+                        self.holidayAppliedMonths.insert(monthKey)
+                        self.generateCalendar(updateHeader: false)
+                    }
                 }
             }
         }
@@ -1261,7 +1291,27 @@ extension CalendarViewController: UICollectionViewDataSource {
         formatter.dateFormat = "yyyy-MM-dd"
         guard let selectedDate = formatter.date(from: dateString) else { return }
 
+        if presentReadOnlyNoticeIfNeeded(for: todo) { return }
         coordinator?.presentEditEvent(todo: todo, date: selectedDate, viewModel: viewModel)
+    }
+
+    /// 외부(읽기 전용) 일정이면 편집 시트 대신 안내 토스트를 띄우고 true를 반환한다.
+    @discardableResult
+    private func presentReadOnlyNoticeIfNeeded(for todo: TodoItem) -> Bool {
+        guard todo.isReadOnly else { return false }
+        let source = externalSourceDisplayName(todo.externalSource)
+        showSyncToast("\(source) 일정은 읽기 전용이에요. Nower에서 수정·삭제는 안 돼요.")
+        return true
+    }
+
+    /// externalSource 코드("apple"/"google"/"naver")를 사용자용 이름으로 변환한다.
+    private func externalSourceDisplayName(_ source: String?) -> String {
+        switch source {
+        case "apple": return "Apple 캘린더"
+        case "google": return "Google 캘린더"
+        case "naver": return "네이버 캘린더"
+        default: return "외부 캘린더"
+        }
     }
 
     private func handleDaySelection(dateString: String) {
@@ -1336,6 +1386,7 @@ extension CalendarViewController: SchedulePanelDelegate {
     }
 
     func schedulePanel(_ panel: SchedulePanelViewController, didSelect todo: TodoItem, on date: Date) {
+        if presentReadOnlyNoticeIfNeeded(for: todo) { return }
         coordinator?.presentEditEvent(todo: todo, date: date, viewModel: viewModel)
     }
 }

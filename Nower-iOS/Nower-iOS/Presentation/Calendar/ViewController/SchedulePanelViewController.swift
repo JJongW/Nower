@@ -9,6 +9,7 @@
 //
 
 import UIKit
+import NowerCore
 
 protocol SchedulePanelDelegate: AnyObject {
     /// 드래그 중 연속 진행도(0 = peek, 1 = 확장). 부모가 높이/코스메틱 적용.

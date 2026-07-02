@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import NowerCore
 
 /// 주의 각 날짜 정보
 /// iOS 버전과 동일한 구조를 사용하여 일관성을 유지합니다.

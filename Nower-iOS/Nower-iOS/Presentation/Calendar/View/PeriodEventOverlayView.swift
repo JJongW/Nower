@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import NowerCore
 import SnapKit
 
 /// 기간별 일정을 캘린더에서 연속된 바로 표시하는 뷰

@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import NowerCore
 
 // MARK: - AddTodoUseCase Implementation
 final class DefaultAddTodoUseCase: AddTodoUseCase {

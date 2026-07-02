@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import NowerCore
 
 class EventTableViewCell: UITableViewCell {
 

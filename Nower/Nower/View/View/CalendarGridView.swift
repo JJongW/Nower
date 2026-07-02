@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import NowerCore
 import SwiftUI
 
 struct CalendarGridView: View {
@@ -48,6 +49,12 @@ struct CalendarGridView: View {
                             },
                             onDayDoubleTapped: onOpenAddEventForDate,
                             onTodoSelected: { todo, dateString in
+                                // 외부(읽기 전용) 일정은 편집 팝업 대신 안내 토스트.
+                                if todo.isReadOnly {
+                                    toastMessage = ExternalCalendarManager.readOnlyNoticeMessage(for: todo)
+                                    showToast = true
+                                    return
+                                }
                                 selectedTodo = todo
                                 selectedDate = dateString
                                 isShowingEditPopup = true

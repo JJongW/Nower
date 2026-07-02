@@ -4,12 +4,13 @@
 //
 //  iOS 월간 캘린더 위젯
 //  macOS NowerCalendarWidget.swift를 iOS용으로 포팅
-//  - WidgetTodoItem, WidgetAppColors는 TodayWidget.swift에서 공유
+//  - TodoItem은 NowerCore, WidgetAppColors는 TodayWidget.swift에서 공유
 //
 
 import WidgetKit
 import SwiftUI
 import Foundation
+import NowerCore
 
 // MARK: - Calendar Day Info
 
@@ -20,7 +21,7 @@ struct CalendarDayInfo {
     let isSunday: Bool
     let isSaturday: Bool
     let holidayName: String?
-    let todos: [WidgetTodoItem]
+    let todos: [TodoItem]
 }
 
 // MARK: - Calendar Entry
@@ -29,9 +30,9 @@ struct CalendarEntry: TimelineEntry {
     let date: Date
     let currentMonth: Date
     let weeks: [[CalendarDayInfo]]
-    let allTodos: [WidgetTodoItem]
-    let periodEvents: [WidgetTodoItem]
-    let singleDayEvents: [WidgetTodoItem]
+    let allTodos: [TodoItem]
+    let periodEvents: [TodoItem]
+    let singleDayEvents: [TodoItem]
 }
 
 // MARK: - Calendar Provider
@@ -56,7 +57,7 @@ struct CalendarProvider: TimelineProvider {
         completion(Timeline(entries: [entry], policy: .after(nextUpdate)))
     }
 
-    func generateCalendarEntry(for month: Date, todos: [WidgetTodoItem]) -> CalendarEntry {
+    func generateCalendarEntry(for month: Date, todos: [TodoItem]) -> CalendarEntry {
         let calendar = Calendar.current
         let today = Date()
 
@@ -111,15 +112,20 @@ struct CalendarProvider: TimelineProvider {
         )
     }
 
-    private func loadTodosFromICloud() -> [WidgetTodoItem] {
-        do {
-            let store = NSUbiquitousKeyValueStore.default
-            store.synchronize()
-            guard let data = store.data(forKey: "SavedTodos") else { return [] }
-            return try JSONDecoder().decode([WidgetTodoItem].self, from: data)
-        } catch {
-            return []
+    private func loadTodosFromICloud() -> [TodoItem] {
+        let store = NSUbiquitousKeyValueStore.default
+        store.synchronize()
+
+        var todos: [TodoItem] = []
+        if let data = store.data(forKey: "SavedTodos") {
+            todos = (try? JSONDecoder().decode([TodoItem].self, from: data)) ?? []
         }
+        // 외부(Apple 등) 읽기 전용 일정 병합 (별도 KVS 키)
+        if let externalData = store.data(forKey: "SavedExternalTodos") {
+            let external = (try? JSONDecoder().decode([TodoItem].self, from: externalData)) ?? []
+            todos.append(contentsOf: external)
+        }
+        return todos
     }
 }
 
@@ -311,7 +317,7 @@ struct DayCellWithEventsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
-    private func getAllEventsForDay() -> [WidgetTodoItem] {
+    private func getAllEventsForDay() -> [TodoItem] {
         var allEvents = dayInfo.todos.filter { !$0.isPeriodEvent }
 
         let formatter = DateFormatter()
@@ -435,8 +441,8 @@ struct MonthCalendarWidget_Previews: PreviewProvider {
         let today = Date()
         let month = Calendar.current.dateInterval(of: .month, for: today)?.start ?? today
         let sampleTodos = [
-            WidgetTodoItem(text: "샘플 일정 1", isRepeating: false, date: today, colorName: "skyblue"),
-            WidgetTodoItem(text: "샘플 일정 2", isRepeating: false, date: today, colorName: "coralred")
+            TodoItem(text: "샘플 일정 1", isRepeating: false, date: today, colorName: "skyblue"),
+            TodoItem(text: "샘플 일정 2", isRepeating: false, date: today, colorName: "coralred")
         ]
         let entry = CalendarProvider().generateCalendarEntry(for: month, todos: sampleTodos)
 

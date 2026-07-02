@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import NowerCore
 
 struct EditTodoPopupView: View {
     let originalTodo: TodoItem
