@@ -87,6 +87,7 @@ class CalendarViewModel: ObservableObject {
             guard let self = self else { return }
             self.loadAllTodos()
             self.generateCalendarDays(for: self.currentMonth)
+            self.refreshExternalCalendars() // 앱 시작 시 외부 캘린더(Apple 등) 읽기
         }
     }
 
@@ -158,7 +159,20 @@ class CalendarViewModel: ObservableObject {
     /// Phase 1+ 에서 provider fetch 결과를 여기에 주입합니다.
     func setExternalTodos(_ items: [TodoItem]) {
         externalTodos = items
+        // 주 그리드(weeks)는 generateCalendarDays로 굽기 때문에, 외부 일정이
+        // 반영되도록 재생성한다. 밀도도 함께 갱신된다.
+        generateCalendarDays(for: currentMonth)
         recomputeDensityMap()
+    }
+
+    /// 외부 캘린더(Apple 등)를 다시 읽어 externalTodos를 갱신합니다.
+    /// 앱 시작·포그라운드 복귀·연동 토글 변경 시 호출. 비활성/미허가면 빈 배열로 교체됩니다.
+    func refreshExternalCalendars(around date: Date? = nil) {
+        let base = date ?? currentMonth
+        Task {
+            let todos = await ExternalCalendarManager.shared.fetchExternalTodos(around: base)
+            await MainActor.run { self.setExternalTodos(todos) }
+        }
     }
 
     /// 특정 날짜의 Todo 목록을 반환합니다.
@@ -167,8 +181,13 @@ class CalendarViewModel: ObservableObject {
         let key = date.toDateString()
         let todosForDate = todosByDate[key] ?? []
 
-        // 외부 캘린더 일정(읽기 전용, 비영구) 중 이 날짜에 포함되는 것
-        let externalForDate = externalTodos.filter { $0.includesDate(date) }
+        // 외부 캘린더 일정(읽기 전용, 비영구) 중 이 날짜에 포함되는 것.
+        // 같은 날 휴일 라벨과 이름이 같은 외부 공휴일 캡슐은 제거(중복 흡수).
+        // macOS는 아직 휴일 라벨이 없어 현재는 no-op이지만 iOS와 동일 로직을 유지한다.
+        let holidayForDate = holidayName(for: date)
+        let externalForDate = externalTodos
+            .filter { $0.includesDate(date) }
+            .filter { holidayForDate == nil || $0.text != holidayForDate }
 
         // 해당 날짜의 단일 날짜 일정들만 필터링 (기간별 일정 및 반복 원본 제외) + 외부 단일 일정
         let singleDayTodos = todosForDate.filter { !$0.isPeriodEvent && !$0.isRecurringEvent }
@@ -235,7 +254,8 @@ class CalendarViewModel: ObservableObject {
     func generateCalendarDays(for date: Date) {
         let generateBlock = { [weak self] in
             guard let self = self else { return }
-            let allTodos = self.loadAllTodosUseCase.execute()
+            // 로컬 저장 일정 + 외부(Apple 등) 읽기 전용 일정을 함께 그린다.
+            let allTodos = self.loadAllTodosUseCase.execute() + self.externalTodos
 
             self.weeks = CalendarDayGenerator.generateWeeks(
                 for: date,
@@ -533,7 +553,26 @@ class CalendarViewModel: ObservableObject {
             name: NSWorkspace.didWakeNotification,
             object: nil
         )
+        // 앱이 다시 활성화되면 외부 캘린더를 재fetch(외부 앱에서 편집된 일정 반영)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(externalCalendarDidChange),
+            name: NSApplication.didBecomeActiveNotification,
+            object: nil
+        )
         #endif
+        // 설정에서 외부 캘린더 on/off가 바뀌면 즉시 재fetch
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(externalCalendarDidChange),
+            name: ExternalCalendarManager.didChangeNotification,
+            object: nil
+        )
+    }
+
+    /// 외부 캘린더 연동 상태 변경·앱 활성화 시 재fetch.
+    @objc private func externalCalendarDidChange() {
+        refreshExternalCalendars()
     }
 
     /// Todo 업데이트 알림을 처리합니다.

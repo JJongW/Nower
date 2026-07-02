@@ -95,6 +95,12 @@ struct EventListView: View {
                         ForEach(Array(todos.enumerated()), id: \.element.id) { index, todo in
                             EventListRowView(todo: todo)
                                 .onTapGesture {
+                                    // 외부(읽기 전용) 일정은 편집 팝업 대신 안내 토스트.
+                                    if todo.isReadOnly {
+                                        toastMessage = ExternalCalendarManager.readOnlyNoticeMessage(for: todo)
+                                        showToast = true
+                                        return
+                                    }
                                     // 일정 클릭 시 편집 팝업 표시
                                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                                         selectedTodoForEdit = todo

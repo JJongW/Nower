@@ -14,6 +14,8 @@ import NowerCore
 struct SettingsView: View {
     @EnvironmentObject var settingsManager: SettingsManager
     @State private var templates: [EventTemplate] = []
+    @State private var appleCalendarEnabled = ExternalCalendarManager.shared.isAppleEnabled
+    @State private var showPermissionAlert = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -53,6 +55,35 @@ struct SettingsView: View {
                 }
             }
 
+            Divider()
+                .padding(.top, 8)
+
+            // 외부 캘린더 섹션
+            VStack(alignment: .leading, spacing: 8) {
+                Text("외부 캘린더")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+
+                Toggle(isOn: $appleCalendarEnabled) {
+                    Text("Apple 캘린더 연동")
+                        .font(.system(size: 13))
+                        .foregroundColor(AppColors.textPrimary)
+                }
+                .toggleStyle(.switch)
+                .padding(.horizontal, 16)
+                .onChange(of: appleCalendarEnabled) { enabled in
+                    handleAppleToggle(enabled)
+                }
+
+                Text("켜면 기기의 Apple 캘린더 일정을 Nower 달력에 함께 보여줘요. 읽기 전용이라 Nower에서 수정·삭제는 안 돼요.")
+                    .font(.system(size: 11))
+                    .foregroundColor(AppColors.textFieldPlaceholder)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 16)
+            }
+
             Spacer()
 
             Divider()
@@ -62,8 +93,35 @@ struct SettingsView: View {
             }
             .padding(.vertical, 12)
         }
-        .frame(width: 380, height: 320)
+        .frame(width: 380, height: 440)
         .onAppear { loadTemplates() }
+        .alert("캘린더 접근이 필요해요", isPresented: $showPermissionAlert) {
+            Button("시스템 설정 열기") {
+                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+            Button("취소", role: .cancel) {}
+        } message: {
+            Text("시스템 설정 > 개인정보 보호 및 보안 > 캘린더에서 Nower를 허용하면 일정을 함께 볼 수 있어요.")
+        }
+    }
+
+    /// Apple 캘린더 연동 토글 처리. 켤 때 권한을 요청하고, 거부되면 토글을 되돌린다.
+    private func handleAppleToggle(_ enabled: Bool) {
+        if enabled {
+            Task { @MainActor in
+                let granted = await ExternalCalendarManager.shared.requestAppleAccess()
+                if granted {
+                    ExternalCalendarManager.shared.setAppleEnabled(true)
+                } else {
+                    appleCalendarEnabled = false
+                    showPermissionAlert = true
+                }
+            }
+        } else {
+            ExternalCalendarManager.shared.setAppleEnabled(false)
+        }
     }
 
     private func templateRow(_ template: EventTemplate) -> some View {
